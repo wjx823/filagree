@@ -1,0 +1,12 @@
+num_tests = 1
+
+test = function(title, code, expected)
+	answer = code()
+	if answer == expected then
+		result = 'passed'
+	else
+		result = 'failed'
+	end
+	print('#' + num_tests + ' ' + title + ': ' + result)
+	num_tests = num_tests + 1
+end

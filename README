@@ -1,0 +1,162 @@
+v0.1 10/1/11
+
+Kangaroo is a scripting language, with a compiler and virtual machine written in C99. On an ARM chip, the VM takes 11KB.
+
+You may run the unit test thusly:
+	make
+	./interpret test.kg
+
+To get a feel for the language, here are the unit tests, written in Kangaroo.
+
+---------------------------------------
+
+# unit_test.kg
+
+num_tests = 1
+
+test = function(title, code, expected)
+	answer = code()
+	if answer == expected then
+		result = 'passed'
+	else
+		result = 'failed'
+	end
+	print('#' + num_tests + ' ' + title + ': ' + result)
+	num_tests = num_tests + 1
+end
+
+
+# test.kg
+
+import 'unit_test'
+
+test('add integers',
+	function()
+		a = 7
+		b = 8
+		c = a + b
+		return c
+	end,
+	15)
+
+test('add strings',
+	function()
+		p = 'hello, '
+		q = p + 'world!'
+		return q
+	end,
+	'hello, world!')
+
+test('if-then',
+	function()
+		if true
+			then b=2
+		else
+			b=3
+		end
+		return b
+	end,
+	2)
+
+test('index',
+	function()
+		a = [7,8,9]
+		return a[2]
+	end,
+	9)
+
+test('list set',
+	function()
+		a = [7,8,9]
+	a[2] = 19
+		return a[2]
+	end,
+	19)
+
+test('fdecl',
+	function()
+		f = function (a,b,c)
+			return a+b+c
+		end
+		return f(1,2,3)
+	end,
+	6)
+
+test('if-then-else',
+	function()
+		if 2>3 then
+			return '2>3'
+		else if 3==3 then
+			return '3==3'
+		else
+			return '2<3'
+		end
+	end,
+	'3==3')
+
+test('while',
+	function()
+		i = 1
+	while i < 7
+		i = i + 1
+	end
+		return i
+	end,
+	7)
+
+test('comment',
+	function()
+		# return 1
+		return 2
+	end,
+	2)
+
+test('float',
+	  function()
+		x = 1.2
+	  y = 3.4
+	  return x + y > 4
+	end,
+	  1)
+
+test('serial',
+	function()
+		a = [2,3,4]
+	a.x = 7
+	b = a.serialize
+	c = b.deserialize
+		return c.x + c[2]
+	end,
+	11)
+
+test('map',
+	function()
+		x='y'
+		a = [2,3,4,'x':7,x:8]
+		a['z'] = 9
+		return  a.string +
+			a.type   +
+			a.length +
+			a.list   +
+			a.keys   +
+			a.values
+	end,
+	'[2,3,4,\'x\':7,\'y\':8,\'z\':9]list3[2,3,4][\'x\',\'y\',\'z\'][7,8,9]')
+
+test('string',
+	function()
+		a = 'supercalifragilisticexpialidocious!' 
+		return a[34].string
+	end,
+	'!')
+
+test('scope',
+	function()
+		n = 2
+	f = function(n)
+		n = 3
+	end
+	f(4)
+		return n
+	end,
+	2)
