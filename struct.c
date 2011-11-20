@@ -11,7 +11,7 @@
 
 #include "vm.h"
 #include "struct.h"
-
+#include "util.h"
 
 #define BYTE_ARRAY_MAX_LEN        1000
 #define ERROR_BYTE_ARRAY_LEN    "byte array too long"

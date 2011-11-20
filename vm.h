@@ -3,9 +3,7 @@
 
 
 #include <stdint.h>
-#include <stdbool.h>
 #include <inttypes.h>
-#include <setjmp.h>
 #include "struct.h"
 
 
@@ -55,7 +53,7 @@ enum VarType {
 };    
 
 struct variable {
-    char* name;
+    const struct byte_array* name;
     uint8_t type;
     uint8_t marked;
     union {
@@ -69,65 +67,16 @@ struct variable {
 };
 
 const char* variable_value(const struct variable* v);
-
-// c bridge ////////////////////////////////////////////////////////////////
+struct byte_array *variable_serialize(struct byte_array *bits,
+									  const struct variable *in);
+struct variable *variable_deserialize(struct byte_array *str); // todo: move current out of byte_array, so that I can make more const
 
 typedef void(bridge)(struct ifo*);
-
-struct number_string {
-    uint8_t number;
-    char* chars;
-};
-
-const char* num_to_string(const struct number_string *ns, int num_items, int num);
 
 #define ERROR_OPCODE "unknown opcode"
 
 void display_program(const char* title, struct byte_array* program);
 struct variable *execute(struct byte_array *program, bridge *callback_to_c);
-
-
-#ifdef __LP64__
-#define VOID_INT int64_t
-#define VOID_FLT long double
-#else
-#define VOID_INT int32_t
-#define VOID_FLT double)(int32_t
-#endif
-
-#define ARRAY_LEN(x) (sizeof x / sizeof *x)
-
-#ifdef DEBUG
-
-#ifdef ANDROID
-
-#include <android/log.h>
-#define TAG "fisil"
-#define LOG_LINE_LENGTH 100
-char log_message[LOG_LINE_LENGTH];
-#define DEBUGPRINT(...) { snprintf(log_message, LOG_LINE_LENGTH, __VA_ARGS__ );\
-__android_log_write(ANDROID_LOG_ERROR, TAG, log_message); }
-
-#else // not ANDROID
-
-#include <stdio.h>
-#define DEBUGPRINT(...) fprintf( stderr, __VA_ARGS__ );
-
-#endif // (not) ANDROID
-
-#else // (not) DEBUG
-
-#define DEBUGPRINT(...)
-
-#endif // DEBUG
-
-#define ITOA_LEN    19 // enough for 64-bit integer
-
-extern jmp_buf trying;
-void assert_message(bool assertion, const char* message);
-void exit_message(const char* message);
-void null_check(const void* p);
-int try();
 
 
 #endif // VM_H

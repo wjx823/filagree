@@ -13,6 +13,7 @@
 #include "serial.h"
 #include "struct.h"
 #include "vm.h"
+#include "util.h"
 
 // functions ///////////////////////////////////////////////////////////////
 

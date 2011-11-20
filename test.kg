@@ -1,4 +1,4 @@
-import 'unit_test'
+import '/Users/yusuf/make/vm/unit_test'
 
 test('add integers',
 	function()
@@ -130,3 +130,13 @@ test('scope',
 		return n
 	end,
 	2)
+
+test('file',
+ 	function()
+ 		x = [2,'3':4,'5']
+ 		save(x, 'test_file')
+ 		y = load('test_file')
+ 		remove('test_file')
+ 		return x == y
+ 	end,
+ 	1)

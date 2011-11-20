@@ -18,6 +18,9 @@ uint32_t num_inst_executed = 0;
 void display_instruction(struct byte_array *program);
 struct variable* run(struct byte_array *program, bool in_context);
 struct variable* variable_new_err(const char* message);
+int variable_save(const struct variable* v,
+				  const struct variable* path);
+struct variable *variable_load(const struct variable* path);
 
 uint8_t indent;
 #define INDENT indent++
@@ -67,6 +70,26 @@ void print(struct ifo *stack)
 	printf("%s\n", variable_value(v));
 }
 
+void save(struct ifo *stack)
+{
+	struct variable *path = (struct variable*)ifo_pop(stack);
+	struct variable *v = (struct variable*)ifo_pop(stack);
+	variable_save(v, path);
+}
+
+void load(struct ifo *stack)
+{
+	struct variable *path = (struct variable*)ifo_pop(stack);
+	struct variable *v = variable_load(path);
+	lifo_push(stack, (void*)v);
+}
+
+void rm(struct ifo *stack)
+{
+	struct variable *path = (struct variable*)ifo_pop(stack);
+	remove(byte_array_to_string(path->str));
+}
+
 struct string_func
 {
 	const char* name;
@@ -75,6 +98,9 @@ struct string_func
 
 struct string_func builtin_funcs[] = {
 	{"print", &print},
+	{"save", &save},
+	{"load", &load},
+	{"remove", &rm},
 };
 
 static inline void func_call()
@@ -270,8 +296,10 @@ const char *variable_value(const struct variable* v)
 		case VAR_LST: {
 			strcpy(str, "[");
 			struct array* list = v->list;
+			null_check(list);
 			for (int i=0; i<list->length; i++) {
 				struct variable* element = (struct variable*)array_get(list, i);
+				null_check(element);
 				const char *q = (element->type == VAR_STR || element->type == VAR_FNC) ? "'" : "";
 				const char *c = i ? "," : "";
 				sprintf(str, "%s%s%s%s%s", str, c, q, variable_value(element), q);
@@ -361,17 +389,18 @@ void push_list(struct byte_array *program)
 {
 	int32_t num_items = serial_decode_int(program);
 	DEBUGPRINT("LST %d\n", num_items);
-	struct array *items = array_new_size(num_items);
+	struct array *items = array_new();
 	struct map *map = map_new(); 
-	
+
 	while (num_items--) {
 		struct variable* v = (struct variable*)ifo_pop(operand_stack);
 		if (v->type == VAR_MAP)
-			map_union(map, v->map);
+			map_union(map, v->map); // mapped values are stored in the map, not list
 		else
-			array_set(items, num_items, v);
+			array_add(items, v);
 	}
 	struct variable *list = variable_new_list(items);
+	DEBUGPRINT("push_list %s\n", variable_value(list));
 	list->map = map;
 	lifo_push(operand_stack, list);
 }
@@ -399,7 +428,8 @@ struct variable* variable_set(struct variable *u, const struct variable* v)
 		case VAR_FLT:	u->floater = v->floater;			break;
 		case VAR_FNC:
 		case VAR_STR:	u->str = byte_array_copy(v->str);	break;
-		case VAR_LST:	u->list = v->list;					break;
+		case VAR_LST:	u->list = v->list;
+						u->list->current = u->list->data;	break;
 		default:		exit_message("bad var type");		break;
 	}
 	if (v->type == VAR_STR)
@@ -628,6 +658,26 @@ struct variable *variable_deserialize(struct byte_array *bits)
 	return out;
 }
 
+int variable_save(const struct variable* v,
+				  const struct variable* path)
+{
+	assert_message(v, "variable is null");
+	assert_message(path, "path is null");
+
+	struct byte_array *bytes = byte_array_new();
+	variable_serialize(bytes, v);
+	return write_file(path->str, bytes);
+}
+
+struct variable *variable_load(const struct variable* path)
+{
+	assert_message(path, "path is null");
+	
+	struct byte_array *file_bytes = read_file(path->str);
+	struct variable *v = variable_deserialize(file_bytes);
+	return v;
+}
+
 static inline struct variable *default_member(const struct variable *indexable,
 											  const struct variable *index)
 {
@@ -804,22 +854,23 @@ static inline void push_fnc(struct byte_array *program)
 
 static inline void set(struct program_state *state)
 {	
-	struct variable* from_stack = (struct variable*)ifo_pop(operand_stack);
 	struct byte_array *program = state->code;
-	const struct byte_array* name = serial_decode_string(program);
+	const struct byte_array* to_name = serial_decode_string(program);
+	struct variable *to_var = find_var(state, to_name);
+	struct variable* from_stack = (struct variable*)ifo_pop(operand_stack);
 
-	struct variable *from_name = find_var(state, name);
-	if (!from_name) { // new variable
+	if (!to_var) { // new variable
 		struct map *var_map = state->named_variables;
-		from_name = variable_copy(from_stack);
-		map_insert(var_map, name, (void*)from_name);
+		to_var = variable_copy(from_stack);
+		to_var->name = byte_array_copy(to_name);
+		map_insert(var_map, to_name, (void*)to_var);
 	}
 	else
-		variable_set(from_name, from_stack);
-
+		variable_set(to_var, from_stack);
+	
 	DEBUGPRINT("SET %s to %s\n",
-			   byte_array_to_string(name),
-			   variable_value(from_name));
+			   byte_array_to_string(to_name),
+			   variable_value(to_var));
 }
 
 static inline void list_put()
@@ -866,7 +917,6 @@ static inline struct variable *binary_op_int(enum Opcode op,
 		case VM_SUB:	i = m - n;	break;
 		case VM_AND:	i = m && n;	break;
 		case VM_EQ:		i = m == n;	break;
-		case VM_NEQ:	i = m != n;	break;
 		case VM_OR:		i = m || n;	break;
 		case VM_GT:		i = n > m;	break;
 		case VM_LT:		i = n < m;	break;
@@ -919,24 +969,95 @@ static inline struct variable *binary_op_str(enum Opcode op,
 	return w;
 }
 
+static inline bool variable_compare(const struct variable *u,
+									const struct variable *v)
+{
+	if (!u != !v)
+		return false;
+	enum VarType ut = (enum VarType)u->type;
+	enum VarType vt = (enum VarType)v->type;
+
+	if (ut != vt)
+		return false;
+
+	switch (ut) {
+		case VAR_LST:
+			if (u->list->length != v->list->length)
+				return false;
+			for (int i=0; i<u->list->length; i++) {
+				struct variable *ui = (struct variable*)array_get(u->list, i);
+				struct variable *vi = (struct variable*)array_get(v->list, i);
+				if (!variable_compare(ui, vi))
+					return false;		
+			}
+			// for list, check the map too
+		case VAR_MAP: {
+			struct array *keys = map_keys(u->map);
+			for (int i=0; i<keys->length; i++) {
+				struct byte_array *key = array_get(keys, i);
+				struct variable *uvalue = map_get(u->map, key);
+				struct variable *vvalue = map_get(v->map, key);
+				if (!variable_compare(uvalue, vvalue))
+					return false;
+			}
+			return true; }
+		case VAR_INT:
+			return u->integer == v->integer;
+		case VAR_FLT:
+			return u->floater == v->floater;
+		case VAR_STR:
+			return byte_array_equals(u->str, v->str);
+		default:
+			exit_message("bad comparison");
+			return false;
+	}
+}
+
+static inline struct variable *binary_op_lst(enum Opcode op,
+											 const struct variable *u,
+											 const struct variable *v)
+{
+	assert_message(u->type==VAR_LST && v->type==VAR_LST, "list op with non-lists");
+	struct variable *w = NULL;
+
+	switch (op) {
+		case VM_ADD:
+			w = variable_copy(u);
+			for (int i=0; i<v->list->length; i++)
+				array_add(w->list, array_get(v->list, i));
+			break;
+		default:
+			exit_message("unknown string operation");
+			break;
+	}
+
+	return w;
+}
+
 static inline void binary_op(enum Opcode op)
 {
 	const struct variable *u = (const struct variable*)ifo_pop(operand_stack);
 	const struct variable *v = (const struct variable*)ifo_pop(operand_stack);
 	struct variable *w;
-	enum VarType ut = (enum VarType)u->type;
-	enum VarType vt = (enum VarType)v->type;
+
+	if (op == VM_EQ) {
+		bool same = variable_compare(u, v);
+		w = variable_new_int(same);
+	} else {
 	
-	if (vt == VAR_STR)
-		w = binary_op_str(op, u, v);
-	else if ((ut == VAR_FLT && is_num(vt)) || (vt == VAR_FLT && is_num(ut)))
-		w = binary_op_float(op, u, v);
-	else if (ut == VAR_INT && vt == VAR_INT) 
-		w = binary_op_int(op, u, v);
-	else
-		exit_message("unknown binary op");
+		enum VarType ut = (enum VarType)u->type;
+		enum VarType vt = (enum VarType)v->type;
+
+		if (vt == VAR_STR)															w = binary_op_str(op, u, v);
+		else if ((ut == VAR_FLT && is_num(vt)) || (vt == VAR_FLT && is_num(ut)))	w = binary_op_float(op, u, v);
+		else if (ut == VAR_INT && vt == VAR_INT)									w = binary_op_int(op, u, v);
+		else if (vt == VAR_LST)														w = binary_op_lst(op, u, v);
+		else
+			exit_message("unknown binary op");
+	}
+	
 	lifo_push(operand_stack, w);
-	
+
 	DEBUGPRINT("%s(%s,%s) = %s\n",
 			   num_to_string(opcodes, ARRAY_LEN(opcodes), op),
 			   variable_value(v),
