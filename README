@@ -1,6 +1,6 @@
-v0.1 10/1/11
+v0.2 11/20/11
 
-Kangaroo is a scripting language, with a compiler and virtual machine written in C99. On an ARM chip, the VM takes 11KB.
+Kangaroo is a scripting language, with a compiler and virtual machine written in C99. On an ARM chip, the VM takes <20KB.
 
 You may run the unit test thusly:
 	make
@@ -160,3 +160,13 @@ test('scope',
 		return n
 	end,
 	2)
+
+test('file',
+        function()
+                x = [2,'3':4,'5']
+                save(x, 'test_file')
+                y = load('test_file')
+                remove('test_file')
+                return x == y
+        end,
+        1)
