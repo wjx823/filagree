@@ -2,10 +2,81 @@
 #include "util.h"
 #include <sys/stat.h>
 #include <string.h>
+#include <stdarg.h>
 
+char *make_message(const char *format, va_list list) // based on printf(3) man page
+{
+	int n;
+	int size = 100;	 // Guess we need no more than 100 bytes.
+	char *p, *np;
+
+	if ((p = malloc(size)) == NULL)
+		return NULL;
+
+	while (1) {
+
+		// Try to print in the allocated space.
+
+		n = vsnprintf(p, size, format, list);
+
+		// If that worked, return the string.
+
+		if (n > -1 && n < size)
+			return p;
+
+		// Else try again with more space.
+
+		if (n > -1)	// glibc 2.1
+			size = n+1;	// precisely what is needed
+		else		// glibc 2.0
+			size *= 2;	// twice the old size
+		
+		if ((np = realloc (p, size)) == NULL) {
+			free(p);
+			return NULL;
+		} else {
+			p = np; // QED
+		}
+	}
+}
+
+#define PRINT_FORMATED_AND_EXIT(...)	\
+{	va_list list;						\
+		va_start(list, format );		\
+		vfprintf(stderr, format, list);	\
+		va_end(list );					\
+		fprintf(stderr, "\n");			\
+		exit(1);						\
+	}
+
+void assert_message(bool assertion, const char *format, ...)
+{
+	if (!assertion)
+		PRINT_FORMATED_AND_EXIT(format);
+}
+
+void exit_message(const char *format, ...)
+{
+	PRINT_FORMATED_AND_EXIT(format);
+}
+
+void null_check(const void *pointer) {
+	if (!pointer) {
+		fprintf(stderr, "null pointer");
+		exit(1);
+	}
+}
+
+const char* num_to_string(const struct number_string *ns, int num_items, int num)
+{
+	for (int i=0; i<num_items; i++) // reverse lookup nonterminal string
+		if (num == ns[i].number)
+			return ns[i].chars;
+	exit_message("num not found");
+	return NULL;
+}
 
 // file
-
 
 #ifdef FILE_RW
 
@@ -55,7 +126,8 @@ struct byte_array *read_file(const struct byte_array *filename_ba)
 		exit_message(ERROR_FCLOSE);
 	
 	struct byte_array* ba = byte_array_new_size(read);
-	ba->data = ba->current = str;
+	ba->data = str;
+	byte_array_reset(ba);
 	return ba;
 }
 

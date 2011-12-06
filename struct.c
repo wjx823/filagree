@@ -19,25 +19,25 @@
 
 // array ///////////////////////////////////////////////////////////////////
 
-struct array* array_new() {
+struct array *array_new() {
     return array_new_size(0);
 }
 
-struct array* array_new_size(uint32_t size) {
-    struct array* a = (struct array*)malloc(sizeof(struct array));
+struct array *array_new_size(uint32_t size) {
+    struct array *a = (struct array*)malloc(sizeof(struct array));
     a->data = a->current = NULL;
     a->length = 0;
     return a;
 }
 
-void array_del(struct array* a) {
+void array_del(struct array *a) {
     for (int i=0; i<a->length; i++)
         free(array_get(a, i));
     free(a->data);
     free(a);
 }
 
-void array_resize(struct array* a, uint32_t length) {
+void array_resize(struct array *a, uint32_t length) {
     a->data = (void**)realloc(a->data, length * sizeof(void*));
     null_check(a->data);
     memset(&a->data[a->length], 0, length-a->length);
@@ -48,6 +48,16 @@ uint32_t array_add(struct array *a, void *datum) {
     a->data = (void**)realloc(a->data, (a->length+1) * sizeof(void*));
     a->data[a->length++] = datum;
     return a->length-1;
+}
+
+void array_insert(struct array *a, uint32_t index, void *datum)
+{
+    a->data = (void**)realloc(a->data, (a->length+1) * sizeof(void*));
+	uint32_t i;
+	for (i=a->length; i>index; i--)
+		a->data[i] = a->data[i-1];
+	a->data[i] = datum;
+	a->length++;
 }
 
 void* array_get(const struct array *a, uint32_t index) {
@@ -106,7 +116,7 @@ void byte_array_resize(struct byte_array* ba, uint32_t size) {
     ba->size = size;
 }
 
-bool byte_array_equals(const struct byte_array* a, const struct byte_array* b) {
+bool byte_array_equals(const struct byte_array *a, const struct byte_array* b) {
     if (a==b)
         return true;
     if (!a != !b) // one is null and the other is not
@@ -132,12 +142,13 @@ struct byte_array* byte_array_copy(const struct byte_array* original) {
     return copy;
 }
 
-void byte_array_append(struct byte_array* a, const struct byte_array* b) {
+void byte_array_append(struct byte_array *a, const struct byte_array* b) {
     null_check(a);
     null_check(b);
     uint32_t offset = a->size;
     byte_array_resize(a, a->size + b->size);
     memcpy(&a->data[offset], b->data, b->size);
+	a->current = a->data + a->size;
 }
 
 struct byte_array* byte_array_from_string(const char* str)
@@ -150,8 +161,8 @@ struct byte_array* byte_array_from_string(const char* str)
 
 char* byte_array_to_string(const struct byte_array* ba)
 {
-    int len = ba->size + 1;
-    char* s = (char*)malloc(len + 1);
+    int len = ba->size;
+    char* s = (char*)malloc(len+1);
     memcpy(s, ba->data, len);
     s[len] = 0;
     return s;
@@ -186,8 +197,9 @@ struct byte_array* byte_array_concatenate(int n, const struct byte_array* ba, ..
     return result;
 }
 
-struct byte_array* byte_array_add_byte(struct byte_array* a, uint8_t b) {
+struct byte_array* byte_array_add_byte(struct byte_array *a, uint8_t b) {
     byte_array_resize(a, a->size+1);
+	a->current = a->data + a->size;
     a->data[a->size-1] = b;
     return a;
 }
@@ -200,62 +212,51 @@ void byte_array_print(const char* text, const struct byte_array* ba) {
         printf("\t%s%d\n", i==offset?">":" ", ba->data[i]);
 }
 
-// ifo ////////////////////////////////////////////////////////////////////
+// lifo ////////////////////////////////////////////////////////////////////
 
-struct ifo* ifo_new() {
-    return (struct ifo*)calloc(sizeof(struct ifo), 1);
+struct lifo* lifo_new() {
+    return (struct lifo*)calloc(sizeof(struct lifo), 1);
 }
 
-struct ifo_node* ifo_node_new() {
-    return (struct ifo_node*)calloc(sizeof(struct ifo_node), 1);
+struct lifo_node* lifo_node_new() {
+    return (struct lifo_node*)calloc(sizeof(struct lifo_node), 1);
 }
 
-void fifo_push(struct ifo* fifo_, void* data)
-{
-    null_check(data);
-    if (!fifo_->head)
-        fifo_->head = fifo_->tail = ifo_node_new();
-    else
-        fifo_->tail = fifo_->tail->next = ifo_node_new();
-    null_check(fifo_->tail);
-    fifo_->tail->data = data;
-}
-
-void lifo_push(struct ifo* lifo_, void* data)
+void lifo_push(struct lifo* lifo_, void* data)
 {
     null_check(data);
     if (!lifo_->head)
-        lifo_->head = lifo_->tail = ifo_node_new();
+        lifo_->head = lifo_->tail = lifo_node_new();
     else {
-        struct ifo_node* old_head = lifo_->head;
-        lifo_->head = ifo_node_new();
+        struct lifo_node* old_head = lifo_->head;
+        lifo_->head = lifo_node_new();
         null_check(lifo_->head);
         lifo_->head->next = old_head;
     }
     lifo_->head->data = data;
 }
 
-void* ifo_pop(struct ifo* ifo_)
+void* lifo_pop(struct lifo* lifo_)
 {
-    if (!ifo_->head)
+    if (!lifo_->head)
         return NULL;
-    void* data = ifo_->head->data;
-    ifo_->head = ifo_->head->next;
+    void* data = lifo_->head->data;
+    lifo_->head = lifo_->head->next;
     null_check(data);
     return data;
 }
 
-void* ifo_peek(const struct ifo* ifo, uint8_t index)
+void* lifo_peek(const struct lifo* lifo, uint8_t index)
 {
-    null_check(ifo);
-    struct ifo_node*p = ifo->head;
+    null_check(lifo);
+    struct lifo_node*p = lifo->head;
     for (; index; index--, p=p->next);
     return p ? p->data : NULL;
 }
 
-bool ifo_empty(const struct ifo* ifo)
+bool lifo_empty(const struct lifo* lifo)
 {
-	return ifo->head == NULL && ifo->tail == NULL;
+	return lifo->head == NULL && lifo->tail == NULL;
 }
 
 // map /////////////////////////////////////////////////////////////////////
@@ -331,7 +332,7 @@ int map_insert(struct map* m, const struct byte_array* key, void *data)
 }
 
 struct array* map_keys(const struct map* m) {
-    struct array* a = array_new();
+    struct array *a = array_new();
     for (int i=0; i<m->size; i++)
         for (const struct hash_node* n = m->nodes[i]; n; n=n->next)
             if (n->data)
@@ -340,7 +341,7 @@ struct array* map_keys(const struct map* m) {
 }
 
 struct array* map_values(const struct map* m) {
-    struct array* a = array_new();
+    struct array *a = array_new();
     for (int i=0; i<m->size; i++)
         for (const struct hash_node* n = m->nodes[i]; n; n=n->next)
             if (n->data)
@@ -422,12 +423,13 @@ int map_resize(struct map* m, size_t size)
     return 0;
 }
 
-// in case of intersection, b wins
-void map_union(struct map *a, const struct map *b)
+// in case of intersection, a wins
+void map_update(struct map *a, const struct map *b)
 {
     const struct array *keys = map_keys(b);
     for (int i=0; i<keys->length; i++) {
         const struct byte_array *key = (const struct byte_array*)array_get(keys, i);
-        map_insert(a, key, map_get(b, key));
+		if (!map_has(a, key))
+			map_insert(a, key, map_get(b, key));
     }
 }

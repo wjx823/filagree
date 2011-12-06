@@ -17,6 +17,14 @@ test('add strings',
 	end,
 	'hello, world!')
 
+test('add lists',
+	function()
+		a = [1,2,3,'p':4,'q':5]
+		b = [3,4,'q':6,'r':7]
+		return a+b
+	end,
+	[1,2,3,3,4,'p':4,'q':5,'r':7])
+
 test('if-then',
 	function()
 		if true
@@ -92,9 +100,9 @@ test('float',
 test('serial',
 	function()
 		a = [2,3,4]
-	a.x = 7
-	b = a.serialize
-	c = b.deserialize
+		a.x = 7
+		b = a.serialize
+		c = b.deserialize
 		return c.x + c[2]
 	end,
 	11)
@@ -123,10 +131,10 @@ test('string',
 test('scope',
 	function()
 		n = 2
-	f = function(n)
-		n = 3
-	end
-	f(4)
+		f = function(n)
+			n = 3
+		end
+		f(4)
 		return n
 	end,
 	2)
@@ -140,3 +148,39 @@ test('file',
  		return x == y
  	end,
  	1)
+
+test('default params',
+	function()
+		f = function(a=3,b,c,d=9,e)
+			if not c then
+				return  a + d # + (e or 7)
+			end
+			return 99
+		end
+		return f(2,4)
+	end,
+	11)
+
+/* coming next
+test('many returns',
+	function()
+		f = function()
+			return 12,6
+		end
+		x,y = f()
+		return x/y
+	end,
+	2)
+
+test('sort',
+	function()
+		p = [3,1,4,1,5,9,6,2]
+		q = [['a':3, 'b'1'], ['c':4, 'b':5'], ['b':6, 'a':2]]
+		r = p.sort()
+		s = q.sort(function(x) return x.a*2 + x.b*3 end)
+		return r+s
+	end,
+	2)
+*/
+
+tests_complete()

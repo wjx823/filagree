@@ -21,10 +21,15 @@
 #define ESCAPED_NEWLINE	'n'
 #define ESCAPED_TAB		't'
 #define ESCAPED_QUOTE	'\''
+#define PARAM_VALUE		0
+#define PARAM_NAME		1
 
+uint32_t line;
 struct array* lex_list;
 struct map *imports = NULL;
 struct byte_array *read_file(const struct byte_array *filename);
+
+// todo: enable cast between some primitives: flt->int, etc.
 
 // token ///////////////////////////////////////////////////////////////////
 
@@ -58,7 +63,7 @@ struct token {
 		LEX_RIGHTSTACHE,
 		LEX_IDENTIFIER,
 		LEX_STRING,
-		LEX_NUMBER,
+		LEX_INTEGER,
 		LEX_TRUE,
 		LEX_FALSE,
 		LEX_IF,
@@ -74,6 +79,7 @@ struct token {
 	} lexeme;
 	uint32_t number;
 	struct byte_array *string;
+	uint32_t at_line;
 };
 
 struct number_string lexemes[] = {
@@ -125,9 +131,9 @@ const char* lexeme_to_string(enum Lexeme lexeme)
 	switch (lexeme) {
 		case LEX_IDENTIFIER:return "id";		break;
 		case LEX_STRING:	return "string";	break;
-		case LEX_NUMBER:	return "number";	break;
+		case LEX_INTEGER:	return "number";	break;
 		default:
-			return num_to_string(lexemes, ARRAY_LEN(lexemes), lexeme);
+			return NUM_TO_STRING(lexemes, lexeme);
 			break;
 	}
 	return NULL;
@@ -141,10 +147,10 @@ void display_token(struct token *token, int depth) {
 		indent[i] = '\t';
 	indent[i] = 0;
 	DEBUGPRINT("%s%d ", indent, token->lexeme);
-	
+
 	switch (token->lexeme) {
 		case LEX_NONE:												break;
-		case LEX_NUMBER:	DEBUGPRINT("%u", token->number);		break;
+		case LEX_INTEGER:	DEBUGPRINT("%u", token->number);		break;
 		case LEX_STRING:
 		case LEX_IDENTIFIER: {
 			char* s = byte_array_to_string(token->string);
@@ -176,22 +182,23 @@ void display_lex_list() {
 
 struct array* lex(struct byte_array *binput);
 
-struct token *token_new(enum Lexeme lexeme) {
+struct token *token_new(enum Lexeme lexeme, int at_line) {
 	struct token *t = malloc(sizeof(struct token));
 	t->lexeme = lexeme;
 	t->string = NULL;
 	t->number = 0;
+	t->at_line = line;
 	return t;
 }
 
 struct token *insert_token(enum Lexeme lexeme) {
-	struct token *token = token_new(lexeme);
+	struct token *token = token_new(lexeme, line);
 	array_add(lex_list, token);
 	return token;
 }
 
 int insert_token_number(const char *input, int i) {
-	struct token *token = insert_token(LEX_NUMBER);
+	struct token *token = insert_token(LEX_INTEGER);
 	token->number = atoi(&input[i]);
 	//while (isdigit(input[i++]));
 	for (; isdigit(input[i]); i++);
@@ -209,7 +216,7 @@ int insert_token_string(enum Lexeme lexeme, const char* input, int i)
 	while ((lexeme==LEX_IDENTIFIER && isiden(input[i])) || 
 		   (lexeme==LEX_STRING && input[i] != QUOTE)) {
 		uint8_t c = input[i++];
-		DEBUGPRINT("@%d c=%3d %c\n", i, c, c);
+		//DEBUGPRINT("@%d c=%3d %c\n", i, c, c);
 		if (c == ESCAPE) {
 			c = input[i++];
 			switch (c) {
@@ -221,11 +228,12 @@ int insert_token_string(enum Lexeme lexeme, const char* input, int i)
 		}
 		byte_array_add_byte(string, c);
 	}
-	
+
 	int end = i + (lexeme==LEX_STRING);
-	struct token *token = token_new(lexeme);
+	struct token *token = token_new(lexeme, line);
 	token->string = string;
 	array_add(lex_list, token);
+	//display_token(token, 0);
 	return end;
 }
 
@@ -253,30 +261,36 @@ int import(const char* input, int i)
 
 struct array* lex(struct byte_array *binput)
 {
-	DEBUGPRINT("lex:\n");
 	lex_list = array_new();
 	imports = map_new();
 	int i=0,j;
 	char c;
+	line = 1;
 
 	const char* input = byte_array_to_string(binput);
 	const char* right_comment = lexeme_to_string(LEX_RIGHT_COMMENT);
 	int right_comment_len = strlen(right_comment);
-	
+
 lexmore:
 	while (i < binput->size) {
 
 		for (j=0; j<ARRAY_LEN(lexemes); j++) {
+
 			char* lexstr = lexemes[j].chars;
+
 			if (!strncmp(&input[i], lexstr, strlen(lexstr))) {
+
 				enum Lexeme lexeme = lexemes[j].number;
-				if (lexeme == LEX_LEFT_COMMENT) {
-					while (strncmp(&input[i++], right_comment, right_comment_len));
-					i += right_comment_len-1;
-				}
-				else if (lexeme == LEX_LINE_COMMENT)
+
+				if (lexeme == LEX_LEFT_COMMENT) { // start comment with /*
+					while (strncmp(&input[i], right_comment, right_comment_len))
+						if (input[i++] == '\n')
+							line++;
+					i += right_comment_len;
+				} else if (lexeme == LEX_LINE_COMMENT) { // start line comment with #
 					while (input[i++] != '\n');
-				else if (lexeme == LEX_IMPORT)
+					line++;
+				} else if (lexeme == LEX_IMPORT)
 					i = import(input, i);
 				else {
 					if (lexeme == LEX_DIVIDE)
@@ -286,11 +300,12 @@ lexmore:
 				goto lexmore;
 			}
 		}
-		
+	
 		c = input[i];
-		
+	
 		if (isdigit(c))			i = insert_token_number(input,i);
 		else if (isiden(c))		i = insert_token_string(LEX_IDENTIFIER, input, i);
+		else if (c == '\n')		{ line++; i++; }
 		else if (isspace(c))	i++;
 		else if (c=='\'')		i = insert_token_string(LEX_STRING, input, i+1);
 		else					exit_message(ERROR_LEX);
@@ -298,7 +313,6 @@ lexmore:
 #ifdef DEBUG
 	display_lex_list();
 #endif
-	DEBUGPRINT("done lexing\n\n");
 	return lex_list;
 }
 
@@ -307,7 +321,7 @@ lexmore:
  BNF:
  
  <statements> --> ( <ifthenelse> | <loop> | <rejoinder> | <assignment> | <fcall> )+
- <assignment> --> LEX_IDENTIFIER <member>* LEX_LET_IT_BE ( ( <fdecl> | <expression> ) <dictionary> )^ )
+ <assignment> --> LEX_IDENTIFIER <member>* LEX_SET ( ( <fdecl> | <expression> ) <dictionary> )^ )
  <ifthenelse> --> IF <expression> THEN <statements>
 	(ELSE IF <expression> THEN <statements>)*
 	(ELSE <statements>)? LEX_END
@@ -319,8 +333,9 @@ lexmore:
  <pair> --> <expression> LEX_COLON <expression>
  <rejoinder> --> LEX_RETURN <expression>
  <fdecl> --> FUNCTION LEX_LEFT_PARENTHESIS
-	( LEX_IDENTIFIER ( LEX_COMMA LEX_IDENTIFIER )* )?
+	( <param> ( LEX_COMMA <param> )* )?
 	LEX_RIGHT_PARENTHESIS <statements> LEX_END
+ <param> --> LEX_IDENTIFIER ( LEX_SET <expression> )?
  <fcall> --> <expression> <call>
  <call> --> LEX_LEFT_PARENTHESIS
 	( <expression> ( LEX_COMMA <expression> )* )?
@@ -332,8 +347,9 @@ lexmore:
  <exp4> --> <exp5> ( <call> | member )*
  <exp5> --> ( LEX_LEFT_PARENTHESIS <expression> LEX_RIGHT_PARENTHESIS ) | <atom>
  
- <atom> -->  LEX_IDENTIFIER | <float> | <integer> | <table> | <fdecl>
- <integer> --> LEX_INTEGER | LEX_TRUE | LEX_FALSE
+ <atom> -->  LEX_IDENTIFIER | <float> | <integer> | <boolean> | <table> | <fdecl>
+ <integer> --> LEX_INTEGER
+ <boolean> --> LEX_TRUE | LEX_FALSE
  <floater> --> LEX_INTEGER LEX_PERIOD LEX_INTEGER
  <string> --> LEX_STRING
  <member> --> LEX_PERIOD <identifier>
@@ -358,7 +374,6 @@ struct symbol {
 		SYMBOL_IF_THEN_ELSE,
         SYMBOL_LOOP,
 		SYMBOL_EXPRESSION,
-		SYMBOL_ATOM,
 		SYMBOL_INTEGER,
 		SYMBOL_FLOAT,
 		SYMBOL_STRING,
@@ -366,10 +381,13 @@ struct symbol {
 		SYMBOL_TABLE,
 		SYMBOL_PAIR,
 		SYMBOL_FDECL,
+		SYMBOL_PARAM,
 		SYMBOL_FCALL,
 		SYMBOL_MEMBER,
 		SYMBOL_LENGTH,
 		SYMBOL_RETURN,
+		SYMBOL_BOOLEAN,
+		SYMBOL_NIL,
 	} nonterminal;
 	const struct token *token;
 	float floater;
@@ -383,7 +401,6 @@ struct number_string nonterminals[] = {
 	{SYMBOL_IF_THEN_ELSE,	"if-then-else"},
     {SYMBOL_LOOP,			"loop"},
 	{SYMBOL_EXPRESSION,		"expression"},
-	{SYMBOL_ATOM,			"atom"},
 	{SYMBOL_INTEGER,		"integer"},
 	{SYMBOL_FLOAT,			"float"},
 	{SYMBOL_STRING,			"string"},
@@ -391,15 +408,18 @@ struct number_string nonterminals[] = {
 	{SYMBOL_TABLE,			"table"},
 	{SYMBOL_PAIR,			"pair"},
 	{SYMBOL_FDECL,			"fdecl"},
+	{SYMBOL_PARAM,			"param"},
 	{SYMBOL_FCALL,			"fcall"},
 	{SYMBOL_MEMBER,			"member"},
 	{SYMBOL_LENGTH,			"length"},
 	{SYMBOL_RETURN,			"return"},
+	{SYMBOL_BOOLEAN,		"boolean"},
+	{SYMBOL_NIL,			"nil"},
 };
 
 struct symbol *symbol_new(enum Nonterminal nonterminal)
 {
-	//	DEBUGPRINT("symbol_new %s\n", num_to_string(nonterminals, ARRAY_LEN(nonterminals), nonterminal));
+	//	DEBUGPRINT("symbol_new %s\n", NUM_TO_STRING(nonterminals, ARRAY_LEN(nonterminals), nonterminal));
 	struct symbol *s = malloc(sizeof(struct symbol));
 	s->nonterminal = nonterminal;
 	s->branches = array_new();
@@ -428,7 +448,7 @@ void display_symbol(const struct symbol *symbol, int depth) {
 		indent[i] = '\t';
 	indent[i] = 0;
 	DEBUGPRINT("%s%d ", indent, symbol->nonterminal);
-	
+
 	switch (symbol->nonterminal) {
 		case SYMBOL_INTEGER:
 			DEBUGPRINT("%u", symbol->token->number);
@@ -444,22 +464,22 @@ void display_symbol(const struct symbol *symbol, int depth) {
 		} break;
 		case SYMBOL_EXPRESSION:
 			DEBUGPRINT("%s %s",
-					   num_to_string(nonterminals, ARRAY_LEN(nonterminals), symbol->nonterminal),
+					   NUM_TO_STRING(nonterminals, symbol->nonterminal),
 					   lexeme_to_string(symbol->token->lexeme));
 			break;
 		default:
-			DEBUGPRINT("%s", num_to_string(nonterminals, ARRAY_LEN(nonterminals), symbol->nonterminal));
+			DEBUGPRINT("%s", NUM_TO_STRING(nonterminals, symbol->nonterminal));
 			break;
 	}
 	DEBUGPRINT("\n");
-	
+
 	depth++;
 	const struct array *branches = symbol->branches;
 	for (int k=0; k<branches->length; k++) {
 		const struct symbol *branch = array_get(branches, k);
 		display_symbol(branch, depth);
 	}
-	
+
 	free(indent);
 }
 
@@ -488,7 +508,7 @@ struct token *fetch(enum Lexeme lexeme) {
 	struct token *token = parse_list->data[parse_index];
 	if (token->lexeme != lexeme)
 		return NULL;
-	DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
+	//DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
 	parse_index++;
 	return token;
 }
@@ -512,7 +532,7 @@ struct token *fetch_lookahead(enum Lexeme lexeme, ...) {
 	struct token *t=NULL;
 	va_list argp;
 	va_start(argp, lexeme);
-	
+
 	for (; lexeme; lexeme = va_arg(argp, enum Lexeme)) {
 		if (LOOKAHEAD == lexeme) {
 			t = fetch(lexeme);
@@ -530,18 +550,18 @@ struct symbol *symbol_fetch(enum Nonterminal n, enum Lexeme goal, ...)
 	struct token *token = parse_list->data[parse_index];
 	assert_message(token!=0, ERROR_NULL);
 	enum Lexeme lexeme = token->lexeme;
-	
+
 	struct symbol *symbol = NULL;
-	
+
 	va_list argp;
 	va_start(argp, goal);
-	
+
 	for (; goal; goal = va_arg(argp, enum Lexeme)) {
 		if (lexeme == goal) {
-			
+		
 			symbol = symbol_new(n);
 			symbol->token = token;
-			DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
+			//DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
 			parse_index++;
 			break;
 		}
@@ -557,16 +577,16 @@ struct symbol *symbol_adds(struct symbol *s, struct symbol *child, ...) {
 		array_add(s->branches, child);
 	va_end(argp);
 	return s;
-	
+
 }
 
 //////////////////////////////// BNFs
 
-struct symbol *element(bool colonizable)
+struct symbol *element(enum Lexeme attach)
 {
-	DEBUGPRINT("element @ %d\n", parse_index);
+	//DEBUGPRINT("element @ %d\n", parse_index);
 	struct symbol *e = expression();
-	if (colonizable && fetch(LEX_COLON)) { // i.e., x:y
+	if (attach && fetch(attach)) { // i.e., x:y
 		struct symbol *f = expression();
 		struct symbol *p = symbol_new(SYMBOL_PAIR);
 		e = symbol_adds(p, f, e, NULL);
@@ -577,42 +597,59 @@ struct symbol *element(bool colonizable)
 struct symbol *list(enum Nonterminal nonterminal,
 					enum Lexeme start,
 					enum Lexeme stop,
-					bool colonizable) {
-	FETCH_OR_QUIT(start);
+					enum Lexeme attach) {
+	// FETCH_OR_QUIT(start);
+	struct token *t = fetch(start);
+	if (!t) return NULL;
+
 	struct symbol *s = symbol_new(nonterminal);
-	
+
+	//DEBUGPRINT("start list at line %d\n", t->at_line);
 	if (LOOKAHEAD!=stop) {
-		symbol_adds(s, element(colonizable), NULL);
+		symbol_adds(s, element(attach), NULL);
 		while (fetch(LEX_COMMA))
-			symbol_adds(s, element(colonizable), NULL);
-	}	
+			symbol_adds(s, element(attach), NULL);
+	}
 	if (LOOKAHEAD!=stop) {
-		int c = LOOKAHEAD;
-		DEBUGPRINT("bad list: %d\n", c);
+		int l = LOOKAHEAD;
+		DEBUGPRINT("bad list: %s\n", NUM_TO_STRING(lexemes, l));
 		exit_message("bad list");
 		return NULL;
 	}
-	fetch(stop);
+	t = fetch(stop);
+	//DEBUGPRINT("end list at line %d\n", t->at_line);
 	return s;
 }
 
-struct symbol *fdecl() {
+// <param> --> LEX_IDENTIFIER ( LEX_SET <expression> )?
+struct symbol *param()
+{
+	struct symbol *s = symbol_fetch(SYMBOL_PARAM, LEX_IDENTIFIER, NULL);
+	if (fetch(LEX_SET))
+		symbol_add(s, expression());
+	return s;
+}
+
+// <fdecl> --> FUNCTION LEX_LEFT_PARENTHESIS
+//	( <param> ( LEX_COMMA <param> )* )?
+//	LEX_RIGHT_PARENTHESIS <statements> LEX_END
+struct symbol *fdecl()
+{
 	FETCH_OR_QUIT(LEX_FUNCTION)
-	struct symbol *s = list(SYMBOL_FDECL, LEX_LEFTHESIS, LEX_RIGHTHESIS, false);
+	struct symbol *s = list(SYMBOL_FDECL, LEX_LEFTHESIS, LEX_RIGHTHESIS, LEX_SET);
 	symbol_add(s, statements());
 	fetch(LEX_END);
 	return s;
 }
 
 struct symbol *table() {
-	//	DEBUGPRINT("table\n");
-	return list(SYMBOL_TABLE, LEX_LEFTSQUARE, LEX_RIGHTSQUARE, true);
+	return list(SYMBOL_TABLE, LEX_LEFTSQUARE, LEX_RIGHTSQUARE, LEX_COLON);
 }
 
 struct symbol *integer()
 {
 	//	DEBUGPRINT("integer\n");
-	struct token *t = fetch_lookahead(LEX_NUMBER, LEX_TRUE, LEX_FALSE, NULL);
+	struct token *t = fetch(LEX_INTEGER);
 	if (!t)
 		return NULL;
 	struct symbol *s = symbol_new(SYMBOL_INTEGER);
@@ -620,22 +657,32 @@ struct symbol *integer()
 	return s;
 }
 
+struct symbol *boolean()
+{
+	struct token *t = fetch_lookahead(LEX_TRUE, LEX_FALSE, NULL);
+	if (!t)
+		return NULL;
+	struct symbol *s = symbol_new(SYMBOL_BOOLEAN);
+	s->token = t;
+	return s;
+}
+
 struct symbol *floater()
 {
 	//	DEBUGPRINT("floater\n");
-	struct token *a = fetch(LEX_NUMBER);
+	struct token *a = fetch(LEX_INTEGER);
 	if (!a)
 		return NULL;
-	
+
 	FETCH_OR_QUIT(LEX_PERIOD);
-	
-	struct token *b = fetch(LEX_NUMBER);
+
+	struct token *b = fetch(LEX_INTEGER);
 	if (!b)
 		return NULL;
-	
+
 	struct symbol *s = symbol_new(SYMBOL_FLOAT);
 	float decimal;
-	for (decimal = b->number; decimal>1; decimal /= 10);	
+	for (decimal = b->number; decimal>1; decimal /= 10);
 	s->floater = a->number + decimal;
 	return s;
 }
@@ -647,7 +694,7 @@ struct symbol *string()
 	struct token *t = fetch(LEX_STRING);
 	if (!t)
 		return NULL;
-	struct symbol *s = symbol_new(SYMBOL_STRING); // todo: add lexeme as second parameter
+	struct symbol *s = symbol_new(SYMBOL_STRING);
 	s->token = t;
 	return s;
 }
@@ -663,10 +710,10 @@ struct symbol *variable()
 	return s;
 }
 
-// <atom> -->  LEX_IDENTIFIER | <string> | <integer> | <floater> | <table>
+//  <atom> -->  LEX_IDENTIFIER | <float> | <integer> | <boolean> | <table> | <fdecl>
 struct symbol *atom()
 {
-	return one_of(&variable, &string, &floater, &integer, &table, &fdecl, NULL);
+	return one_of(&variable, &string, &floater, &integer, &boolean, &table, &fdecl, NULL);
 }
 
 // <exp5> --> ( LEX_LEFTTHESIS <expression> LEX_RIGHTTHESIS ) | <atom>
@@ -702,14 +749,17 @@ struct symbol *member()
 // <call> --> LEX_LEFT_PARENTHESIS ( <expression> ( LEX_COMMA <expression> )* )? LEX_RIGHT_PARENTHESIS
 struct symbol *call()
 {
-	return list(SYMBOL_FCALL, LEX_LEFTHESIS, LEX_RIGHTHESIS, false);
+	return list(SYMBOL_FCALL, LEX_LEFTHESIS, LEX_RIGHTHESIS, LEX_NONE);
 }
 
 // <fcall> --> <expression> <call>
 struct symbol *fcall()
 {
 	struct symbol *e = expression();
-	return e && e->nonterminal ==  SYMBOL_FCALL ? e : NULL;
+	if (e && e->nonterminal ==  SYMBOL_FCALL)
+		return e;
+	return NULL;
+//	return e && e->nonterminal ==  SYMBOL_FCALL ? e : NULL;
 }
 
 // <exp4> --> <exp5> ( <call> | member )*
@@ -750,7 +800,7 @@ struct symbol *expression()
 	return e;
 }
 
-// <assignment> --> <variable> <member>* LEX_LET_IT_BE ( <fdecl> | <expression> )
+// <assignment> --> <variable> <member>* LEX_SET ( <fdecl> | <expression> )
 struct symbol *assignment()
 {
 	struct symbol *m, *v = variable();
@@ -759,7 +809,7 @@ struct symbol *assignment()
 	while ((m = member()))
 		v = symbol_adds(m, v, NULL);
 	FETCH_OR_QUIT(LEX_SET);
-	
+
 	struct symbol *s = symbol_new(SYMBOL_ASSIGNMENT);
 	symbol_adds(s, v, NULL);
 	return symbol_adds(s, one_of(&expression, &fdecl), NULL);
@@ -775,7 +825,7 @@ struct symbol *ifthenelse()
 	symbol_add(f, expression());
 	fetch(LEX_THEN);
 	symbol_add(f, statements());
-	
+
 	while (lookahead(0) == LEX_ELSE && lookahead(1) == LEX_IF) {
 		fetch(LEX_ELSE);
 		fetch(LEX_IF);
@@ -783,7 +833,7 @@ struct symbol *ifthenelse()
 		fetch(LEX_THEN);
 		symbol_add(f, statements());
 	}
-	
+
 	if (fetch_lookahead(LEX_ELSE))
 		symbol_add(f, statements());
 	fetch(LEX_END);
@@ -874,10 +924,10 @@ struct symbol *parse(struct array *list, uint32_t index)
 	DEBUGPRINT("parse:\n");
 	assert_message(list!=0, ERROR_NULL);
 	assert_message(index<list->length, ERROR_INDEX);
-	
+
 	parse_list = list;
 	parse_index = index;
-	
+
 	struct symbol *p = statements();
 #ifdef DEBUG
 	display_symbol(p, 1);
@@ -903,19 +953,20 @@ struct byte_array *encodeInt(int n) {
 
 struct byte_array *generate_step(int count, int action,...)
 {
-	
+
 	struct byte_array *bytecode = byte_array_new_size(1);
 	bytecode->data[0] = (uint8_t)action;
-	
+	bytecode->current = bytecode->data + 1;
+
 	va_list argp;
-	uint8_t parameter;	
+	uint8_t parameter;
 	for(va_start(argp, action); --count;) {
 		parameter = va_arg(argp, int);
 		byte_array_add_byte(bytecode, (uint8_t)parameter);
 	}
-	
+
 	va_end(argp);
-	
+
 	return bytecode;
 }
 
@@ -945,13 +996,13 @@ struct byte_array *generate_math(struct symbol *root)
 		case LEX_AND:			op = VM_AND;			break;
 		case LEX_OR:			op = VM_OR;				break;
 		case LEX_NOT:			op = VM_NOT;			break;
-		case LEX_SAME:			op = VM_EQ;				break;
+		case LEX_SAME:			op = VM_EQU;			break;
 		case LEX_DIFFERENT:		op = VM_NEQ;			break;
 		case LEX_GREATER:		op = VM_GT;				break;
-		case LEX_LESSER:		op = VM_LT;				break;			
+		case LEX_LESSER:		op = VM_LT;				break;		
 		default:	exit_message("bad math lexeme");	break;
 	}
-	byte_array_append(code, generate_step(1,op));
+	byte_array_append(code, generate_step(1, op));
 	return code;
 }
 
@@ -972,14 +1023,14 @@ struct byte_array *generate_ifthenelse(struct symbol *root)
 		assert_message(thn->nonterminal == SYMBOL_STATEMENTS, "branch syntax error");
 		struct byte_array *thn_code = generate_code(thn);
 		byte_array_append(thn_code, generate_jump(0)); // jump to end
-		
+	
 		// if
 		struct symbol *iff = array_get(root->branches, i);
 		byte_array_append(code, generate_code(iff));
 		byte_array_append(code, generate_step(2, VM_IF, thn_code->size));
 		byte_array_append(code, thn_code);
 		array_add(gotos, (void*)(VOID_INT)(code->size-1));
-		
+	
 		// else
 		if (root->branches->length > i+2) {
 			struct symbol *els = array_get(root->branches, i+2);
@@ -991,7 +1042,7 @@ struct byte_array *generate_ifthenelse(struct symbol *root)
 			}
 		}
 	}
-	
+
 	// go back and fill in where to jump to the end of if-then-elseif-else when done
 	for (int j=0; j<gotos->length; j++) {
 		VOID_INT g = (VOID_INT)array_get(gotos, j);
@@ -1020,14 +1071,20 @@ struct byte_array *generate_float(struct symbol *root)
 	return step;
 }
 
-struct byte_array *generate_int(struct symbol *root) {
-	uint32_t value;
+struct byte_array *generate_integer(struct symbol *root) {
+	struct byte_array *code = generate_step(1, VM_INT);
+	return serial_encode_int(code, 0, root->token->number);
+}
+
+struct byte_array *generate_boolean(struct symbol *root) {
+	uint32_t value = 0;
 	switch (root->token->lexeme) {
-		case LEX_TRUE:	value = 1;						break;
-		case LEX_FALSE:	value = 0;						break;
-		default:		value = root->token->number;	break;
+		case		LEX_TRUE:	value = 1;						break;
+		case		LEX_FALSE:	value = 0;						break;
+		default:	exit_message("bad boolean value");			return NULL;
 	}
-	return generate_step(2, VM_INT, value);
+	struct byte_array *code = generate_step(1, VM_BOOL);
+	return serial_encode_int(code, 0, value);
 }
 
 struct byte_array *generate_string(struct symbol *root) {
@@ -1044,26 +1101,38 @@ struct byte_array *generate_assignment(struct symbol *root)
 	struct symbol *rhs = array_get(root->branches, RHS);
 	struct byte_array *lhs_code = generate_code(lhs);
 	struct byte_array *rhs_code = generate_code(rhs);
-	
+
 	struct byte_array *a = byte_array_concatenate(2, rhs_code, lhs_code);
 	return a;
 }
 
 struct byte_array *generate_fdecl(struct symbol *root)
 {
-	struct byte_array *code = byte_array_new();
 	struct array *args = root->branches;
-	for (int i=args->length-2; i>=0; i--) {
-		struct symbol *arg = array_get(args, i);
-		struct byte_array *name = serial_encode_string(0, 0, arg->token->string);
-		byte_array_append(code, generate_step(1,VM_SET));
-		byte_array_append(code, name);
-		
+	uint32_t num_args = args->length-1; // last item in root->branches is function code
+	struct byte_array *code = generate_step(2, VM_ARG, num_args);
+
+	// function arguments
+	for (int i=num_args-1; i>=0; i--) {  
+
+		struct symbol *key = array_get(args, i);
+		struct symbol *value;
+
+		if (key->nonterminal == SYMBOL_PAIR) {
+			value = array_get(key->branches, PARAM_VALUE);
+			key = array_get(key->branches, PARAM_NAME);
+		} else
+			value = symbol_new(SYMBOL_NIL);
+
+		serial_encode_string(code, 0, key->token->string);
+		byte_array_append(code, generate_code(value));
 	}
+
+	// function body
 	struct symbol *body = array_get(root->branches, root->branches->length-1);
 	byte_array_append(code, generate_code(body));
 	struct byte_array *code_str = serial_encode_string(0, 0, code);
-	
+
 	struct byte_array *op = generate_step(1, VM_FNC);
 	struct byte_array *fd = byte_array_concatenate(2, op, code_str);
 	return fd;
@@ -1078,31 +1147,30 @@ struct byte_array *generate_variable(struct symbol *root)
 	return op;
 }
 
-struct byte_array *generate_array_items(const struct array* items)
+struct byte_array *generate_array_items(enum Opcode opcode, const struct symbol* root)
 {
+	const struct array *items = root->branches;
+	uint32_t num_items = items->length;
 	struct byte_array *step, *result = byte_array_new();
-	for (int i=0; i<items->length; i++) {
+
+	for (int i=0; i<num_items; i++) {
 		struct symbol *item = (struct symbol*)array_get(items, i);
 		step = generate_code(item);
 		byte_array_append(result, step);
 	}
-	return result;
+
+	struct byte_array *op = generate_step(2, opcode, num_items);
+	return byte_array_concatenate(2, result, op);
 }
 
 struct byte_array *generate_pair(struct symbol *root)
 {
-	struct byte_array *items = generate_array_items(root->branches);
-	struct byte_array *op = generate_step(2, VM_MAP, root->branches->length/2);
-	struct byte_array *list = byte_array_concatenate(2, items, op);
-    return list;
+	return generate_array_items(VM_MAP, root);
 }
 
 struct byte_array *generate_list(struct symbol *root)
 {
-	struct byte_array *items = generate_array_items(root->branches);
-	struct byte_array *op = generate_step(2, VM_LST, root->branches->length);
-	struct byte_array *list = byte_array_concatenate(2, items, op);
-    return list;
+	return generate_array_items(VM_LST, root);
 }
 
 struct  byte_array* generate_member(struct symbol *root)
@@ -1123,32 +1191,39 @@ struct  byte_array* generate_member(struct symbol *root)
 
 struct byte_array *generate_fcall(struct symbol *root)
 {
-	struct byte_array *op = generate_step(1, VM_CAL);
-	struct byte_array *params = generate_array_items(root->branches);
-	return byte_array_concatenate(2, params, op);
+	return generate_array_items(VM_CAL, root);
 }
 
 struct byte_array *generate_return(struct symbol *root)
 {
 	struct byte_array *code = generate_code(array_get(root->branches,0));
+	struct byte_array *ret = generate_step(1, VM_RET);
+	byte_array_append(code, ret);
 	// todo: put multiple return items into an array
 	return code;
+}
+
+struct byte_array *generate_nil()
+{
+	return generate_step(1, VM_NIL);
 }
 
 struct byte_array *generate_code(struct symbol *root)
 {
 	if (root==0)
 		return NULL;
-	
+
 	struct byte_array *code = NULL;
 	code_generator *codegen;
-	
+
 	//DEBUGPRINT("generate_code %s\n", nonterminals[root->nonterminal]);
 	switch(root->nonterminal) {
 		case SYMBOL_STATEMENTS:		return generate_statements(root);
 		case SYMBOL_ASSIGNMENT:		return generate_assignment(root);
 		case SYMBOL_EXPRESSION:		return generate_math(root);
-		case SYMBOL_INTEGER:		return generate_int(root);
+		case SYMBOL_NIL:			return generate_nil();
+		case SYMBOL_INTEGER:		return generate_integer(root);
+		case SYMBOL_BOOLEAN:		return generate_boolean(root);
 		case SYMBOL_FLOAT:			return generate_float(root);
 		case SYMBOL_STRING:			return generate_string(root);
 		case SYMBOL_VARIABLE:		return generate_variable(root);
@@ -1158,10 +1233,10 @@ struct byte_array *generate_code(struct symbol *root)
 		case SYMBOL_FDECL:			return generate_fdecl(root);
 		case SYMBOL_PAIR:			return generate_pair(root);
 		case SYMBOL_TABLE:			return generate_list(root);
-        case SYMBOL_LOOP:			return generate_loop(root);
+		case SYMBOL_LOOP:			return generate_loop(root);
 		case SYMBOL_RETURN:			return generate_return(root);
 		default:
-			exit_message(ERROR_TOKEN);	
+			exit_message(ERROR_TOKEN);
 			break;
 	}
 	code = codegen(root);
@@ -1180,13 +1255,14 @@ struct byte_array *generate(struct symbol *root)
 	display_program(0, program);
 #endif
 	return program;
-}	
+}
 
 // build ///////////////////////////////////////////////////////////////////
 
 struct byte_array *build_string(const struct byte_array *input) {
 	assert_message(input!=0, ERROR_NULL);
 	struct byte_array *input_copy = byte_array_copy(input);
+	DEBUGPRINT("lex:\n");
 	struct array* list = lex(input_copy);
 	struct symbol *tree = parse(list, 0);
 	return generate(tree);

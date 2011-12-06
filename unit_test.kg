@@ -1,12 +1,18 @@
-num_tests = 1
+num_tests = 0
+num_passed = 0
 
 test = function(title, code, expected)
 	answer = code()
 	if answer == expected then
 		result = 'passed'
+		num_passed = num_passed + 1
 	else
 		result = 'failed'
 	end
-	print('#' + num_tests + ' ' + title + ': ' + result)
+	print('#' + (num_tests+1) + ' ' + title + ': ' + result)
 	num_tests = num_tests + 1
+end
+
+tests_complete = function()
+	print('unit tests done -- ' + num_passed +'/'+ num_tests +' passed')
 end

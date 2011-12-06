@@ -17,6 +17,41 @@
 
 // functions ///////////////////////////////////////////////////////////////
 
+// tells how many bytes are needed to encode this value
+uint8_t encode_int_size(int32_t value)
+{
+    uint8_t i;
+    value = (value >= 0 ? value : -value) >> 6;
+    for (i=1; value; i++, value >>=7);
+    return i;
+}
+
+struct byte_array* encode_int(struct byte_array* buf, int32_t value)
+{
+    if (!buf)
+		buf = byte_array_new();
+    uint8_t growth = encode_int_size(value);
+    byte_array_resize(buf, buf->size + growth);
+    uint8_t byte = (value & 0x3F) | ((value >= 0x40) ? 0x80 : 0) | ((value < 0) ? 0x40 : 0); 
+    *buf->current++ = byte; 
+    value >>= 6;
+    while (value) {
+        //        DEBUGPRINT("%llu %llu %d\n", value, (value & 0x7F), (value >= 0x80));
+        byte = (value & 0x7F) | ((value >= 0x80) ? 0x80 : 0); 
+        *buf->current++ = byte; 
+        value >>= 7;
+    }
+    return buf;
+}
+
+struct byte_array* serial_encode_int(struct byte_array* buf, int32_t key, int32_t value) {
+    if (!buf)
+        buf = byte_array_new();
+    if (key)
+        encode_int(buf, key<<2 | SERIAL_INT);
+    encode_int(buf, value);
+    return buf;
+}
 
 int32_t serial_decode_int(struct byte_array* buf)
 {
@@ -44,9 +79,12 @@ float serial_decode_float(struct byte_array* buf)
 
 struct byte_array* serial_decode_string(struct byte_array* buf)
 {
+	null_check(buf);
     int32_t len = serial_decode_int(buf);
+	assert_message(len>=0, "negative malloc");
     struct byte_array* ba = byte_array_new_size(len);
     ba->data = ba->current = (uint8_t*)malloc(len);
+	null_check(ba->data);
     memcpy(ba->data, buf->current, len);
     buf->current += len;
     return ba;
@@ -89,32 +127,6 @@ void serial_decode(struct byte_array* buf, serial_element se, const void* extra)
 //    DEBUGPRINT("serial_decode done\n");
 }
 
-// tells how many bytes are needed to encode this value
-uint8_t encode_int_size(int32_t value)
-{
-    uint8_t i;
-    value = (value >= 0 ? value : -value) >> 6;
-    for (i=1; value; i++, value >>=7);
-    return i;
-}
-
-struct byte_array* encode_int(struct byte_array* buf, int32_t value)
-{
-    if (!buf) buf = byte_array_new();
-    uint8_t growth = encode_int_size(value);
-    byte_array_resize(buf, buf->size + growth);
-    uint8_t byte = (value & 0x3F) | ((value >= 0x40) ? 0x80 : 0) | ((value < 0) ? 0x40 : 0); 
-    *buf->current++ = byte; 
-    value >>= 6;
-    while (value) {
-        //        DEBUGPRINT("%llu %llu %d\n", value, (value & 0x7F), (value >= 0x80));
-        byte = (value & 0x7F) | ((value >= 0x80) ? 0x80 : 0); 
-        *buf->current++ = byte; 
-        value >>= 7;
-    }
-    return buf;
-}
-
 // assume little endian
 struct byte_array *encode_float(struct byte_array *buf, float f)
 {
@@ -124,15 +136,6 @@ struct byte_array *encode_float(struct byte_array *buf, float f)
         byte_array_add_byte(buf, *uf);
         uf++;
     }
-    return buf;
-}
-
-struct byte_array* serial_encode_int(struct byte_array* buf, int32_t key, int32_t value) {
-    if (!buf)
-        buf = byte_array_new();
-    if (key)
-        encode_int(buf, key<<2 | SERIAL_INT);
-    encode_int(buf, value);
     return buf;
 }
 

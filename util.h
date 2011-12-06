@@ -33,6 +33,7 @@ __android_log_write(ANDROID_LOG_ERROR, TAG, log_message); }
 #include <stdio.h>
 #define DEBUGPRINT(...) fprintf( stderr, __VA_ARGS__ );
 
+
 #endif // (not) ANDROID
 
 #else // (not) DEBUG
@@ -44,8 +45,9 @@ __android_log_write(ANDROID_LOG_ERROR, TAG, log_message); }
 #define ITOA_LEN    19 // enough for 64-bit integer
 
 extern jmp_buf trying;
-void assert_message(bool assertion, const char* message);
-void exit_message(const char* message);
+char *make_message(const char *fmt, va_list ap);
+void assert_message(bool assertion, const char *format, ...);
+void exit_message(const char *format, ...);
 void null_check(const void* p);
 int try();
 
@@ -66,6 +68,7 @@ struct number_string {
 };
 
 const char* num_to_string(const struct number_string *ns, int num_items, int num);
+#define NUM_TO_STRING(ns, num) num_to_string(ns, ARRAY_LEN(ns), num)
 
 // error messages
 
