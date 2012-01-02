@@ -1,8 +1,8 @@
 UNAME := $(shell uname -s)
 
 CC=gcc
-CFLAGS=-c -Wall -O0 -std=c99 -I -fnested-functions -fms-extensions -DTEST -DFILE_RW -DDEBUG
-LDFLAGS=
+CFLAGS=-c -Wall -Os -std=c99 -I -fnested-functions -fms-extensions -DTEST -DFILE_RW -DDEBUG -ffunction-sections -fdata-sections
+LDFLAGS=-Wl --gc-sections
 SOURCES=vm.c struct.c serial.c compile.c test.c util.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=interpret

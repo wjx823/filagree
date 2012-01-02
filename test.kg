@@ -1,6 +1,6 @@
-import '/Users/yusuf/make/vm/unit_test'
+import 'unit_test'
 
-test('add integers',
+tester.test('add integers',
 	function()
 		a = 7
 		b = 8
@@ -9,7 +9,7 @@ test('add integers',
 	end,
 	15)
 
-test('add strings',
+tester.test('add strings',
 	function()
 		p = 'hello, '
 		q = p + 'world!'
@@ -17,7 +17,7 @@ test('add strings',
 	end,
 	'hello, world!')
 
-test('add lists',
+tester.test('add lists',
 	function()
 		a = [1,2,3,'p':4,'q':5]
 		b = [3,4,'q':6,'r':7]
@@ -25,7 +25,7 @@ test('add lists',
 	end,
 	[1,2,3,3,4,'p':4,'q':5,'r':7])
 
-test('if-then',
+tester.test('if-then',
 	function()
 		if true
 			then b=2
@@ -36,22 +36,22 @@ test('if-then',
 	end,
 	2)
 
-test('index',
+tester.test('index',
 	function()
 		a = [7,8,9]
 		return a[2]
 	end,
 	9)
 
-test('list set',
+tester.test('list set',
 	function()
 		a = [7,8,9]
-	a[2] = 19
+		a[2] = 19
 		return a[2]
 	end,
 	19)
 
-test('fdecl',
+tester.test('fdecl',
 	function()
 		f = function (a,b,c)
 			return a+b+c
@@ -60,44 +60,32 @@ test('fdecl',
 	end,
 	6)
 
-test('if-then-else',
-	function()
-		if 2>3 then
-			return '2>3'
-		else if 3==3 then
-			return '3==3'
-		else
-			return '2<3'
-		end
-	end,
-	'3==3')
-
-test('while',
+tester.test('while',
 	function()
 		i = 1
-	while i < 7
-		i = i + 1
-	end
+		while i < 7
+			i = i + 1
+		end
 		return i
 	end,
 	7)
 
-test('comment',
+tester.test('comment',
 	function()
 		# return 1
 		return 2
 	end,
 	2)
 
-test('float',
+tester.test('float',
 	  function()
 		x = 1.2
 	  y = 3.4
 	  return x + y > 4
 	end,
-	  1)
+	1)
 
-test('serial',
+tester.test('serial',
 	function()
 		a = [2,3,4]
 		a.x = 7
@@ -107,7 +95,7 @@ test('serial',
 	end,
 	11)
 
-test('map',
+tester.test('map',
 	function()
 		x='y'
 		a = [2,3,4,'x':7,x:8]
@@ -121,14 +109,14 @@ test('map',
 	end,
 	'[2,3,4,\'x\':7,\'y\':8,\'z\':9]list3[2,3,4][\'x\',\'y\',\'z\'][7,8,9]')
 
-test('string',
+tester.test('string',
 	function()
 		a = 'supercalifragilisticexpialidocious!' 
 		return a[34].string
 	end,
 	'!')
 
-test('scope',
+tester.test('scope',
 	function()
 		n = 2
 		f = function(n)
@@ -139,48 +127,39 @@ test('scope',
 	end,
 	2)
 
-test('file',
+tester.test('file',
  	function()
  		x = [2,'3':4,'5']
- 		save(x, 'test_file')
- 		y = load('test_file')
- 		remove('test_file')
+ 		vm.save(x, 'test_file')
+ 		y = vm.load('test_file')
+ 		vm.remove('test_file')
  		return x == y
  	end,
  	1)
 
-test('default params',
-	function()
-		f = function(a=3,b,c,d=9,e)
-			if not c then
-				return  a + d # + (e or 7)
-			end
-			return 99
-		end
-		return f(2,4)
-	end,
-	11)
-
-/* coming next
-test('many returns',
+tester.test('many returns',
 	function()
 		f = function()
 			return 12,6
 		end
-		x,y = f()
-		return x/y
+		x,y,z = f()
+		if not z then
+			return x/y
+		else
+			return 99
+		end
 	end,
 	2)
 
-test('sort',
+tester.test('sort',
 	function()
 		p = [3,1,4,1,5,9,6,2]
-		q = [['a':3, 'b'1'], ['c':4, 'b':5'], ['b':6, 'a':2]]
-		r = p.sort()
-		s = q.sort(function(x) return x.a*2 + x.b*3 end)
-		return r+s
+		p.sort()
+		q = [['a':3, 'b':4], ['a':2, 'b':5]]
+		q.sort(function(x,y) return y.a - x.a end)
+		return p[0] + q[0].a
 	end,
-	2)
-*/
+	3)
 
-tests_complete()
+
+tester.done()

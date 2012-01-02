@@ -31,7 +31,7 @@ __android_log_write(ANDROID_LOG_ERROR, TAG, log_message); }
 #else // not ANDROID
 
 #include <stdio.h>
-#define DEBUGPRINT(...) fprintf( stderr, __VA_ARGS__ );
+#define DEBUGPRINT(...) fprintf( stderr, __VA_ARGS__ )
 
 
 #endif // (not) ANDROID

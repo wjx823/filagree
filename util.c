@@ -47,7 +47,7 @@ char *make_message(const char *format, va_list list) // based on printf(3) man p
 		va_end(list );					\
 		fprintf(stderr, "\n");			\
 		exit(1);						\
-	}
+}
 
 void assert_message(bool assertion, const char *format, ...)
 {
@@ -61,10 +61,8 @@ void exit_message(const char *format, ...)
 }
 
 void null_check(const void *pointer) {
-	if (!pointer) {
-		fprintf(stderr, "null pointer");
-		exit(1);
-	}
+	if (!pointer)
+		exit_message("null pointer");
 }
 
 const char* num_to_string(const struct number_string *ns, int num_items, int num)

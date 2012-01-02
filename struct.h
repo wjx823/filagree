@@ -31,7 +31,7 @@ uint32_t array_add(struct array *a , void *datum);
 void array_insert(struct array *a, uint32_t index, void *datam);
 void* array_get(const struct array *a, uint32_t index);
 void array_set(struct array *a, uint32_t index, void *datum);
-void array_remove(struct array *a, uint32_t index);
+void *array_remove(struct array *a, uint32_t index);
 
 // byte_array ///////////////////////////////////////////////////////////////
 
@@ -54,25 +54,25 @@ bool byte_array_equals(const struct byte_array *a, const struct byte_array* b);
 struct byte_array* byte_array_concatenate(int n, const struct byte_array* ba, ...);
 void byte_array_print(const char* text, const struct byte_array* ba);
 
-// lifo ////////////////////////////////////////////////////////////////////
+// stack ////////////////////////////////////////////////////////////////////
 
-struct lifo_node {
+struct stack_node {
 	void* data;
-	struct lifo_node* next;
+	struct stack_node* next;
 };
 
-struct lifo {
-	struct lifo_node* head;
-	struct lifo_node* tail;
+struct stack {
+	struct stack_node* head;
+	struct stack_node* tail;
 };
 
-struct lifo* lifo_new();
-struct lifo_node* lifo_node_new();
-void fifo_push(struct lifo* fifo, void* data);
-void lifo_push(struct lifo* lifo, void* data);
-void* lifo_pop(struct lifo* lifo);
-void* lifo_peek(const struct lifo* lifo, uint8_t index);
-bool lifo_empty(const struct lifo* lifo);
+struct stack* stack_new();
+struct stack_node* stack_node_new();
+void fifo_push(struct stack* fifo, void* data);
+void stack_push(struct stack* stack, void* data);
+void* stack_pop(struct stack* stack);
+void* stack_peek(const struct stack* stack, uint8_t index);
+bool stack_empty(const struct stack* stack);
 
 // map /////////////////////////////////////////////////////////////////////
 

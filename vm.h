@@ -19,7 +19,9 @@ enum Opcode {
     VM_STR,	//	push a string
     VM_VAR,	//	push a variable
     VM_FNC,	//	push a function
-    VM_SET,	//	pop a value and set a variable to it
+    VM_DST,	//	done with assignment
+    VM_SET, //  set a variable
+	VM_SRC,	//	push a set of values
     VM_LST,	//	push a list
     VM_MAP,	//	push a map
     VM_GET,	//	get an item from a list or map
@@ -39,7 +41,7 @@ enum Opcode {
     VM_IF,	//	if then
     VM_JMP,	//	jump the program counter
     VM_CAL,	//	call a function
-	VM_ARG,	//	function arguments
+	VM_MET,	//	call an object method
 	VM_RET,	//	return from a function,
 };
 
@@ -68,7 +70,7 @@ struct variable {
         int integer;
         float floater;
 		bool boolean;
-        void(*cfnc)(struct lifo*); // i.e., bridge
+        void(*cfnc)(struct stack*); // i.e., bridge
     };
     struct map *map;
 };
@@ -78,12 +80,21 @@ struct byte_array *variable_serialize(struct byte_array *bits,
 									  const struct variable *in);
 struct variable *variable_deserialize(struct byte_array *str);
 
-typedef void(bridge)(struct lifo*);
+typedef void(bridge)(struct stack*);
 
 #define ERROR_OPCODE "unknown opcode"
 
 void display_program(const char* title, struct byte_array* program);
 struct variable *execute(struct byte_array *program, bridge *callback_to_c);
+
+extern int variable_save(const struct variable* v,
+						 const struct variable* path);
+extern struct variable *variable_load(const struct variable* path);
+struct variable *variable_new_err(const char* message);
+struct variable *variable_new_c(bridge *cfnc);
+struct variable *variable_new_int(int32_t i);
+struct variable *variable_new_nil();
+struct variable *variable_new_map(struct map *map);
 
 
 #endif // VM_H
