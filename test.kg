@@ -1,4 +1,4 @@
-import 'unit_test'
+import '/Users/yusuf/make/vm/unit_test'
 
 tester.test('add integers',
 	function()
@@ -161,5 +161,32 @@ tester.test('sort',
 	end,
 	3)
 
+tester.test('find',
+	function()
+		p = 'one two three'
+		q = p.find('two')
+		r = p.find('o', 1)
+		return q+r
+	end,
+	10)
+
+tester.test('part',
+	function()
+		p = 'one two three'
+		q = p.part(4,3)
+		return q
+	end,
+	'two')
+
+tester.test('replace',
+	function()
+		p = 'one two three four'
+		q = p.replace('two', '2')
+		r = q.replace('o', '0', 1) # specifying position means not global
+		s = r.replace('e', '3')
+		t = s.replace(6, 3, 'gl') # start, length, new_string
+		return t
+	end,
+	'on3 2 gl33 f0ur')
 
 tester.done()

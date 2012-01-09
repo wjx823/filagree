@@ -18,5 +18,8 @@ struct string_func
 
 struct variable *func_map();
 
+struct variable *builtin_method(struct variable *indexable,
+								const struct variable *index);
+
 
 #endif // SYS_H

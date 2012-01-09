@@ -26,7 +26,7 @@ uint8_t encode_int_size(int32_t value)
     return i;
 }
 
-struct byte_array* encode_int(struct byte_array* buf, int32_t value)
+struct byte_array *encode_int(struct byte_array *buf, int32_t value)
 {
     if (!buf)
 		buf = byte_array_new();

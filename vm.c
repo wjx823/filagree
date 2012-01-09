@@ -13,7 +13,6 @@ struct stack *program_stack;
 struct stack *operand_stack;
 struct stack *rhs;
 uint32_t num_inst_executed = 0;
-struct variable *comparator = NULL;
 
 #ifdef DEBUG
 
@@ -22,11 +21,10 @@ struct variable *comparator = NULL;
 void display_instruction(struct byte_array *program);
 void display_code(struct byte_array *code);
 void print_operand_stack();
-struct variable* run(struct byte_array *program);
+struct variable* run(struct byte_array *program, bool in_context);
 struct variable *rhs_pop();
 static void dst();
 void src_size();
-static void call();
 
 uint8_t indent;
 #define INDENT indent++;
@@ -51,7 +49,7 @@ struct variable* error = 0;
 
 jmp_buf trying;
 
-static inline void vm_exit() {
+static  void vm_exit() {
 	longjmp(trying, 1);
 }
 
@@ -148,16 +146,10 @@ const struct number_string var_types[] = {
 	{VAR_C,			"c-function"},
 };
 
-#define FNC_STRING		"string"
-#define FNC_LIST		"list"
-#define FNC_TYPE		"type"
-#define FNC_LENGTH		"length"
-#define FNC_KEYS		"keys"
-#define FNC_VALUES		"values"
-#define FNC_SERIALIZE	"serialize"
-#define FNC_DESERIALIZE	"deserialize"
-#define FNC_SORT		"sort"
-
+const char *var_type_str(enum VarType vt)
+{
+	return NUM_TO_STRING(var_types, vt);
+}
 
 struct variable* variable_new(enum VarType type)
 {
@@ -177,7 +169,7 @@ struct variable* variable_new_err(const char* message)
 	return v;
 }
 
-inline struct variable* variable_new_nil()
+ struct variable* variable_new_nil()
 {
 	return variable_new(VAR_NIL);
 }
@@ -437,6 +429,8 @@ const struct number_string opcodes[] = {
 	{VM_CAL,		"CAL"},
 	{VM_MET,		"MET"},
 	{VM_RET,		"RET"},
+	{VM_ITR,		"ITR"},
+	{VM_COM,		"COM"},
 };
 
 void print_operand_stack()
@@ -456,7 +450,7 @@ const char* indentation()
 	return (const char*)str;
 }
 
-static inline void display_program_counter(const struct byte_array *program)
+static  void display_program_counter(const struct byte_array *program)
 {
 	DEBUGPRINT("%s%2ld:%3d ", indentation(), program->current-program->data, *program->current);
 }
@@ -467,7 +461,7 @@ void display_code(struct byte_array *code)
 	runtime = false;
 
 	INDENT
-	run(code);
+	run(code, false);
 	UNDENT
 
 	runtime = was_running;
@@ -517,14 +511,14 @@ void src_size(int32_t size)
     //stack_push(rhs_stack, rhs);
 }
 
-static inline void src(enum Opcode op, struct byte_array *program)
+static  void src(enum Opcode op, struct byte_array *program)
 {
 	int32_t size = serial_decode_int(program);
 	VM_DEBUGPRINT("%s %d\n", NUM_TO_STRING(opcodes, op), size);
 	src_size(size);
 }
 
-static void call()
+void vm_call()
 {
 	// get the function pointer from the stack
 	struct variable *func = runtime ? variable_pop() : NULL;
@@ -533,7 +527,7 @@ static void call()
 	// call the function
 	switch (func->type) {
 		case VAR_FNC:
-			run(func->str);
+			run(func->str, false);
 			break;
 		case VAR_C:
 			func->cfnc(operand_stack);
@@ -546,13 +540,13 @@ static void call()
 	UNDENT
 }
 
-static inline void func_call()
+static  void func_call()
 {
 	VM_DEBUGPRINT("VM_CAL\n");
-	call();
+	vm_call();
 }
 
-static inline void push_list(struct byte_array *program)
+static  void push_list(struct byte_array *program)
 {
 	int32_t num_items = serial_decode_int(program);
 	DEBUGPRINT("LST %d", num_items);
@@ -574,7 +568,7 @@ static inline void push_list(struct byte_array *program)
 	variable_push(list);
 }
 
-static inline void push_map(struct byte_array *program)
+static  void push_map(struct byte_array *program)
 {
 	int32_t num_items = serial_decode_int(program);
 	DEBUGPRINT("MAP %d", num_items);
@@ -623,220 +617,7 @@ struct variable* variable_copy(const struct variable* v)
 
 // run /////////////////////////////////////////////////////////////////////
 
-struct byte_array *variable_serialize(struct byte_array *bits,
-									  const struct variable *in)
-{
-	//DEBUGPRINT("\tserialize:%s\n", variable_value(in));
-	if (!bits)
-		bits = byte_array_new();
-	serial_encode_int(bits, 0, in->type);
-	switch (in->type) {
-		case VAR_INT:	serial_encode_int(bits, 0, in->integer);	break;
-		case VAR_FLT:	serial_encode_float(bits, 0, in->floater);	break;
-		case VAR_STR:
-		case VAR_FNC:	serial_encode_string(bits, 0, in->str);		break;
-		case VAR_LST: {
-			serial_encode_int(bits, 0, in->list->length);
-			for (int i=0; i<in->list->length; i++)
-				variable_serialize(bits, (const struct variable*)array_get(in->list, i));
-			if (in->map) {
-				const struct array *keys = map_keys(in->map);
-				const struct array *values = map_values(in->map);
-				serial_encode_int(bits, 0, keys->length);
-				for (int i=0; i<keys->length; i++) {
-					serial_encode_string(bits, 0, (const struct byte_array*)array_get(keys, i));
-					variable_serialize(bits, (const struct variable*)array_get(values, i));
-				}
-			} else
-				serial_encode_int(bits, 0, 0);
-		} break;
-		case VAR_MAP:												break;
-		default:		vm_exit_message("bad var type");				break;
-	}
-
-	//DEBUGPRINT("in: %s\n", variable_value(in));
-	//byte_array_print("serialized: ", bits);
-	return bits;
-}
-
-struct variable *variable_deserialize(struct byte_array *bits)
-{
-	enum VarType vt = (enum VarType)serial_decode_int(bits);
-	switch (vt) {
-		case VAR_NIL:	return variable_new_nil();
-		case VAR_INT:	return variable_new_int(serial_decode_int(bits));
-		case VAR_FLT:	return variable_new_float(serial_decode_float(bits));
-		case VAR_FNC:	return variable_new_fnc(serial_decode_string(bits));
-		case VAR_STR:	return variable_new_str(serial_decode_string(bits));
-		case VAR_LST: {
-			uint32_t size = serial_decode_int(bits);
-			struct array *list = array_new_size(size);
-			while (size--)
-				array_add(list, variable_deserialize(bits));
-			struct variable *out = variable_new_list(list);
-
-			uint32_t map_length = serial_decode_int(bits);
-			if (map_length) {
-				out->map = map_new();
-				for (int i=0; i<map_length; i++) {
-					struct byte_array *key = serial_decode_string(bits);
-					struct variable *value = variable_deserialize(bits);
-					map_insert(out->map, key, value);
-				}
-			}
-			return out;
-		}
-		default:
-			vm_exit_message("bad var type");
-			return NULL;
-	}
-}
-
-int variable_save(const struct variable* v,
-				  const struct variable* path)
-{
-	vm_null_check(v);
-	vm_null_check(path);
-
-	struct byte_array *bytes = byte_array_new();
-	variable_serialize(bytes, v);
-	return write_file(path->str, bytes);
-}
-
-struct variable *variable_load(const struct variable* path)
-{
-	vm_null_check(path);
-
-	struct byte_array *file_bytes = read_file(path->str);
-	if (!file_bytes) // todo: throw exceptions
-		return NULL;
-	struct variable *v = variable_deserialize(file_bytes);
-	return v;
-}
-
-int (compar)(const void *a, const void *b)
-{
-	struct variable *av = *(struct variable**)a;
-	struct variable *bv = *(struct variable**)b;
-
-	if (comparator) {
-
-		assert_message(comparator->type == VAR_FNC, "non-function comparator");
-		stack_push(rhs, av);
-		stack_push(rhs, bv);
-		//		src_size(2);
-		byte_array_reset(comparator->str);
-		stack_push(operand_stack, comparator);
-		call();
-
-		struct variable *result = stack_pop(rhs);
-		assert_message(result->type == VAR_INT, "non-integer comparison result");
-		return result->integer;
-
-	} else {
-
-		enum VarType at = av->type;
-		enum VarType bt = bv->type;
-
-		if (at == VAR_INT && bt == VAR_INT) {
-			// DEBUGPRINT("compare %p:%d to %p:%d : %d\n", av, av->integer, bv, bv->integer, av->integer - bv->integer);
-			return av->integer - bv->integer;
-		} else
-			DEBUGPRINT("can't compare %s to %s\n", NUM_TO_STRING(var_types, at), NUM_TO_STRING(var_types, bt));
-
-		vm_exit_message("incompatible types for comparison");
-		return 0;
-	}
-}
-
-void sort(struct stack *operands)
-{
-	struct variable *self = stack_pop(rhs);
-	assert_message(self->type == VAR_LST, "sorting a non-list");
-	comparator = stack_pop(rhs);
-
-	int num_items = self->list->length;
-
-	int success = heapsort(self->list->data, num_items, sizeof(struct variable*), &compar);
-	assert_message(!success, "error sorting");
-
-
-/*	struct variable **vars = malloc(num_items * sizeof(struct variable*));
-	for (int i=0; i<num_items; i++) {
-		vars[i] = array_get(self->list, i);
-		DEBUGPRINT("vars[%d] = %p\n", i, vars[i]);
-	}
-
-	int success = heapsort(vars, num_items, sizeof(struct variable*), &compar);
-
-	comparator = NULL;
-	assert_message(!success, "error sorting");
-	for (int j=0; j<num_items; j++) {
-		DEBUGPRINT("vars[%d] = %p\n", j, vars[j]);
-		array_set(self->list, j, vars[j]);
-	}
-	//free(vars);*/
-}
-
-static inline struct variable *builtin_method(struct variable *indexable,
-											  const struct variable *index)
-{
-	const char *idxstr = byte_array_to_string(index->str);
-
-	if (!strcmp(idxstr, FNC_LENGTH))
-		return variable_new_int(indexable->list->length);
-
-	if (!strcmp(idxstr, FNC_TYPE)) {
-		const char *typestr = NUM_TO_STRING(var_types, indexable->type);
-		return variable_new_str(byte_array_from_string(typestr));
-	}
-	
-	if (!strcmp(idxstr, FNC_STRING))
-		return variable_new_str(byte_array_from_string(variable_value(indexable)));
-	
-	if (!strcmp(idxstr, FNC_LIST))
-		return variable_new_list(indexable->list);
-	
-	if (!strcmp(idxstr, FNC_KEYS)) {
-		struct variable *v = variable_new_list(array_new());
-		if (indexable->map) {
-			const struct array *a = map_keys(indexable->map);
-			for (int i=0; i<a->length; i++) {
-				struct variable *u = variable_new_str((struct byte_array*)array_get(a, i));
-				array_add(v->list, u);
-			}
-		}
-		return v;
-	}
-	
-	if (!strcmp(idxstr, FNC_VALUES)) {
-		if (!indexable->map)
-			return variable_new_list(array_new());
-		else
-			return variable_new_list((struct array*)map_values(indexable->map));
-	}
-	
-	if (!strcmp(idxstr, FNC_SERIALIZE)) {
-		struct byte_array *bits = variable_serialize(0, indexable);
-		return variable_new_str(bits);
-	}
-	
-	if (!strcmp(idxstr, FNC_DESERIALIZE)) {
-		struct byte_array *bits = indexable->str;
-		byte_array_reset(bits);
-		struct variable *d = variable_deserialize(bits);
-		return d;
-	}
-	
-	if (!strcmp(idxstr, FNC_SORT)) {
-		assert_message(indexable->type == VAR_LST, "sorting non-list");
-		return variable_new_c(&sort);
-	}
-
-	return NULL;
-}
-
-static inline struct variable *list_get_int(const struct variable *indexable,
+static  struct variable *list_get_int(const struct variable *indexable,
 											const struct variable *index)
 {
 	uint32_t n = index->integer;
@@ -882,7 +663,7 @@ void lookup(struct variable *indexable, struct variable *index)
 	variable_push(item);
 }
 
-static inline void list_get()
+static  void list_get()
 {
 	DEBUGPRINT("GET ");
 	if (!runtime)
@@ -893,7 +674,7 @@ static inline void list_get()
 	lookup(indexable, index);
 }
 
-static inline void method(struct byte_array *program)
+static  void method(struct byte_array *program)
 {
 	DEBUGPRINT("MET ");
 	if (!runtime)
@@ -904,11 +685,11 @@ static inline void method(struct byte_array *program)
 	lookup(indexable, index);
 	//	struct stack *rhs = stack_peek(rhs_stack, 0);
 	stack_push(rhs, indexable);
-	call();
+	vm_call();
 }
 
 
-static inline int32_t jump(struct byte_array *program)
+static  int32_t jump(struct byte_array *program)
 {
 	uint8_t *start = program->current;
 	int32_t offset = serial_decode_int(program);
@@ -919,7 +700,7 @@ static inline int32_t jump(struct byte_array *program)
 	return offset - (program->current - start);
 }
 
-static inline int32_t iff(struct byte_array *program)
+static  int32_t iff(struct byte_array *program)
 {
 	int32_t offset = serial_decode_int(program);
 	DEBUGPRINT("IF %d\n", offset);
@@ -936,14 +717,14 @@ static inline int32_t iff(struct byte_array *program)
 	return go ? 0 : (VOID_INT)offset;
 }
 
-static inline void push_nil()
+static  void push_nil()
 {
 	struct variable* var = variable_new_nil();
 	VM_DEBUGPRINT("NIL\n");
 	variable_push(var);
 }
 
-static inline void push_int(struct byte_array *program)
+static  void push_int(struct byte_array *program)
 {
 	int32_t num = serial_decode_int(program);
 	VM_DEBUGPRINT("INT %d\n", num);
@@ -951,7 +732,7 @@ static inline void push_int(struct byte_array *program)
 	variable_push(var);
 }
 
-static inline void push_bool(struct byte_array *program)
+static  void push_bool(struct byte_array *program)
 {
 	int32_t num = serial_decode_int(program);
 	VM_DEBUGPRINT("BOOL %d\n", num);
@@ -959,7 +740,7 @@ static inline void push_bool(struct byte_array *program)
 	variable_push(var);
 }
 
-static inline void push_float(struct byte_array *program)
+static  void push_float(struct byte_array *program)
 {
 	float num = serial_decode_float(program);
 	VM_DEBUGPRINT("FLT %f\n", num);
@@ -978,7 +759,7 @@ struct variable *find_var(const struct byte_array *name)
 	return v;
 }
 
-static inline void push_var(struct program_state *state)
+static  void push_var(struct program_state *state)
 {
 	struct byte_array *program = state->code;
 	struct byte_array* name = serial_decode_string(program);
@@ -988,7 +769,7 @@ static inline void push_var(struct program_state *state)
 	variable_push(v);
 }
 
-static inline void push_str(struct byte_array *program)
+static  void push_str(struct byte_array *program)
 {
 	struct byte_array* str = serial_decode_string(program);
 	VM_DEBUGPRINT("STR '%s'\n", byte_array_to_string(str));
@@ -996,7 +777,7 @@ static inline void push_str(struct byte_array *program)
 	variable_push(v);
 }
 
-static inline void push_fnc(struct byte_array *program)
+static  void push_fnc(struct byte_array *program)
 {
 	uint32_t fcodelen = serial_decode_int(program);
 	struct byte_array* fbody = byte_array_new_size(fcodelen);
@@ -1040,7 +821,7 @@ struct variable *rhs_pop()
 	return value;
 }
 
-static inline void set(struct program_state *state)
+static  void set(struct program_state *state)
 {
 	struct byte_array *program = state->code;
 	struct byte_array *name = serial_decode_string(program);	// destination variable name
@@ -1060,7 +841,7 @@ static void dst()
 		stack_pop(rhs);
 }
 
-static inline void list_put()
+static  void list_put()
 {
 	DEBUGPRINT("PUT");
 	if (!runtime)
@@ -1093,7 +874,7 @@ static inline void list_put()
 	DEBUGPRINT(": %s\n", variable_value(recipient));
 }
 
-static inline struct variable *binary_op_int(enum Opcode op,
+static  struct variable *binary_op_int(enum Opcode op,
 											 const struct variable *u,
 											 const struct variable *v)
 {
@@ -1117,7 +898,7 @@ static inline struct variable *binary_op_int(enum Opcode op,
 	return variable_new_int(i);
 }
 
-static inline struct variable *binary_op_float(enum Opcode op,
+static  struct variable *binary_op_float(enum Opcode op,
 											   const struct variable *u,
 											   const struct variable *v)
 {
@@ -1139,11 +920,11 @@ static inline struct variable *binary_op_float(enum Opcode op,
 	return variable_new_float(f);
 }
 
-static inline bool is_num(enum VarType vt) {
+static  bool is_num(enum VarType vt) {
 	return vt == VAR_INT || vt == VAR_FLT;
 }
 
-static inline struct variable *binary_op_str(enum Opcode op,
+static  struct variable *binary_op_str(enum Opcode op,
 											 const struct variable *u,
 											 const struct variable *v)
 {
@@ -1159,7 +940,7 @@ static inline struct variable *binary_op_str(enum Opcode op,
 	return w;
 }
 
-static inline bool variable_compare(const struct variable *u,
+static  bool variable_compare(const struct variable *u,
 									const struct variable *v)
 {
 	if (!u != !v)
@@ -1203,7 +984,7 @@ static inline bool variable_compare(const struct variable *u,
 	}
 }
 
-static inline struct variable *binary_op_lst(enum Opcode op,
+static  struct variable *binary_op_lst(enum Opcode op,
 											 const struct variable *u,
 											 const struct variable *v)
 {
@@ -1225,7 +1006,7 @@ static inline struct variable *binary_op_lst(enum Opcode op,
 	return w;
 }
 
-static inline void binary_op(enum Opcode op)
+static  void binary_op(enum Opcode op)
 {
 	if (!runtime)
 		VM_DEBUGPRINT("%s\n", NUM_TO_STRING(opcodes, op));
@@ -1260,7 +1041,7 @@ static inline void binary_op(enum Opcode op)
 			   variable_value(w));
 }
 
-static inline void unary_op(enum Opcode op)
+static  void unary_op(enum Opcode op)
 {
 	if (!runtime)
 		VM_DEBUGPRINT("%s\n", NUM_TO_STRING(opcodes, op));
@@ -1296,9 +1077,45 @@ static inline void unary_op(enum Opcode op)
 			   variable_value(result));
 }
 
-struct variable* run(struct byte_array *program)
+// FOR who IN what WHERE where DO how
+static  void iterate(enum Opcode op, struct program_state *state)
 {
-	struct program_state *state = program_state_from_code(program);
+	struct byte_array *program = state->code;
+	struct variable *what = variable_pop();
+
+	struct byte_array *who = serial_decode_string(program);
+	struct byte_array *where = serial_decode_string(program);
+	struct byte_array *how = serial_decode_string(program);
+	bool comprehending = (op == VM_COM);
+	struct variable *result = comprehending ? variable_new_list(NULL) : NULL;
+
+	for (int i=0; i<what->list->length; i++) {
+
+		struct variable *that = array_get(what->list, i);
+		set_named_variable(state, who, that);
+		run(where, true);
+
+		struct variable *fits = stack_pop(operand_stack);
+		assert_message(fits->type == VAR_BOOL, "non-boolean <where> clause");
+		if (!fits->boolean) {
+
+			run(how, false);
+
+			if (comprehending) {
+				struct variable *item = stack_pop(operand_stack);
+				array_add(result->list, item);
+			}
+		}
+	}
+
+	if (comprehending)
+		stack_push(operand_stack, result);
+}
+
+struct variable* run(struct byte_array *program, bool in_context)
+{
+	struct program_state *state = in_context ? stack_peek(program_stack, 0) :
+											   program_state_from_code(program);
 
 	while (program->current < program->data + program->size) {
 		enum Opcode inst = (enum Opcode)*program->current;
@@ -1346,6 +1163,8 @@ struct variable* run(struct byte_array *program)
 			case VM_VAR:	push_var(state);				break;
 			case VM_FNC:	push_fnc(program);				break;
 			case VM_MET:	method(program);				break;
+			case VM_COM:
+			case VM_ITR:	iterate(inst, state);			break;
 			default:		vm_exit_message(ERROR_OPCODE);	break;
 		}
 
@@ -1380,7 +1199,7 @@ struct variable *execute(struct byte_array *program, bridge *callback_to_c)
 
 	struct variable *v;
 	if (!setjmp(trying))
-		v = run(code);
+		v = run(code, false);
 	else
 		v = error;
 

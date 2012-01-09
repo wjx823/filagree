@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <ctype.h>
 
 #include "vm.h"
 #include "struct.h"
@@ -86,7 +87,7 @@ void *array_remove(struct array *a, uint32_t index) {
 	return removed;
 }
 
-											 
+
 // byte_array ///////////////////////////////////////////////////////////////
 
 struct byte_array* byte_array_new() {
@@ -112,7 +113,7 @@ struct byte_array* byte_array_new_size(uint32_t size) {
 void byte_array_resize(struct byte_array* ba, uint32_t size) {
 	assert_message(ba->current >= ba->data, "byte_array corrupt");
 	assert(size);
-
+	
 	uint32_t delta = ba->current - ba->data;
 	ba->data = (uint8_t*)realloc(ba->data, size);
 	assert(ba->data);
@@ -127,7 +128,7 @@ bool byte_array_equals(const struct byte_array *a, const struct byte_array* b) {
 		return false;
 	if (a->size != b->size)
 		return false;
-
+	
 	int i;
 	for (i = 0; i<a->size; i++)
 		if (a->data[i] != b->data[i])
@@ -193,9 +194,9 @@ struct byte_array* byte_array_concatenate(int n, const struct byte_array* ba, ..
 			byte_array_append(result, parameter);
 		}
 	}
-
+	
 	va_end(argp);
-
+	
 	if (result)
 		result->current = result->data + result->size;
 	return result;
@@ -214,6 +215,109 @@ void byte_array_print(const char* text, const struct byte_array* ba) {
 		printf("%s @%d\n", text, offset);
 	for (int i=0; i<ba->size; i++)
 		printf("\t%s%d\n", i==offset?">":" ", ba->data[i]);
+}
+
+int32_t byte_array_find(struct byte_array *within, struct byte_array *sought, uint32_t start)
+{
+	null_check(within);
+	null_check(sought);
+	
+	uint32_t ws = within->size;
+	uint32_t ss = sought->size;
+	assert_message(start < within->size, "out of bounds");
+	
+	uint8_t *wd = within->data;
+	uint8_t *sd = sought->data;
+	for (int32_t i=start; i<ws-ss; i++)
+		if (!memcmp(wd + i, sd, ss)) 
+			return i; 
+	
+	return -1;
+}
+
+/*
+int32_t byte_match(struct byte_array *within, struct byte_array *sought, uint32_t start, int32_t *length, int32_t i, int32_t j)
+{
+	null_check(within);
+	null_check(sought);
+	uint8_t wi = within->data[i];
+	uint8_t sj = sought->data[j];
+	//	uint32_t ws = within->size;
+	uint32_t ss = sought->size;
+	
+	if (sj == '%') {
+		j++;
+		assert_message(j<ss, "last character is %");
+		uint8_t m = sought->data[j];
+		
+		return (m=='d' && isdigit(wi)) ||
+		(m=='a' && isalpha(wi)) ||
+		(m=='s' && isspace(wi)) ||
+		(m=='.');
+	}
+	if (sj == '[') {
+		while (sj != ']') {
+			if (byte_match(within, sought, start, length, i, j))
+				return i;
+			sj = sought->data[++j];
+		}		
+	}
+	return (wi == sj) ? i : -1;
+}
+
+int32_t byte_array_match(struct byte_array *within, struct byte_array *sought, uint32_t start, int32_t *length)
+{
+	null_check(within);
+	null_check(sought);
+	
+	uint32_t ws = within->size;
+	uint32_t ss = sought->size;
+	assert_message(start < within->size, "out of bounds");
+	
+	for (int j,i=0; i<ws; i++) {
+		for (j=0; j<ss; j++)
+			if (!byte_match(within, sought, start, length, i, j))
+				break;
+		if (j == ss)
+			return i;
+	}
+	
+	return -1;
+}
+*/
+
+struct byte_array *byte_array_replace(struct byte_array *within, struct byte_array *replacement, uint32_t start, int32_t length)
+{
+	null_check(within);
+	null_check(replacement);
+	uint32_t ws = within->size;
+	assert_message(start < ws, "index out of bounds");
+	if (length < 0)
+		length = ws - start;
+	
+	int32_t new_length = within->size - length + replacement->size;
+	struct byte_array *replaced = byte_array_new_size(new_length);
+	
+	memcpy(replaced->data, within->data, start);
+	memcpy(replaced->data + start, replacement->data, replacement->size);
+	memcpy(replaced->data + start + replacement->size, within->data + start + length, within->size - start - length);
+	
+	return replaced;
+}
+
+struct byte_array *byte_array_part(struct byte_array *within, uint32_t start, int32_t length)
+{
+	null_check(within);
+	uint32_t ws = within->size;
+	assert_message(start < ws, "index out of bounds");
+	
+	if (length < 0)
+		length = ws - start;
+	
+	struct byte_array *part = byte_array_new_size(length);
+	memcpy(part->data, within->data+start, length);
+	
+	return part;
 }
 
 // stack ////////////////////////////////////////////////////////////////////
@@ -285,7 +389,7 @@ struct map* map_new()
 		free(m);
 		return NULL;
 	}
-
+	
 	return m;
 }
 
@@ -321,7 +425,7 @@ int map_insert(struct map* m, const struct byte_array* key, void *data)
 		}
 		node = node->next;
 	}
-
+	
 	if (!(node = (struct hash_node*)malloc(sizeof(struct hash_node))))
 		return -1;
 	if (!(node->key = byte_array_copy(key))) {
@@ -331,7 +435,7 @@ int map_insert(struct map* m, const struct byte_array* key, void *data)
 	node->data = data;
 	node->next = m->nodes[hash];
 	m->nodes[hash] = node;
-
+	
 	return 0;
 }
 

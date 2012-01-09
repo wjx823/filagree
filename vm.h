@@ -43,6 +43,8 @@ enum Opcode {
     VM_CAL,	//	call a function
 	VM_MET,	//	call an object method
 	VM_RET,	//	return from a function,
+	VM_ITR,	//	iteration loop
+	VM_COM,	//	comprehension
 };
 
 // variable ////////////////////////////////////////////////////////////////
@@ -87,14 +89,20 @@ typedef void(bridge)(struct stack*);
 void display_program(const char* title, struct byte_array* program);
 struct variable *execute(struct byte_array *program, bridge *callback_to_c);
 
-extern int variable_save(const struct variable* v,
-						 const struct variable* path);
+extern int variable_save(const struct variable* v, const struct variable* path);
 extern struct variable *variable_load(const struct variable* path);
 struct variable *variable_new_err(const char* message);
 struct variable *variable_new_c(bridge *cfnc);
 struct variable *variable_new_int(int32_t i);
 struct variable *variable_new_nil();
 struct variable *variable_new_map(struct map *map);
-
+struct variable *variable_new_float(float f);
+struct variable *variable_new_str(struct byte_array *str);
+struct variable *variable_new_fnc(struct byte_array *fnc);
+struct variable *variable_new_list(struct array *list);
+void vm_call();
+const char *var_type_str(enum VarType vt);
+void vm_exit_message(const char *format, ...);
+void vm_null_check(const void* p);
 
 #endif // VM_H
