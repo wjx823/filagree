@@ -468,7 +468,7 @@ void display_symbol(const struct symbol *symbol, int depth)
 			free(s);
 		} break;
 		case SYMBOL_EXPRESSION:
-			DEBUGPRINT("%s\n", lexeme_to_string(symbol->token->lexeme));
+			DEBUGPRINT(" %s\n", lexeme_to_string(symbol->token->lexeme));
 			break;
 		default:
 			DEBUGPRINT("\n");
@@ -738,7 +738,7 @@ struct symbol *string()
 //  <atom> -->  LEX_IDENTIFIER | <float> | <integer> | <boolean> | <table> | <comprehension> | <fdecl>
 struct symbol *atom()
 {
-	return one_of(&variable, &string, &floater, &integer, &boolean, &table, &fdecl, NULL);
+	return one_of(&variable, &string, &floater, &integer, &boolean, &comprehension, &table, &fdecl, NULL);
 }
 
 // <exp5> --> ( LEX_LEFTTHESIS <expression> LEX_RIGHTTHESIS ) | <atom>
@@ -911,7 +911,6 @@ struct symbol *iterloop()
 	if (!i)
 		return  NULL;
 	struct symbol *s = symbol_new(SYMBOL_ITERLOOP);
-	//	symbol_adds(s, statements(), i, NULL);
 	s->index = i;
 	s->value = statements();
 	FETCH_OR_ERROR(LEX_END);
@@ -1177,11 +1176,12 @@ void generate_loop(struct byte_array *code, struct symbol *root)
 // <iterator> --> LEX_FOR LEX_IDENTIFIER LEX_IN <expression> ( LEX_WHERE <expression> )?
 void generate_iterator(struct byte_array *code, struct symbol *root, enum Opcode op)
 {
-	struct symbol *ator = root->value;
-	generate_code(code, ator->value);
-	generate_step(code, 1, op);
+	struct symbol *ator = root->index;
+	generate_code(code, ator->value);	//	IN b
+	generate_step(code, 1, op);			//	iterator or comprehension
+	serial_encode_string(code, 0, ator->token->string);	// FOR a
 
-	if (ator->index) {	// where
+	if (ator->index) {	// WHERE c
 		struct byte_array *where = byte_array_new();
 		generate_code(where, ator->index);
 		serial_encode_string(code, 0, where);
@@ -1190,8 +1190,8 @@ void generate_iterator(struct byte_array *code, struct symbol *root, enum Opcode
 		generate_nil(code, NULL);
 
 	struct byte_array *what = byte_array_new();
-	generate_code(what, root->index);
-	serial_encode_string(code, 0, what);
+	generate_code(what, root->value);
+	serial_encode_string(code, 0, what);	// DO d
 }
 
 // <iterloop> --> <iterator> <statements> LEX_END

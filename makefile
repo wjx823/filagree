@@ -5,7 +5,7 @@ CFLAGS=-c -Wall -Os -std=c99 -I -fnested-functions -fms-extensions -DTEST -DFILE
 LDFLAGS=-Wl --gc-sections
 SOURCES=vm.c struct.c serial.c compile.c test.c util.c sys.c
 OBJECTS=$(SOURCES:.c=.o)
-EXECUTABLE=interpret
+EXECUTABLE=filagree
 
 all: $(SOURCES) $(EXECUTABLE)
 	

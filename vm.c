@@ -49,7 +49,7 @@ struct variable* error = 0;
 
 jmp_buf trying;
 
-static  void vm_exit() {
+static void vm_exit() {
 	longjmp(trying, 1);
 }
 
@@ -111,6 +111,7 @@ struct program_state *program_state_new()
 struct program_state *program_state_from_code(struct byte_array *code)
 {
 	struct program_state *state = program_state_new();
+	//DEBUGPRINT("program_state_from_code %p\n", state);
 	state->code = code;
 	byte_array_reset(code);
 	stack_push(program_stack, state);
@@ -244,7 +245,7 @@ struct variable *variable_new_fnc(struct byte_array *fnc) {
 
 struct variable *variable_new_list(struct array *list) {
 	struct variable *v = variable_new(VAR_LST);
-	v->list = list;
+	v->list = list ? list : array_new();
 	return v;
 }
 
@@ -450,7 +451,7 @@ const char* indentation()
 	return (const char*)str;
 }
 
-static  void display_program_counter(const struct byte_array *program)
+static void display_program_counter(const struct byte_array *program)
 {
 	DEBUGPRINT("%s%2ld:%3d ", indentation(), program->current-program->data, *program->current);
 }
@@ -511,7 +512,7 @@ void src_size(int32_t size)
     //stack_push(rhs_stack, rhs);
 }
 
-static  void src(enum Opcode op, struct byte_array *program)
+static void src(enum Opcode op, struct byte_array *program)
 {
 	int32_t size = serial_decode_int(program);
 	VM_DEBUGPRINT("%s %d\n", NUM_TO_STRING(opcodes, op), size);
@@ -540,13 +541,13 @@ void vm_call()
 	UNDENT
 }
 
-static  void func_call()
+static void func_call()
 {
 	VM_DEBUGPRINT("VM_CAL\n");
 	vm_call();
 }
 
-static  void push_list(struct byte_array *program)
+static void push_list(struct byte_array *program)
 {
 	int32_t num_items = serial_decode_int(program);
 	DEBUGPRINT("LST %d", num_items);
@@ -568,7 +569,7 @@ static  void push_list(struct byte_array *program)
 	variable_push(list);
 }
 
-static  void push_map(struct byte_array *program)
+static void push_map(struct byte_array *program)
 {
 	int32_t num_items = serial_decode_int(program);
 	DEBUGPRINT("MAP %d", num_items);
@@ -617,7 +618,7 @@ struct variable* variable_copy(const struct variable* v)
 
 // run /////////////////////////////////////////////////////////////////////
 
-static  struct variable *list_get_int(const struct variable *indexable,
+static struct variable *list_get_int(const struct variable *indexable,
 											const struct variable *index)
 {
 	uint32_t n = index->integer;
@@ -663,7 +664,7 @@ void lookup(struct variable *indexable, struct variable *index)
 	variable_push(item);
 }
 
-static  void list_get()
+static void list_get()
 {
 	DEBUGPRINT("GET ");
 	if (!runtime)
@@ -674,7 +675,7 @@ static  void list_get()
 	lookup(indexable, index);
 }
 
-static  void method(struct byte_array *program)
+static void method(struct byte_array *program)
 {
 	DEBUGPRINT("MET ");
 	if (!runtime)
@@ -689,7 +690,7 @@ static  void method(struct byte_array *program)
 }
 
 
-static  int32_t jump(struct byte_array *program)
+static int32_t jump(struct byte_array *program)
 {
 	uint8_t *start = program->current;
 	int32_t offset = serial_decode_int(program);
@@ -700,31 +701,36 @@ static  int32_t jump(struct byte_array *program)
 	return offset - (program->current - start);
 }
 
-static  int32_t iff(struct byte_array *program)
+bool test_operand()
+{
+	struct variable* v = variable_pop();
+	bool indeed = false;
+	switch (v->type) {
+		case VAR_NIL:	indeed = false;						break;
+		case VAR_BOOL:	indeed = v->boolean;				break;
+		case VAR_INT:	indeed = v->integer;				break;
+		default:		vm_exit_message("bad iff operand");	break;
+	}
+	return indeed;
+}
+
+static int32_t iff(struct byte_array *program)
 {
 	int32_t offset = serial_decode_int(program);
 	DEBUGPRINT("IF %d\n", offset);
 	if (!runtime)
 		return 0;
-	struct variable* v = variable_pop();
-	bool go = false;
-	switch (v->type) {
-		case VAR_NIL:	go = false;							break;
-		case VAR_BOOL:	go = v->boolean;					break;
-		case VAR_INT:	go = v->integer;					break;
-		default:		vm_exit_message("bad iff operand");	break;
-	}
-	return go ? 0 : (VOID_INT)offset;
+	return test_operand() ? 0 : (VOID_INT)offset;
 }
 
-static  void push_nil()
+static void push_nil()
 {
 	struct variable* var = variable_new_nil();
 	VM_DEBUGPRINT("NIL\n");
 	variable_push(var);
 }
 
-static  void push_int(struct byte_array *program)
+static void push_int(struct byte_array *program)
 {
 	int32_t num = serial_decode_int(program);
 	VM_DEBUGPRINT("INT %d\n", num);
@@ -732,7 +738,7 @@ static  void push_int(struct byte_array *program)
 	variable_push(var);
 }
 
-static  void push_bool(struct byte_array *program)
+static void push_bool(struct byte_array *program)
 {
 	int32_t num = serial_decode_int(program);
 	VM_DEBUGPRINT("BOOL %d\n", num);
@@ -740,7 +746,7 @@ static  void push_bool(struct byte_array *program)
 	variable_push(var);
 }
 
-static  void push_float(struct byte_array *program)
+static void push_float(struct byte_array *program)
 {
 	float num = serial_decode_float(program);
 	VM_DEBUGPRINT("FLT %f\n", num);
@@ -752,16 +758,15 @@ struct variable *find_var(const struct byte_array *name)
 {
 	const struct program_state *state = stack_peek(program_stack, 0);
 	struct map *var_map = state->named_variables;
-	// 	DEBUGPRINT("find_var(%s) in %p,%p = %p\n", byte_array_to_string(name), var_map, state, map_get(var_map, name));
+	//DEBUGPRINT("find_var(%s) in %p,%p = %p\n", byte_array_to_string(name), state, var_map, map_get(var_map, name));
 	struct variable *v = map_get(var_map, name);
 	if (!v)
 		v = map_get(vm_state->named_variables, name);
 	return v;
 }
 
-static  void push_var(struct program_state *state)
+static void push_var(struct byte_array *program)
 {
-	struct byte_array *program = state->code;
 	struct byte_array* name = serial_decode_string(program);
 	VM_DEBUGPRINT("VAR %s\n", byte_array_to_string(name));
 	struct variable *v = find_var(name);
@@ -769,7 +774,7 @@ static  void push_var(struct program_state *state)
 	variable_push(v);
 }
 
-static  void push_str(struct byte_array *program)
+static void push_str(struct byte_array *program)
 {
 	struct byte_array* str = serial_decode_string(program);
 	VM_DEBUGPRINT("STR '%s'\n", byte_array_to_string(str));
@@ -777,7 +782,7 @@ static  void push_str(struct byte_array *program)
 	variable_push(v);
 }
 
-static  void push_fnc(struct byte_array *program)
+static void push_fnc(struct byte_array *program)
 {
 	uint32_t fcodelen = serial_decode_int(program);
 	struct byte_array* fbody = byte_array_new_size(fcodelen);
@@ -809,7 +814,7 @@ void set_named_variable(struct program_state *state,
 
 	map_insert(var_map, name, to_var);
 
-	// 	DEBUGPRINT(" (SET %s to %s in {%p,%p,%p})", byte_array_to_string(name), variable_value(to_var), to_var, var_map, state);
+	//	DEBUGPRINT(" (SET %s to %s in {%p,%p,%p})\n", byte_array_to_string(name), variable_value(to_var), state, var_map, to_var);
 }
 
 struct variable *rhs_pop()
@@ -821,9 +826,8 @@ struct variable *rhs_pop()
 	return value;
 }
 
-static  void set(struct program_state *state)
+static void set(struct program_state *state, struct byte_array *program)
 {
-	struct byte_array *program = state->code;
 	struct byte_array *name = serial_decode_string(program);	// destination variable name
 	if (!runtime)
 		VM_DEBUGPRINT("SET %s\n", byte_array_to_string(name));
@@ -841,7 +845,7 @@ static void dst()
 		stack_pop(rhs);
 }
 
-static  void list_put()
+static void list_put()
 {
 	DEBUGPRINT("PUT");
 	if (!runtime)
@@ -874,7 +878,7 @@ static  void list_put()
 	DEBUGPRINT(": %s\n", variable_value(recipient));
 }
 
-static  struct variable *binary_op_int(enum Opcode op,
+static struct variable *binary_op_int(enum Opcode op,
 											 const struct variable *u,
 											 const struct variable *v)
 {
@@ -898,7 +902,7 @@ static  struct variable *binary_op_int(enum Opcode op,
 	return variable_new_int(i);
 }
 
-static  struct variable *binary_op_float(enum Opcode op,
+static struct variable *binary_op_float(enum Opcode op,
 											   const struct variable *u,
 											   const struct variable *v)
 {
@@ -920,11 +924,11 @@ static  struct variable *binary_op_float(enum Opcode op,
 	return variable_new_float(f);
 }
 
-static  bool is_num(enum VarType vt) {
+static bool is_num(enum VarType vt) {
 	return vt == VAR_INT || vt == VAR_FLT;
 }
 
-static  struct variable *binary_op_str(enum Opcode op,
+static struct variable *binary_op_str(enum Opcode op,
 											 const struct variable *u,
 											 const struct variable *v)
 {
@@ -940,7 +944,7 @@ static  struct variable *binary_op_str(enum Opcode op,
 	return w;
 }
 
-static  bool variable_compare(const struct variable *u,
+static bool variable_compare(const struct variable *u,
 									const struct variable *v)
 {
 	if (!u != !v)
@@ -984,7 +988,7 @@ static  bool variable_compare(const struct variable *u,
 	}
 }
 
-static  struct variable *binary_op_lst(enum Opcode op,
+static struct variable *binary_op_lst(enum Opcode op,
 											 const struct variable *u,
 											 const struct variable *v)
 {
@@ -1006,7 +1010,7 @@ static  struct variable *binary_op_lst(enum Opcode op,
 	return w;
 }
 
-static  void binary_op(enum Opcode op)
+static void binary_op(enum Opcode op)
 {
 	if (!runtime)
 		VM_DEBUGPRINT("%s\n", NUM_TO_STRING(opcodes, op));
@@ -1041,7 +1045,7 @@ static  void binary_op(enum Opcode op)
 			   variable_value(w));
 }
 
-static  void unary_op(enum Opcode op)
+static void unary_op(enum Opcode op)
 {
 	if (!runtime)
 		VM_DEBUGPRINT("%s\n", NUM_TO_STRING(opcodes, op));
@@ -1078,28 +1082,42 @@ static  void unary_op(enum Opcode op)
 }
 
 // FOR who IN what WHERE where DO how
-static  void iterate(enum Opcode op, struct program_state *state)
+static void iterate(enum Opcode op, struct program_state *state)
 {
 	struct byte_array *program = state->code;
-	struct variable *what = variable_pop();
 
 	struct byte_array *who = serial_decode_string(program);
 	struct byte_array *where = serial_decode_string(program);
 	struct byte_array *how = serial_decode_string(program);
+
+	DEBUGPRINT("%s %s\n",
+				  NUM_TO_STRING(opcodes, op),
+				  byte_array_to_string(who));
+	if (!runtime) {
+		if (where) {
+			DEBUGPRINT("%s\tWHERE\n", indentation());
+			display_code(where);
+		}
+		DEBUGPRINT("%s\tDO\n", indentation());
+		display_code(how);
+		return;
+	}
+
 	bool comprehending = (op == VM_COM);
 	struct variable *result = comprehending ? variable_new_list(NULL) : NULL;
 
+	struct variable *what = variable_pop();
 	for (int i=0; i<what->list->length; i++) {
 
 		struct variable *that = array_get(what->list, i);
 		set_named_variable(state, who, that);
+
+		byte_array_reset(where);
+		byte_array_reset(how);
 		run(where, true);
+		if (test_operand()) {
 
-		struct variable *fits = stack_pop(operand_stack);
-		assert_message(fits->type == VAR_BOOL, "non-boolean <where> clause");
-		if (!fits->boolean) {
-
-			run(how, false);
+			run(how, true);
 
 			if (comprehending) {
 				struct variable *item = stack_pop(operand_stack);
@@ -1123,7 +1141,8 @@ struct variable* run(struct byte_array *program, bool in_context)
 		display_program_counter(program);
 #endif
 		program->current++; // increment past the instruction
-		num_inst_executed++;
+		if (runtime)
+			num_inst_executed++;
 
 		if (inst == VM_RET) {
 			src(inst, program);
@@ -1147,7 +1166,7 @@ struct variable* run(struct byte_array *program, bool in_context)
 			case VM_NOT:	unary_op(inst);					break;
 			case VM_SRC:	src(inst, program);				break;
 			case VM_DST:	dst();							break;
-			case VM_SET:	set(state);						break;
+			case VM_SET:	set(state, program);			break;
 			case VM_JMP:	pc_offset = jump(program);		break;
 			case VM_IF:		pc_offset = iff(program);		break;
 			case VM_CAL:	func_call();					break;
@@ -1160,7 +1179,7 @@ struct variable* run(struct byte_array *program, bool in_context)
 			case VM_FLT:	push_float(program);			break;
 			case VM_BOOL:	push_bool(program);				break;
 			case VM_STR:	push_str(program);				break;
-			case VM_VAR:	push_var(state);				break;
+			case VM_VAR:	push_var(program);				break;
 			case VM_FNC:	push_fnc(program);				break;
 			case VM_MET:	method(program);				break;
 			case VM_COM:
@@ -1171,7 +1190,8 @@ struct variable* run(struct byte_array *program, bool in_context)
 		program->current += pc_offset;
 	}
 
-	stack_pop(program_stack);
+	if (!in_context)
+		stack_pop(program_stack);
 	return (struct variable*)stack_peek(operand_stack, 0);
 }
 
