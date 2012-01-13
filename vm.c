@@ -12,19 +12,25 @@ void garbage_collect();
 struct stack *program_stack;
 struct stack *operand_stack;
 struct stack *rhs;
-uint32_t num_inst_executed = 0;
+uint32_t num_inst_executed;
+
+struct variable *run(struct byte_array *program, bool in_context);
+struct variable *rhs_pop();
+static void dst();
+void src_size();
+void display_code(struct byte_array *code);
+
+bool runtime = false;
+uint32_t num_vars = 0;
+struct variable* error = 0;
+
 
 #ifdef DEBUG
 
 #define VM_DEBUGPRINT(...) fprintf( stderr, __VA_ARGS__ ); if (!runtime) return;
 
 void display_instruction(struct byte_array *program);
-void display_code(struct byte_array *code);
 void print_operand_stack();
-struct variable* run(struct byte_array *program, bool in_context);
-struct variable *rhs_pop();
-static void dst();
-void src_size();
 
 uint8_t indent;
 #define INDENT indent++;
@@ -38,11 +44,6 @@ uint8_t indent;
 #define VM_DEBUGPRINT(...)
 
 #endif // not DEBUG
-
-
-bool runtime = false;
-uint32_t num_vars = 0;
-struct variable* error = 0;
 
 
 // assertions //////////////////////////////////////////////////////////////
@@ -91,7 +92,7 @@ void vm_null_check(const void* p) {
 // state ///////////////////////////////////////////////////////////////////
 
 struct program_state {
-	struct byte_array *code;
+	//	struct byte_array *code;
 	struct map *named_variables;
 	struct array *all_variables;
 	uint32_t pc;
@@ -105,27 +106,24 @@ struct program_state *program_state_new()
 	struct program_state *state = (struct program_state*)malloc(sizeof(struct program_state));
 	state->named_variables = map_new();
 	state->all_variables = array_new();
-	return state;
-}
-
-struct program_state *program_state_from_code(struct byte_array *code)
-{
-	struct program_state *state = program_state_new();
-	//DEBUGPRINT("program_state_from_code %p\n", state);
-	state->code = code;
-	byte_array_reset(code);
 	stack_push(program_stack, state);
 	return state;
 }
 
-void program_state_vm_init()
+void vm_init()
 {
-	if (!vm_state) {
+	program_stack = stack_new();
+	operand_stack = stack_new();
 
+	if (!vm_state) {
 		struct variable *vm_var = func_map();
 		vm_state = program_state_new();
 		map_insert(vm_state->named_variables, byte_array_from_string(VM_NAME), vm_var);
 	}
+
+	runtime = true;
+	num_vars = 0;
+	num_inst_executed = 0;
 }
 
 
@@ -484,15 +482,16 @@ void display_program(const char* title, struct byte_array *program)
 	byte_array_reset(program);
 	struct byte_array* code = serial_decode_string(program);
 
-	program_stack = stack_new();
-	operand_stack = stack_new();
-	rhs = stack_new();
-
 	display_code(code);
 
 	UNDENT
 	UNDENT
 }
+
+#else // not DEBUG
+
+void display_code(struct byte_array *code) {}
+const struct number_string opcodes[] = {};
 
 #endif // DEBUG
 
@@ -500,6 +499,8 @@ void display_program(const char* title, struct byte_array *program)
 
 void src_size(int32_t size)
 {
+	if (!rhs)
+		rhs = stack_new();
 	if (size > 1)
 		while (stack_peek(rhs,1))
 			stack_pop(rhs);
@@ -758,8 +759,8 @@ struct variable *find_var(const struct byte_array *name)
 {
 	const struct program_state *state = stack_peek(program_stack, 0);
 	struct map *var_map = state->named_variables;
-	//DEBUGPRINT("find_var(%s) in %p,%p = %p\n", byte_array_to_string(name), state, var_map, map_get(var_map, name));
 	struct variable *v = map_get(var_map, name);
+	//DEBUGPRINT("find_var(%s) in %p,%p = %p\n", byte_array_to_string(name), state, var_map, v);
 	if (!v)
 		v = map_get(vm_state->named_variables, name);
 	return v;
@@ -814,7 +815,7 @@ void set_named_variable(struct program_state *state,
 
 	map_insert(var_map, name, to_var);
 
-	//	DEBUGPRINT(" (SET %s to %s in {%p,%p,%p})\n", byte_array_to_string(name), variable_value(to_var), state, var_map, to_var);
+	//DEBUGPRINT(" (SET %s to %s in {%p,%p,%p})\n", byte_array_to_string(name), variable_value(to_var), state, var_map, to_var);
 }
 
 struct variable *rhs_pop()
@@ -1082,14 +1083,13 @@ static void unary_op(enum Opcode op)
 }
 
 // FOR who IN what WHERE where DO how
-static void iterate(enum Opcode op, struct program_state *state)
+static void iterate(enum Opcode op, struct program_state *state, struct byte_array *program)
 {
-	struct byte_array *program = state->code;
-
 	struct byte_array *who = serial_decode_string(program);
 	struct byte_array *where = serial_decode_string(program);
 	struct byte_array *how = serial_decode_string(program);
 
+#ifdef DEBUG
 	DEBUGPRINT("%s %s\n",
 				  NUM_TO_STRING(opcodes, op),
 				  byte_array_to_string(who));
@@ -1102,6 +1102,7 @@ static void iterate(enum Opcode op, struct program_state *state)
 		display_code(how);
 		return;
 	}
+#endif
 
 	bool comprehending = (op == VM_COM);
 	struct variable *result = comprehending ? variable_new_list(NULL) : NULL;
@@ -1130,10 +1131,15 @@ static void iterate(enum Opcode op, struct program_state *state)
 		stack_push(operand_stack, result);
 }
 
-struct variable* run(struct byte_array *program, bool in_context)
+struct variable *run(struct byte_array *program, bool in_context)
 {
-	struct program_state *state = in_context ? stack_peek(program_stack, 0) :
-											   program_state_from_code(program);
+	struct program_state *state = NULL;
+	if (runtime) {
+		if (in_context)
+			state = stack_peek(program_stack, 0);
+		if (!state)
+			state = program_state_new();
+	}
 
 	while (program->current < program->data + program->size) {
 		enum Opcode inst = (enum Opcode)*program->current;
@@ -1183,19 +1189,19 @@ struct variable* run(struct byte_array *program, bool in_context)
 			case VM_FNC:	push_fnc(program);				break;
 			case VM_MET:	method(program);				break;
 			case VM_COM:
-			case VM_ITR:	iterate(inst, state);			break;
+			case VM_ITR:	iterate(inst, state, program);	break;
 			default:		vm_exit_message(ERROR_OPCODE);	break;
 		}
 
 		program->current += pc_offset;
 	}
 
-	if (!in_context)
+	if (runtime && !in_context)
 		stack_pop(program_stack);
 	return (struct variable*)stack_peek(operand_stack, 0);
 }
 
-struct variable *execute(struct byte_array *program, bridge *callback_to_c)
+struct variable *execute(struct byte_array *program, bool in_context, bridge *callback_to_c)
 {
 	DEBUGPRINT("execute:\n");
 	callback2c = callback_to_c;
@@ -1203,12 +1209,6 @@ struct variable *execute(struct byte_array *program, bridge *callback_to_c)
 	byte_array_reset(program);
 	struct byte_array* code = serial_decode_string(program);
 
-	program_stack = stack_new();
-	operand_stack = stack_new();
-	program_state_vm_init();
-
-	runtime = true;
-	num_vars = 0;
 #ifdef DEBUG
 	indent = 1;
 #endif
@@ -1219,13 +1219,13 @@ struct variable *execute(struct byte_array *program, bridge *callback_to_c)
 
 	struct variable *v;
 	if (!setjmp(trying))
-		v = run(code, false);
+		v = run(code, in_context);
 	else
 		v = error;
 
 	end = clock();
 	elapsed = ((double) (end - start)) * 1000 / CLOCKS_PER_SEC;
-	DEBUGPRINT("%u instructions took %fms: %f instructions per ms\n", num_inst_executed, elapsed, num_inst_executed/elapsed);
+	//	DEBUGPRINT("%u instructions took %fms: %f instructions per ms\n", num_inst_executed, elapsed, num_inst_executed/elapsed);
 
 	return v;
 }

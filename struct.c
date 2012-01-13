@@ -90,7 +90,7 @@ void *array_remove(struct array *a, uint32_t index) {
 
 // byte_array ///////////////////////////////////////////////////////////////
 
-struct byte_array* byte_array_new() {
+struct byte_array *byte_array_new() {
 	struct byte_array* ba = (struct byte_array*)malloc(sizeof(struct byte_array));
 	ba->data = ba->current = 0;
 	ba->size = 0;
@@ -103,7 +103,7 @@ void byte_array_del(struct byte_array* ba) {
 	free(ba);
 }
 
-struct byte_array* byte_array_new_size(uint32_t size) {
+struct byte_array *byte_array_new_size(uint32_t size) {
 	struct byte_array* ba = (struct byte_array*)malloc(sizeof(struct byte_array));
 	ba->data = ba->current = (uint8_t*)malloc(size);
 	ba->size = size;
@@ -136,7 +136,7 @@ bool byte_array_equals(const struct byte_array *a, const struct byte_array* b) {
 	return true;
 }
 
-struct byte_array* byte_array_copy(const struct byte_array* original) {
+struct byte_array *byte_array_copy(const struct byte_array* original) {
 	if (!original)
 		return NULL;
 	struct byte_array* copy = (struct byte_array*)malloc(sizeof(struct byte_array));
@@ -156,7 +156,7 @@ void byte_array_append(struct byte_array *a, const struct byte_array* b) {
 	a->current = a->data + a->size;
 }
 
-struct byte_array* byte_array_from_string(const char* str)
+struct byte_array *byte_array_from_string(const char* str)
 {
 	int len = strlen(str);
 	struct byte_array* ba = byte_array_new_size(len);
@@ -177,7 +177,7 @@ void byte_array_reset(struct byte_array* ba) {
 	ba->current = ba->data;
 }
 
-struct byte_array* byte_array_concatenate(int n, const struct byte_array* ba, ...) {
+struct byte_array *byte_array_concatenate(int n, const struct byte_array* ba, ...) {
 	
 	struct byte_array* result = byte_array_copy(ba);
 	
@@ -202,7 +202,7 @@ struct byte_array* byte_array_concatenate(int n, const struct byte_array* ba, ..
 	return result;
 }
 
-struct byte_array* byte_array_add_byte(struct byte_array *a, uint8_t b) {
+struct byte_array *byte_array_add_byte(struct byte_array *a, uint8_t b) {
 	byte_array_resize(a, a->size+1);
 	a->current = a->data + a->size;
 	a->data[a->size-1] = b;
@@ -364,6 +364,7 @@ void* stack_peek(const struct stack* stack, uint8_t index)
 
 bool stack_empty(const struct stack* stack)
 {
+	null_check(stack);
 	return stack->head == NULL;// && stack->tail == NULL;
 }
 

@@ -137,19 +137,16 @@ int write_byte_array(struct byte_array* ba, FILE* file) {
 
 int write_file(const struct byte_array* filename, struct byte_array* bytes)
 {
-	DEBUGPRINT("write_file\n");
 	const char *fname = byte_array_to_string(filename);
 	FILE* file = fopen(fname, "w");
 	if (!file) {
 		DEBUGPRINT("could not open file %s\n", fname);
 		return -1;
 	}
-	//struct byte_array* bytes = byte_array_new();
-	//serial_encode_string(bytes, 0, data);
+
 	int r = fwrite(bytes->data, 1, bytes->size, file);
 	DEBUGPRINT("\twrote %d bytes\n", r);
 	int s = fclose(file);
-	DEBUGPRINT("write_file done\n");
 	return (r<0) || s;
 }
 

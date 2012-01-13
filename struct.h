@@ -40,18 +40,18 @@ struct byte_array {
 	int32_t size;
 };
 
-struct byte_array* byte_array_new();
-struct byte_array* byte_array_new_size(uint32_t size);
+struct byte_array *byte_array_new();
+struct byte_array *byte_array_new_size(uint32_t size);
 void byte_array_append(struct byte_array *a, const struct byte_array* b);
-struct byte_array* byte_array_from_string(const char* str);
+struct byte_array *byte_array_from_string(const char* str);
 char* byte_array_to_string(const struct byte_array* ba);
 void byte_array_del(struct byte_array* ba);
-struct byte_array* byte_array_copy(const struct byte_array* original);
-struct byte_array* byte_array_add_byte(struct byte_array *a, uint8_t b);
+struct byte_array *byte_array_copy(const struct byte_array* original);
+struct byte_array *byte_array_add_byte(struct byte_array *a, uint8_t b);
 void byte_array_reset(struct byte_array* ba);
 void byte_array_resize(struct byte_array* ba, uint32_t size);
 bool byte_array_equals(const struct byte_array *a, const struct byte_array* b);
-struct byte_array* byte_array_concatenate(int n, const struct byte_array* ba, ...);
+struct byte_array *byte_array_concatenate(int n, const struct byte_array* ba, ...);
 void byte_array_print(const char* text, const struct byte_array* ba);
 
 int32_t byte_array_find(struct byte_array *within, struct byte_array *sought, uint32_t start);

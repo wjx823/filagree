@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
+// todo: add hygenic macro
 
 extern struct stack *rhs;
 extern struct stack *operand_stack;

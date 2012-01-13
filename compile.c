@@ -21,6 +21,7 @@
 #define ESCAPED_NEWLINE	'n'
 #define ESCAPED_TAB		't'
 #define ESCAPED_QUOTE	'\''
+#define FG_MAX_INPUT	256
 
 uint32_t line;
 struct array* lex_list;
@@ -121,10 +122,6 @@ struct number_string lexemes[] = {
 	{LEX_RETURN,				"return"},
 };
 
-// display ////////////////////////////////////////////////////////////////////
-
-#ifdef DEBUG
-
 const char* lexeme_to_string(enum Lexeme lexeme)
 {
 	switch (lexeme) {
@@ -137,6 +134,10 @@ const char* lexeme_to_string(enum Lexeme lexeme)
 	}
 	return NULL;
 }
+
+// display ////////////////////////////////////////////////////////////////////
+
+#ifdef DEBUG
 
 void display_token(struct token *token, int depth) {
 	assert_message(depth < 10, "kablooie!");
@@ -514,7 +515,7 @@ struct token *fetch(enum Lexeme lexeme) {
 	if (token->lexeme != lexeme)
 		return NULL;
 	//	DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
-	display_token(token, 0);
+	//  display_token(token, 0);
 
 	parse_index++;
 	return token;
@@ -1260,7 +1261,7 @@ struct byte_array *program_from_code(struct byte_array *code, struct symbol *roo
 struct byte_array *build_string(const struct byte_array *input) {
 	assert_message(input!=0, ERROR_NULL);
 	struct byte_array *input_copy = byte_array_copy(input);
-	DEBUGPRINT("lex:\n");
+	DEBUGPRINT("lex %d:\n", input_copy->size);
 	struct array* list = lex(input_copy);
 	struct symbol *tree = parse(list, 0);
 
@@ -1276,47 +1277,56 @@ struct byte_array *build_file(const struct byte_array* filename)
 
 // main: read file, build, run /////////////////////////////////////////////
 
-#define ERROR_USAGE	"usage: main <script filename>"
+#define ERROR_USAGE	"usage: filagree [file]"
 
+/*
 struct variable *interpret_string(const char* str, bridge *callback)
 {
 	struct byte_array *input = byte_array_from_string(str);
 	struct byte_array *program = build_string(input);
 	return execute(program, 0);
 }
+*/
 
 struct variable *interpret_file(const char* str, bridge *callback)
 {
 	struct byte_array *filename = byte_array_from_string(str);
 	struct byte_array *program = build_file(filename);
-	return execute(program, NULL);
+	vm_init();
+	return execute(program, false, NULL);
 }
 
 int repl()
 {
-	struct byte_array *input = byte_array_new();
-	int c;
-	while ((c = getchar()) != EOF) {
-		byte_array_add_byte(input, c);
-		struct byte_array *program = build_string(input);
-		if (program && execute(program, 0)) {
-			break;
-		}
-		input = byte_array_new();
-	}
-	return errno;
-}
+	char stdinput[FG_MAX_INPUT];
+	struct variable *e;
+	vm_init();
 
-#ifndef TEST
+	for (;;) {
+		fflush(stdin);
+		stdinput[0] = 0;
+		if (!fgets(stdinput, FG_MAX_INPUT, stdin)) {
+			if (feof(stdin))
+				return 0;
+			if (ferror(stdin))
+				return errno;
+			printf("unknown error reading stdin\n");
+			return -1;
+		}
+
+		struct byte_array *input = byte_array_from_string(stdinput);
+		struct byte_array *program = build_string(input);
+		if (program && (e = execute(program, true, 0)) && (e->type == VAR_ERR))
+			printf("%s\n", byte_array_to_string(e->str));
+	}
+}
 
 int main (int argc, char** argv)
 {
 	switch (argc) {
-		case 0:		repl();										break;
-		case 2:		interpret_file(argv[1], &default_callback);	break;
-		default:	exit_message(ERROR_USAGE);					break;
+		case 1:		repl();							break;
+		case 2:		interpret_file(argv[1], NULL);	break;
+		default:	exit_message(ERROR_USAGE);		break;
 	}
 	return 0;
 }
-
-#endif // TEST

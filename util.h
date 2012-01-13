@@ -18,6 +18,10 @@
 #define ARRAY_LEN(x) (sizeof x / sizeof *x)
 
 #ifdef DEBUG
+#define DEBUG_TEST 1
+#else
+#define DEBUG_TEST 0
+#endif
 
 #ifdef ANDROID
 
@@ -25,22 +29,16 @@
 #define TAG "fisil"
 #define LOG_LINE_LENGTH 100
 char log_message[LOG_LINE_LENGTH];
-#define DEBUGPRINT(...) { snprintf(log_message, LOG_LINE_LENGTH, __VA_ARGS__ );\
-__android_log_write(ANDROID_LOG_ERROR, TAG, log_message); }
+#define DEBUGPRINT(...) do { if DEBUG_TEST { snprintf(log_message, LOG_LINE_LENGTH, __VA_ARGS__ );\
+__android_log_write(ANDROID_LOG_ERROR, TAG, log_message); } } while (0);
 
 #else // not ANDROID
 
 #include <stdio.h>
-#define DEBUGPRINT(...) fprintf( stderr, __VA_ARGS__ )
-
+#define DEBUGPRINT(...) do { if (DEBUG_TEST) fprintf( stderr, __VA_ARGS__ ); } while (0)
 
 #endif // (not) ANDROID
 
-#else // (not) DEBUG
-
-#define DEBUGPRINT(...)
-
-#endif // DEBUG
 
 #define ITOA_LEN    19 // enough for 64-bit integer
 

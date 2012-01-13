@@ -86,8 +86,11 @@ typedef void(bridge)(struct stack*);
 
 #define ERROR_OPCODE "unknown opcode"
 
+#ifdef DEBUG
 void display_program(const char* title, struct byte_array* program);
-struct variable *execute(struct byte_array *program, bridge *callback_to_c);
+#endif
+void vm_init();
+struct variable *execute(struct byte_array *program, bool in_context, bridge *callback_to_c);
 
 extern int variable_save(const struct variable* v, const struct variable* path);
 extern struct variable *variable_load(const struct variable* path);
