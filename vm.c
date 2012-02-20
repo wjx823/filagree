@@ -12,6 +12,7 @@ void garbage_collect();
 struct stack *program_stack;
 struct stack *operand_stack;
 struct stack *rhs;
+struct variable *vm_exception;
 uint32_t num_inst_executed;
 
 struct variable *run(struct byte_array *program, bool in_context);
@@ -31,6 +32,7 @@ struct variable* error = 0;
 
 void display_instruction(struct byte_array *program);
 void print_operand_stack();
+const char* indentation();
 
 uint8_t indent;
 #define INDENT indent++;
@@ -114,6 +116,8 @@ void vm_init()
 {
 	program_stack = stack_new();
 	operand_stack = stack_new();
+
+	vm_exception = NULL;
 
 	if (!vm_state) {
 		struct variable *vm_var = func_map();
@@ -421,15 +425,16 @@ const struct number_string opcodes[] = {
 	{VM_NEG,		"NEG"},
 	{VM_EQU,		"EQU"},
 	{VM_NEQ,		"NEQ"},
-	{VM_GT,			"GTN"},
-	{VM_LT,			"LTN"},
-	{VM_IF,			"IFF"},
+	{VM_GTN,		"GTN"},
+	{VM_LTN,		"LTN"},
+	{VM_IFF,		"IFF"},
 	{VM_JMP,		"JMP"},
 	{VM_CAL,		"CAL"},
 	{VM_MET,		"MET"},
 	{VM_RET,		"RET"},
 	{VM_ITR,		"ITR"},
 	{VM_COM,		"COM"},
+	{VM_TRY,		"TRY"},
 };
 
 void print_operand_stack()
@@ -523,7 +528,7 @@ static void src(enum Opcode op, struct byte_array *program)
 void vm_call()
 {
 	// get the function pointer from the stack
-	struct variable *func = runtime ? variable_pop() : NULL;
+	struct variable *func = variable_pop();
 	INDENT
 
 	// call the function
@@ -538,7 +543,6 @@ void vm_call()
 			vm_exit_message("not a function");
 			break;
 	}
-
 	UNDENT
 }
 
@@ -804,6 +808,8 @@ void set_named_variable(struct program_state *state,
 						const struct byte_array *name,
 						const struct variable *value)
 {
+	if (!state)
+		state = stack_peek(program_stack, 0);
 	struct map *var_map = state->named_variables;
 	struct variable *to_var = find_var(name);
 
@@ -820,7 +826,6 @@ void set_named_variable(struct program_state *state,
 
 struct variable *rhs_pop()
 {
-	//	struct stack *rhs = stack_peek(rhs_stack, 0);
 	struct variable *value = stack_pop(rhs);
 	if (!value)
 		value = variable_new_nil();
@@ -892,10 +897,17 @@ static struct variable *binary_op_int(enum Opcode op,
 		case VM_ADD:	i = m + n;	break;
 		case VM_SUB:	i = m - n;	break;
 		case VM_AND:	i = m && n;	break;
-		case VM_EQU:		i = m == n;	break;
+		case VM_EQU:	i = m == n;	break;
 		case VM_OR:		i = m || n;	break;
-		case VM_GT:		i = m > n;	break;
-		case VM_LT:		i = m < n;	break;
+		case VM_GTN:	i = m > n;	break;
+		case VM_LTN:	i = m < n;	break;
+		case VM_BND:	i = m & n;	break;
+		case VM_BOR:	i = m | n;	break;
+		case VM_MOD:	i = m % n;	break;
+		case VM_XOR:	i = m ^ n;	break;
+		case VM_RSF:	i = m >> n;	break;
+		case VM_LSF:	i = m << n;	break;
+
 		default:
 			vm_exit_message("bad math int operator");
 			return NULL;
@@ -916,8 +928,8 @@ static struct variable *binary_op_float(enum Opcode op,
 		case VM_ADD:	f = m + n;							break;
 		case VM_SUB:	f = m - n;							break;
 		case VM_NEQ:	f = m != n;							break;
-		case VM_GT:		return variable_new_int(n > m);
-		case VM_LT:		return variable_new_int(n < m);
+		case VM_GTN:	return variable_new_int(n > m);
+		case VM_LTN:	return variable_new_int(n < m);
 		default:
 			vm_exit_message("bad math float operator");
 			return NULL;
@@ -1068,6 +1080,7 @@ static void unary_op(enum Opcode op)
 			switch (op) {
 				case VM_NEG:	result = variable_new_int(-n);		break;
 				case VM_NOT:	result = variable_new_bool(!n);		break;
+				case VM_INV:	result = variable_new_int(~n);		break;
 				default:		vm_exit_message("bad math operator");	break;
 			}
 		} break;
@@ -1131,15 +1144,40 @@ static void iterate(enum Opcode op, struct program_state *state, struct byte_arr
 		stack_push(operand_stack, result);
 }
 
+static inline void vm_trycatch(struct byte_array *program)
+{
+	struct byte_array *try = serial_decode_string(program);
+	DEBUGPRINT("TRY %d\n", try->size);
+	display_code(try);
+	struct byte_array *name = serial_decode_string(program);
+	struct byte_array *catch = serial_decode_string(program);
+#ifdef DEBUG
+	DEBUGPRINT("%sCATCH %s %d\n", indentation(), byte_array_to_string(name), catch->size);
+#endif
+	display_code(catch);
+	if (!runtime)
+		return;
+
+	run(try, true);
+	if (vm_exception) {
+		set_named_variable(NULL, name, vm_exception);
+		vm_exception = NULL;
+		run(catch, true);
+	}
+}
+
 struct variable *run(struct byte_array *program, bool in_context)
 {
 	struct program_state *state = NULL;
+	program->current = program->data;
 	if (runtime) {
 		if (in_context)
 			state = stack_peek(program_stack, 0);
-		if (!state)
+		else
 			state = program_state_new();
 	}
+	//DEBUGPRINT("run %d %d %p\n", runtime, context, state);
+	//DEBUGPRINT("\t%p < %p + %d? %s\n", program->current, program->data, program->size, program->current < program->data + program->size ? "yes":"no");
 
 	while (program->current < program->data + program->size) {
 		enum Opcode inst = (enum Opcode)*program->current;
@@ -1153,6 +1191,13 @@ struct variable *run(struct byte_array *program, bool in_context)
 		if (inst == VM_RET) {
 			src(inst, program);
 			break;
+		} else if (inst == VM_TRO) {
+			DEBUGPRINT("THROW\n");
+			if (runtime) {
+				vm_exception = stack_pop(operand_stack);
+				break;
+			} else
+				continue;
 		}
 
 		int32_t pc_offset = 0;
@@ -1165,8 +1210,15 @@ struct variable *run(struct byte_array *program, bool in_context)
 			case VM_AND:
 			case VM_EQU:
 			case VM_NEQ:
-			case VM_GT:
-			case VM_LT:
+			case VM_GTN:
+			case VM_LTN:
+			case VM_BND:
+			case VM_BOR:
+			case VM_MOD:
+			case VM_XOR:
+			case VM_INV:
+			case VM_RSF:
+			case VM_LSF:
 			case VM_OR:		binary_op(inst);				break;
 			case VM_NEG:
 			case VM_NOT:	unary_op(inst);					break;
@@ -1174,7 +1226,7 @@ struct variable *run(struct byte_array *program, bool in_context)
 			case VM_DST:	dst();							break;
 			case VM_SET:	set(state, program);			break;
 			case VM_JMP:	pc_offset = jump(program);		break;
-			case VM_IF:		pc_offset = iff(program);		break;
+			case VM_IFF:	pc_offset = iff(program);		break;
 			case VM_CAL:	func_call();					break;
 			case VM_LST:	push_list(program);				break;
 			case VM_MAP:	push_map(program);				break;
@@ -1190,13 +1242,16 @@ struct variable *run(struct byte_array *program, bool in_context)
 			case VM_MET:	method(program);				break;
 			case VM_COM:
 			case VM_ITR:	iterate(inst, state, program);	break;
+			case VM_TRY:	vm_trycatch(program);			break;
 			default:		vm_exit_message(ERROR_OPCODE);	break;
 		}
-
 		program->current += pc_offset;
 	}
 
-	if (runtime && !in_context)
+	//DEBUGPRINT("run done %d %d %p\n", runtime, context, state);
+	if (!runtime)
+		return NULL;
+	if (!in_context)
 		stack_pop(program_stack);
 	return (struct variable*)stack_peek(operand_stack, 0);
 }

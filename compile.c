@@ -15,7 +15,7 @@
 #define ERROR_LEX		"Lexigraphical error"
 #define ERROR_PARSE		"Parsological error"
 #define ERROR_TOKEN		"Unknown token"
-#define EXTENSION		".kg"
+#define EXTENSION		".fg"
 #define QUOTE			'\''
 #define ESCAPE			'\\'
 #define ESCAPED_NEWLINE	'n'
@@ -43,9 +43,16 @@ struct token {
 		LEX_MINUS,
 		LEX_TIMES,
 		LEX_DIVIDE,
+		LEX_MODULO,
 		LEX_AND,
 		LEX_OR,
 		LEX_NOT,
+		LEX_BAND,
+		LEX_BOR,
+		LEX_INVERSE,
+		LEX_XOR,
+		LEX_LSHIFT,
+		LEX_RSHIFT,
 		LEX_GREATER,
 		LEX_LESSER,
 		LEX_SAME,
@@ -76,6 +83,10 @@ struct token {
 		LEX_WHERE,
 		LEX_FUNCTION,
 		LEX_RETURN,
+		LEX_TRY,
+		LEX_CATCH,
+		LEX_THROW,
+		LEX_DO,
 	} lexeme;
 	uint32_t number;
 	struct byte_array *string;
@@ -91,6 +102,13 @@ struct number_string lexemes[] = {
 	{LEX_MINUS,					"-"},
 	{LEX_TIMES,					"*"},
 	{LEX_DIVIDE,				"/"},
+	{LEX_MODULO,				"%"},
+	{LEX_BAND,					"&"},
+	{LEX_BOR,					"|"},
+	{LEX_INVERSE,				"~"},
+	{LEX_XOR,					"^"},
+	{LEX_RSHIFT,				">>"},
+	{LEX_LSHIFT,				"<<"},
 	{LEX_AND,					"and"},
 	{LEX_OR,					"or"},
 	{LEX_NOT,					"not"},
@@ -120,6 +138,10 @@ struct number_string lexemes[] = {
 	{LEX_IN,					"in"},
 	{LEX_WHERE,					"where"},
 	{LEX_RETURN,				"return"},
+	{LEX_TRY,					"try"},
+	{LEX_CATCH,					"catch"},
+	{LEX_THROW,					"throw"},
+	{LEX_DO,					"do"}
 };
 
 const char* lexeme_to_string(enum Lexeme lexeme)
@@ -210,6 +232,14 @@ bool isiden(char c)
 	return isalnum(c) || (c=='_');
 }
 
+bool isKeyword(int n)
+{
+	for (int c,i=0; (c = lexemes[n].chars[i]); i++)
+		if (!isalpha(c))
+			return false;
+	return true;
+}
+
 int insert_token_string(enum Lexeme lexeme, const char* input, int i)
 {
 	struct byte_array *string = byte_array_new();
@@ -280,6 +310,10 @@ lexmore:
 
 			if (!strncmp(&input[i], lexstr, strlen(lexstr))) {
 
+				if (isKeyword(j) && i<binput->size-1 && isalpha(input[i+strlen(lexemes[j].chars)])) {
+					DEBUGPRINT("%s is a keyword, %c is alpha\n", lexemes[j].chars, input[i+strlen(lexemes[j].chars)]);
+					continue; // just an identifier
+				}
 				enum Lexeme lexeme = lexemes[j].number;
 
 				if (lexeme == LEX_LEFT_COMMENT) { // start comment with /*
@@ -320,7 +354,9 @@ lexmore:
 
 BNF:
 
-<statements> --> ( <assignment> | <fcall> | <ifthenelse> | <loop> | <rejoinder> | <iterloop> )*
+<statements> --> ( <assignment> | <fcall> | <ifthenelse> | <loop> | <rejoinder> | <iterloop> | <trycatch> | <throw> )*
+<trycatch> --> LEX_TRY <statements> LEX_CATCH <variable> <statements> LEX_END
+<throw> --> LEX_THROW <expression>
 <assignment> --> <destination>, LEX_SET <source>,
 <destination> --> <variable> | ( <expression> <member> )
 <source> --> <expression>
@@ -328,22 +364,24 @@ BNF:
 <ifthenelse> --> IF <expression> THEN <statements>
 				  ( ELSE IF <expression> THEN <statements> )*
 				  ( ELSE <statements>)? LEX_END
-<loop> --> WHILE <expression> <statements> LEX_END
+<loop> --> WHILE <expression> LEX_DO <statements> LEX_END
 
 <iterator> --> LEX_FOR LEX_IDENTIFIER LEX_IN <expression> ( LEX_WHERE <expression> )?
-<iterloop> --> <iterator> <statements> LEX_END
+<iterloop> --> <iterator> LEX_DO <statements> LEX_END
 <comprehension> --> LEX_LEFTSQUARE <expression> <iterator> LEX_RIGHTSQUARE
 
 <rejoinder> --> LEX_RETURN <source>,
-<fdecl> --> FUNCTION LEX_LEFT_PARENTHESIS <destination>, LEX_RIGHT_PARENTHESIS <statements> LEX_END
+<fdecl> --> FUNCTION LEX_LEFTHESIS <variable>, LEX_RIGHTHESIS <statements> LEX_END
 <fcall> --> <expression> <call>
-<call> --> LEX_LEFT_PARENTHESIS <source>, LEX_RIGHT_PARENTHESIS
+<call> --> LEX_LEFTHESIS <source>, LEX_RIGHTHESIS
 
 <expression> --> <exp2> ( ( LEX_SAME | LEX_DIFFERENT | LEX_GREATER | LEX_LESSER ) <exp2> )?
-<exp2> --> <exp3> ( ( LEX_PLUS | LEX_MINUS | LEX_TIMES | LEX_DIVIDE ) <exp3> )*
-<exp3> --> (NOT | LEX_MINUS)? <exp4>
-<exp4> --> <exp5> ( <call> | <member> )*
-<exp5> --> ( LEX_LEFTTHESIS <expression> LEX_RIGHTTHESIS ) | <atom>
+<exp2> --> <exp3> ( ( LEX_PLUS | LEX_MINUS ) <exp3> )*
+<exp3> --> <exp4> ( ( LEX_PLUS | LEX_MINUS | LEX_TIMES | LEX_DIVIDE | LEX_MODULO |
+					  LEX_BAND | LEX_BOR | LEX_XOR | LEX_LSHIFT | LEX_RSHIFT) <exp3> )*
+<exp4> --> (LEX_NOT | LEX_MINUS | LEX_INVERSE)? <exp5>
+<exp5> --> <exp6> ( <call> | <member> )*
+<exp6> --> ( LEX_LEFTTHESIS <expression> LEX_RIGHTTHESIS ) | <atom>
 <atom> -->  LEX_IDENTIFIER | <float> | <integer> | <boolean> | <table> | <comprehension> | <fdecl>
 
 <variable> --> LEX_IDENTIFIER
@@ -380,6 +418,8 @@ struct symbol {
 		SYMBOL_ITERATOR,
 		SYMBOL_ITERLOOP,
 		SYMBOL_COMPREHENSION,
+		SYMBOL_TRYCATCH,
+		SYMBOL_THROW,
 	} nonterminal;
 	const struct token *token;
 	struct array* list;
@@ -411,6 +451,8 @@ struct number_string nonterminals[] = {
 	{SYMBOL_ITERATOR,		"iterator"},
 	{SYMBOL_ITERLOOP,		"iterloop"},
 	{SYMBOL_COMPREHENSION,	"comprehension"},
+	{SYMBOL_TRYCATCH,		"try-catch"},
+	{SYMBOL_THROW,			"throw"},
 };
 
 struct array* parse_list;
@@ -462,7 +504,11 @@ void display_symbol(const struct symbol *symbol, int depth)
 		case SYMBOL_FLOAT:
 			DEBUGPRINT(": %f\n", symbol->floater);
 			break;
-		case SYMBOL_VARIABLE:
+		case SYMBOL_VARIABLE: {
+			char* s = byte_array_to_string(symbol->token->string);
+			DEBUGPRINT(": '%s (%s)'\n", s, symbol->lhs ? "lhs":"rhs");
+			free(s);
+		} break;
 		case SYMBOL_STRING: {
 			char* s = byte_array_to_string(symbol->token->string);
 			DEBUGPRINT(": '%s'\n", s);
@@ -470,6 +516,12 @@ void display_symbol(const struct symbol *symbol, int depth)
 		} break;
 		case SYMBOL_EXPRESSION:
 			DEBUGPRINT(" %s\n", lexeme_to_string(symbol->token->lexeme));
+			break;
+		case SYMBOL_TRYCATCH:
+			DEBUGPRINT("try\n");
+			display_symbol(symbol->index, depth);
+			DEBUGPRINT("catch %s\n", byte_array_to_string(symbol->token->string));
+			display_symbol(symbol->value, depth);
 			break;
 		default:
 			DEBUGPRINT("\n");
@@ -497,7 +549,8 @@ void display_symbol(const struct symbol *symbol, int depth)
 
 #define LOOKAHEAD (lookahead(0))
 #define FETCH_OR_QUIT(x) if (!fetch(x)) return NULL;
-#define FETCH_OR_ERROR(x) if (!fetch(x)) { exit_message("missing %s at line %d", NUM_TO_STRING(lexemes, x), line); return NULL; }
+#define OR_ERROR(x) { exit_message("missing %s at line %d", NUM_TO_STRING(lexemes, x), line); return NULL; }
+#define FETCH_OR_ERROR(x) if (!fetch(x)) OR_ERROR(x);
 
 
 enum Lexeme lookahead(int n) {
@@ -512,9 +565,11 @@ struct token *fetch(enum Lexeme lexeme) {
 	if (parse_index >= parse_list->length)
 		return NULL;
 	struct token *token = parse_list->data[parse_index];
-	if (token->lexeme != lexeme)
+	if (token->lexeme != lexeme) {
+		DEBUGPRINT("fetched %s instead of %s at %d\n", lexeme_to_string(token->lexeme), lexeme_to_string(lexeme), parse_index);
 		return NULL;
-	//	DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
+	}
+	DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
 	//  display_token(token, 0);
 
 	parse_index++;
@@ -618,25 +673,6 @@ struct symbol *destination()
 	return e;
 };
 
-/*
-//  <destination> --> <expression> ( LEX_COLON <expression> )?
-struct symbol *destination()
-{
-	struct symbol *e = expression();
-	if (!e)
-		return NULL;
-	struct symbol *p = symbol_new(SYMBOL_PAIR);
-	p->index = e;
-	p->index->lhs = true;
-
-	if (fetch(LEX_COLON)) // i.e. x:y
-		p->value = expression();
-	else
-		p->value = symbol_new(SYMBOL_NIL);
-	return p;
-}
-*/
-
 //<variable> --> LEX_IDENTIFIER
 struct symbol *variable()
 {
@@ -644,10 +680,7 @@ struct symbol *variable()
 }
 
 
-// <fdecl> --> FUNCTION
-//				LEX_LEFT_PARENTHESIS
-//				<destination>,
-//				LEX_RIGHT_PARENTHESIS <statements> LEX_END
+// <fdecl> --> FUNCTION LEX_LEFTHESIS <variable>, LEX_RIGHTHESIS <statements> LEX_END
 struct symbol *fdecl()
 {
 	FETCH_OR_QUIT(LEX_FUNCTION)
@@ -656,8 +689,8 @@ struct symbol *fdecl()
 	s->index = repeated(SYMBOL_DESTINATION, &destination);
 	FETCH_OR_ERROR(LEX_RIGHTHESIS)
 	s->value = statements();
-	DEBUGPRINT("fdecl: %d statements\n", s->value->list->length);
-	DEBUGPRINT("lookahead=%s\n", NUM_TO_STRING(lexemes, LOOKAHEAD));
+	//DEBUGPRINT("fdecl: %d statements\n", s->value->list->length);
+	//DEBUGPRINT("lookahead=%s\n", NUM_TO_STRING(lexemes, LOOKAHEAD));
 	FETCH_OR_ERROR(LEX_END);
 	return s;
 }
@@ -770,7 +803,7 @@ struct symbol *member()
 	return m;
 }
 
-// <call> --> LEX_LEFT_PARENTHESIS <source>, LEX_RIGHT_PARENTHESIS
+// <call> --> LEX_LEFTHESIS <source>, LEX_RIGHTHESIS
 struct symbol *call()
 {
 	struct symbol *s = symbol_new(SYMBOL_FCALL);
@@ -925,12 +958,43 @@ struct symbol *rejoinder()
 	return repeated(SYMBOL_RETURN, &expression); // return values
 }
 
+// <trycatch> --> LEX_TRY <statements> LEX_CATCH <destination> <statements> LEX_END
+struct symbol *trycatch()
+{
+	FETCH_OR_QUIT(LEX_TRY);
+	struct symbol *s = symbol_new(SYMBOL_TRYCATCH);
+	s->index = statements();
+	FETCH_OR_ERROR(LEX_CATCH);
+	if (!(s->token = fetch(LEX_IDENTIFIER)))
+		OR_ERROR(LEX_IDENTIFIER);
+	s->lhs = true;
+	s->value = statements();
+	FETCH_OR_ERROR(LEX_END);
+	return s;
+}
+
+// <throw> --> LEX_THROW <expression>
+struct symbol *throw()
+{
+	FETCH_OR_QUIT(LEX_THROW);
+	struct symbol *s = symbol_new(SYMBOL_THROW);
+	s->value = expression();
+	return s;
+}
+
+struct symbol *strings_and_variables()
+{
+	struct array *sav = array_new();
+	while ((array_add(sav, variable()) || array_add(sav, string())));
+	return (struct symbol*)sav;
+}
+
 // <statements> --> ( <assignment> | <fcall> | <ifthenelse> | <loop> | <rejoinder> | <iterloop> ) *
 struct symbol *statements()
 {
 	struct symbol *s = symbol_new(SYMBOL_STATEMENTS);
 	struct symbol *t;
-	while ((t = one_of(&assignment, &fcall, &ifthenelse, &loop, &rejoinder, &iterloop, NULL)))
+	while ((t = one_of(&assignment, &fcall, &ifthenelse, &loop, &rejoinder, &iterloop, &trycatch, &throw, NULL)))
 		symbol_add(s, t);
 	return s;
 }
@@ -954,7 +1018,7 @@ struct symbol *parse(struct array *list, uint32_t index)
 
 // generate ////////////////////////////////////////////////////////////////
 
-void generate_code(struct byte_array *code, struct symbol *root);
+struct byte_array *generate_code(struct byte_array *code, struct symbol *root);
 
 void generate_step(struct byte_array *code, int count, int action,...)
 {
@@ -1112,8 +1176,8 @@ void generate_math(struct byte_array *code, struct symbol *root)
 		case LEX_NOT:			op = VM_NOT;			break;
 		case LEX_SAME:			op = VM_EQU;			break;
 		case LEX_DIFFERENT:		op = VM_NEQ;			break;
-		case LEX_GREATER:		op = VM_GT;				break;
-		case LEX_LESSER:		op = VM_LT;				break;
+		case LEX_GREATER:		op = VM_GTN;			break;
+		case LEX_LESSER:		op = VM_LTN;			break;
 		default:	exit_message("bad math lexeme");	break;
 	}
 	generate_step(code, 1, op);
@@ -1135,7 +1199,7 @@ void generate_ifthenelse(struct byte_array *code, struct symbol *root)
 		// if
 		struct symbol *iff = array_get(root->list, i);
 		generate_code(code, iff);
-		generate_step(code, 2, VM_IF, thn_code->size);
+		generate_step(code, 2, VM_IFF, thn_code->size);
 		byte_array_append(code, thn_code);
 		array_add(gotos, (void*)(VOID_INT)(code->size-1));
 		
@@ -1166,7 +1230,7 @@ void generate_loop(struct byte_array *code, struct symbol *root)
 	generate_code(b, root->value);
 	
 	struct byte_array *thn = byte_array_new();
-	generate_step(thn, 2, VM_IF, b->size + 2);
+	generate_step(thn, 2, VM_IFF, b->size + 2);
 	
 	struct byte_array *while_a_do_b = byte_array_concatenate(4, code, ifa, thn, b);
 	byte_array_append(code, while_a_do_b);
@@ -1205,12 +1269,31 @@ void generate_comprehension(struct byte_array *code, struct symbol *root) {
 	generate_iterator(code, root, VM_COM);
 }
 
+// <trycatch> --> LEX_TRY <statements> LEX_CATCH <variable> <statements> LEX_END
+void generate_trycatch(struct byte_array *code, struct symbol *root)
+{
+	struct byte_array *try   = generate_code(NULL, root->index);
+
+	generate_step(code, 1, VM_TRY);
+	serial_encode_string(code, 0, try);
+
+	serial_encode_string(code, 0, root->token->string);
+	struct byte_array *catch = generate_code(NULL, root->value);
+	serial_encode_string(code, 0, catch);
+}
+
+void generate_throw(struct byte_array *code, struct symbol *root)
+{
+	generate_code(code, root->value);
+	generate_step(code, 1, VM_TRO);
+}
+
 typedef void(generator)(struct byte_array*, struct symbol*);
 
-void generate_code(struct byte_array *code, struct symbol *root)
+struct byte_array *generate_code(struct byte_array *code, struct symbol *root)
 {
 	if (!root)
-		return;
+		return NULL;
 	generator *g = NULL;
 
 	//DEBUGPRINT("generate_code %s\n", nonterminals[root->nonterminal]);
@@ -1236,12 +1319,18 @@ void generate_code(struct byte_array *code, struct symbol *root)
 		case SYMBOL_DESTINATION:	g = generate_destination;	break;
 		case SYMBOL_IF_THEN_ELSE:	g = generate_ifthenelse;	break;
 		case SYMBOL_COMPREHENSION:	g = generate_comprehension;	break;
+		case SYMBOL_TRYCATCH:		g = generate_trycatch;		break;
+		case SYMBOL_THROW:			g = generate_throw;			break;
 		default:
 			exit_message(ERROR_TOKEN);
-			return;
+			return NULL;
 	}
 
-	g(code, root);
+	if (!code)
+		code = byte_array_new();
+	if (g)
+		g(code, root);
+	return code;
 }
 
 struct byte_array *program_from_code(struct byte_array *code, struct symbol *root)
@@ -1278,15 +1367,6 @@ struct byte_array *build_file(const struct byte_array* filename)
 // main: read file, build, run /////////////////////////////////////////////
 
 #define ERROR_USAGE	"usage: filagree [file]"
-
-/*
-struct variable *interpret_string(const char* str, bridge *callback)
-{
-	struct byte_array *input = byte_array_from_string(str);
-	struct byte_array *program = build_string(input);
-	return execute(program, 0);
-}
-*/
 
 struct variable *interpret_file(const char* str, bridge *callback)
 {

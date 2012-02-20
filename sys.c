@@ -12,7 +12,7 @@ extern struct stack *rhs;
 extern struct stack *operand_stack;
 extern void src_size(int32_t size);
 extern void call(struct byte_array *program);
-
+extern struct variable *vm_exception;
 
 // system functions
 
@@ -49,11 +49,22 @@ void rm()
 	remove(byte_array_to_string(path->str));
 }
 
+/*
+void throw()
+{
+	stack_pop(rhs); // self
+	struct variable *message = stack_pop(rhs);
+	vm_assert(message->type == VAR_STR, "non-string error message");
+	vm_exception = variable_new_err(byte_array_to_string(message->str));
+}
+*/
+
 struct string_func builtin_funcs[] = {
 	{"print", &print},
 	{"save", &save},
 	{"load", &load},
 	{"remove", &rm},
+	//	{"throw", &throw},
 };
 
 struct variable *func_map()

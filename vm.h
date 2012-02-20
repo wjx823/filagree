@@ -30,21 +30,30 @@ enum Opcode {
     VM_SUB,	//	subtract two values
     VM_MUL,	//	multiply two values
     VM_DIV,	//	divide two values
+	VM_MOD,	//	modulo
+	VM_BND,	//	bitwise and
+	VM_BOR,	//	bitwise or
+	VM_INV,	//	bitwise inverse
+	VM_XOR,	//	xor
+	VM_LSF,	//	left shift
+	VM_RSF,	//	right shift
     VM_NEG,	//	arithmetic negate a value
     VM_NOT,	//	boolean negate a value
     VM_EQU,	//	compare
 	VM_NEQ,	//	diff
-    VM_GT,	//	greater than
-    VM_LT,	//	less than
+    VM_GTN,	//	greater than
+    VM_LTN,	//	less than
     VM_AND,	//	logical and
     VM_OR,	//	logical or
-    VM_IF,	//	if then
+    VM_IFF,	//	if then
     VM_JMP,	//	jump the program counter
     VM_CAL,	//	call a function
 	VM_MET,	//	call an object method
 	VM_RET,	//	return from a function,
 	VM_ITR,	//	iteration loop
 	VM_COM,	//	comprehension
+	VM_TRY,	//	try.catch
+	VM_TRO, //	throw
 };
 
 // variable ////////////////////////////////////////////////////////////////
@@ -107,5 +116,6 @@ void vm_call();
 const char *var_type_str(enum VarType vt);
 void vm_exit_message(const char *format, ...);
 void vm_null_check(const void* p);
+void vm_assert(bool assertion, const char *format, ...);
 
 #endif // VM_H
