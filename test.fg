@@ -1,11 +1,4 @@
-/*
-x = [3,1,4]
-y = 0
-z = [n+1 for n in x where n > 2]
-vm.print(z)
-*/
-
-import '/Users/yusuf/make/vm/unit_test'
+import '/Users/yusuf/make/filagree/unit_test'
 
 tester.test('add integers',
 	function()
@@ -215,5 +208,16 @@ tester.test('comprehension',
 	end,
 	[5,6,10])
 
+tester.test('exception',
+	function()
+		try
+			throw 2
+			return 3
+		catch x
+			return x
+		end
+		return 4
+	end,
+	2)
 
 tester.done()
