@@ -1,4 +1,6 @@
-import '/Users/yusuf/make/filagree/unit_test'
+# test.fg ###################################################################
+
+import 'unit_test'
 
 tester.test('add integers',
 	function()

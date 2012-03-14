@@ -31,13 +31,15 @@ uint32_t array_add(struct array *a , void *datum);
 void array_insert(struct array *a, uint32_t index, void *datam);
 void* array_get(const struct array *a, uint32_t index);
 void array_set(struct array *a, uint32_t index, void *datum);
-void *array_remove(struct array *a, uint32_t index);
+void array_remove(struct array *a, uint32_t start, int32_t length);
+struct array *array_part(struct array *within, uint32_t start, uint32_t length);
+void array_append(struct array *a, const struct array* b);
 
 // byte_array ///////////////////////////////////////////////////////////////
 
 struct byte_array {
 	uint8_t *data, *current;
-	int32_t size;
+	uint32_t length;
 };
 
 struct byte_array *byte_array_new();
@@ -53,10 +55,10 @@ void byte_array_resize(struct byte_array* ba, uint32_t size);
 bool byte_array_equals(const struct byte_array *a, const struct byte_array* b);
 struct byte_array *byte_array_concatenate(int n, const struct byte_array* ba, ...);
 void byte_array_print(const char* text, const struct byte_array* ba);
-
 int32_t byte_array_find(struct byte_array *within, struct byte_array *sought, uint32_t start);
+struct byte_array *byte_array_part(struct byte_array *within, uint32_t start, uint32_t length);
+void byte_array_remove(struct byte_array *within, uint32_t start, int32_t length);
 struct byte_array *byte_array_replace(struct byte_array *within, struct byte_array *replacement, uint32_t start, int32_t length);
-struct byte_array *byte_array_part(struct byte_array *within, uint32_t start, int32_t length);
 
 // stack ////////////////////////////////////////////////////////////////////
 

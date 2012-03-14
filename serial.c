@@ -31,7 +31,7 @@ struct byte_array *encode_int(struct byte_array *buf, int32_t value)
     if (!buf)
 		buf = byte_array_new();
     uint8_t growth = encode_int_size(value);
-    byte_array_resize(buf, buf->size + growth);
+    byte_array_resize(buf, buf->length + growth);
     uint8_t byte = (value & 0x3F) | ((value >= 0x40) ? 0x80 : 0) | ((value < 0) ? 0x40 : 0); 
     *buf->current++ = byte; 
     value >>= 6;
@@ -93,7 +93,7 @@ struct byte_array* serial_decode_string(struct byte_array* buf)
 void serial_decode(struct byte_array* buf, serial_element se, const void* extra)
 {
 //    DEBUGPRINT("serial_decode %d %x<%x?\n", buf->size, buf->current, buf->data + buf->size);
-    while (buf->current < buf->data + buf->size)
+    while (buf->current < buf->data + buf->length)
     {
         // get key and wire type
         int32_t keyWire = serial_decode_int(buf);
@@ -152,8 +152,8 @@ uint8_t serial_encode_string_size(int32_t key, const struct byte_array* string) 
     if (!string)
         return 0;
     return (key ? encode_int_size(key) : 0) +
-           encode_int_size(string->size) +
-           string->size;
+           encode_int_size(string->length) +
+           string->length;
 }
 
 struct byte_array* serial_encode_string(struct byte_array* buf, int32_t key, const struct byte_array* bytes)
@@ -165,11 +165,11 @@ struct byte_array* serial_encode_string(struct byte_array* buf, int32_t key, con
 
     if (key)
         encode_int(buf, key<<2 | SERIAL_STRING);
-    encode_int(buf, bytes->size);
-    byte_array_resize(buf, buf->size + bytes->size);
-    memcpy(buf->current, bytes->data, bytes->size);
+    encode_int(buf, bytes->length);
+    byte_array_resize(buf, buf->length + bytes->length);
+    memcpy(buf->current, bytes->data, bytes->length);
 
-    buf->current = buf->data + buf->size;
+    buf->current = buf->data + buf->length;
     return buf;
 }
 
