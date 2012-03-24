@@ -8,6 +8,8 @@ You may run the unit test thusly:
 
 To get a feel for the language, here are the unit tests, written in Filagree.
 
+In it, an object named 'tester' is created that includes a function to run a given test and check the actual result against the expected.
+
 
 # unit_test.fg ##############################################################
 
