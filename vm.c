@@ -280,9 +280,9 @@ void display_program(struct byte_array *program)
 
 #else // not DEBUG
 
-void display_code(struct byte_array *code) {}
+void display_code(struct Context *context, struct byte_array *code) {}
 const struct number_string opcodes[] = {};
-const char* indentation(context) { return ""; }
+const char* indentation(struct Context *context) { return ""; }
 
 #endif // DEBUG
 

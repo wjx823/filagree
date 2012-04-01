@@ -144,8 +144,6 @@ struct byte_array *byte_array_new_size(uint32_t size) {
 
 void byte_array_resize(struct byte_array* ba, uint32_t size) {
     assert_message(ba->current >= ba->data, "byte_array corrupt");
-    assert(size && size < SIZE_MAX);
-
     uint32_t delta = ba->current - ba->data;
     ba->data = (uint8_t*)realloc(ba->data, size);
     assert(ba->data);
