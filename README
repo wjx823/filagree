@@ -1,4 +1,4 @@
-v0.5 2012/03/13
+v0.5 2012/04/01
 
 Filagree is a scripting language, with a compiler and virtual machine written in C99. On an ARM chip, the VM takes ~20KB.
 
@@ -8,10 +8,9 @@ You may run the unit test thusly:
 
 To get a feel for the language, here are the unit tests, written in Filagree.
 
-In it, an object named 'tester' is created that includes a function to run a given test and check the actual result against the expected.
 
 
-# unit_test.fg ##############################################################
+// unit_test.fg /////////////////////////////////////////////////////////////
 
 tester = [
 	'tested':0,
@@ -35,9 +34,10 @@ tester = [
 ]
 
 
-# test.fg ###################################################################
 
-import 'unit_test'
+// test.fg //////////////////////////////////////////////////////////////////
+
+import '/Users/yusuf/make/filagree/unit_test'
 
 tester.test('add integers',
 	function()

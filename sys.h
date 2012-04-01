@@ -14,9 +14,10 @@ struct string_func
     bridge* func;
 };
 
-struct variable *func_map();
+struct variable *func_map(struct Context *context);
 
-struct variable *builtin_method(struct variable *indexable,
+struct variable *builtin_method(struct Context *context,
+								struct variable *indexable,
                                 const struct variable *index);
 
 #endif // SYS_H

@@ -10,6 +10,21 @@
 #define ERROR_NULL    "null pointer"
 #define ERROR_INDEX    "index out of bounds"
 
+typedef struct Context *context_p; // forward declaration
+typedef void(bridge)(context_p context, struct stack*);
+
+struct Context {
+	struct program_state *vm_state;
+	struct stack *program_stack;
+	struct stack *operand_stack;
+	struct stack *rhs;
+	struct variable *vm_exception;
+	bridge *callback2c;
+	bool runtime;
+	uint32_t num_vars;
+	struct variable* error;
+	uint8_t indent;
+};
 
 enum Opcode {
     VM_NIL,    //    push nil
@@ -56,67 +71,20 @@ enum Opcode {
     VM_TRO, //    throw
 };
 
-// variable ////////////////////////////////////////////////////////////////
-
-enum VarType {
-    VAR_NIL,
-    VAR_INT,
-    VAR_FLT,
-    VAR_BOOL,
-    VAR_STR,
-    VAR_FNC,
-    VAR_LST,
-    VAR_MAP,
-    VAR_ERR,
-    VAR_C,
-};    
-
-struct variable {
-    const struct byte_array* name;
-    enum VarType type;
-    uint8_t marked;
-    union {
-        struct byte_array* str;
-        struct array *list;
-        int32_t integer;
-        float floater;
-        bool boolean;
-        void(*cfnc)(struct stack*); // i.e., bridge
-    };
-    struct map *map;
-};
-
-const char* variable_value(const struct variable* v);
-struct byte_array *variable_serialize(struct byte_array *bits,
-                                      const struct variable *in);
-struct variable *variable_deserialize(struct byte_array *str);
-
-typedef void(bridge)(struct stack*);
-
 #define ERROR_OPCODE "unknown opcode"
 
 #ifdef DEBUG
-void display_program(const char* title, struct byte_array* program);
+void display_program(struct byte_array* program);
 #endif
-void vm_init();
-struct variable *execute(struct byte_array *program, bool in_context, bridge *callback_to_c);
+struct Context *vm_init();
+struct variable *execute(struct byte_array *program,
+						 bool in_context,
+						 bridge *callback_to_c);
+void garbage_collect(struct Context *context);
 
-extern int variable_save(const struct variable* v, const struct variable* path);
-extern struct variable *variable_load(const struct variable* path);
-struct variable *variable_new_err(const char* message);
-struct variable *variable_new_c(bridge *cfnc);
-struct variable *variable_new_int(int32_t i);
-struct variable *variable_new_nil();
-struct variable *variable_new_map(struct map *map);
-struct variable *variable_new_float(float f);
-struct variable *variable_new_str(struct byte_array *str);
-struct variable *variable_new_fnc(struct byte_array *fnc);
-struct variable *variable_new_list(struct array *list);
-struct variable* variable_copy(const struct variable* v);
 void vm_call();
-const char *var_type_str(enum VarType vt);
-void *vm_exit_message(const char *format, ...);
-void vm_null_check(const void* p);
-void vm_assert(bool assertion, const char *format, ...);
+void *vm_exit_message(struct Context *context, const char *format, ...);
+void vm_null_check(struct Context *context, const void* p);
+void vm_assert(struct Context *context, bool assertion, const char *format, ...);
 
 #endif // VM_H

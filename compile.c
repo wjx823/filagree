@@ -10,6 +10,7 @@
 #include "serial.h"
 #include "compile.h"
 #include "vm.h"
+#include "variable.h"
 
 #define TAG              "compile"
 #define ERROR_LEX        "Lexigraphical error"
@@ -1344,7 +1345,7 @@ struct byte_array *generate_program(struct symbol *root)
     struct byte_array *program = serial_encode_int(0, 0, code->length);
     byte_array_append(program, code);
 #ifdef DEBUG
-    display_program(0, program);
+    display_program(program);
 #endif
     return program;
 }
@@ -1371,7 +1372,6 @@ struct variable *interpret_file(const char* str, bridge *callback)
 {
     struct byte_array *filename = byte_array_from_string(str);
     struct byte_array *program = build_file(filename);
-    vm_init();
     return execute(program, false, NULL);
 }
 
@@ -1393,7 +1393,7 @@ struct variable *repl()
 {
     char stdinput[FG_MAX_INPUT];
     struct variable *v = NULL;
-    vm_init();
+    struct Context *context = vm_init();
 
     for (;;) {
         fflush(stdin);
@@ -1403,7 +1403,7 @@ struct variable *repl()
                 return 0;
             if (ferror(stdin))
 				//return errno;
-				return variable_new_err("unknown error reading stdin");
+				return variable_new_err(context, "unknown error reading stdin");
         }
         if ((v = interpret_string(stdinput, NULL)))
             return v;
@@ -1421,7 +1421,7 @@ int main (int argc, char** argv)
         default:    exit_message(ERROR_USAGE);          break;
     }
 	if (v && v->type==VAR_ERR)
-		PRINT("%s\n", variable_value(v));
+		PRINT("%s\n", variable_value(NULL, v));
 	return v && v->type == VAR_ERR;
 }
 #endif // EXECUTABLE
