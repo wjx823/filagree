@@ -44,7 +44,6 @@
 		88A65D9F147757400055DACF /* vm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = vm.c; sourceTree = "<group>"; };
 		88A65DA81477574E0055DACF /* test.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test.fg; sourceTree = "<group>"; };
 		88A65DA91477574E0055DACF /* unit_test.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = unit_test.fg; sourceTree = "<group>"; };
-		88BC3EE3151076EF00600744 /* try.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = try.fg; sourceTree = "<group>"; };
 		88C760B015428A5100A4F8E7 /* interpret.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = interpret.h; sourceTree = "<group>"; };
 		88C760B215428A5F00A4F8E7 /* interpret.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = interpret.c; sourceTree = "<group>"; };
 		88E65DE41510F46F00E6207D /* variable.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = variable.c; sourceTree = "<group>"; };
@@ -108,7 +107,6 @@
 			isa = PBXGroup;
 			children = (
 				88A65DA81477574E0055DACF /* test.fg */,
-				88BC3EE3151076EF00600744 /* try.fg */,
 				88A65DA91477574E0055DACF /* unit_test.fg */,
 			);
 			name = test;
