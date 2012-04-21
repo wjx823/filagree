@@ -16,10 +16,7 @@
 #define VOID_FLT double)(int32_t
 #endif
 
-#ifdef MBED_PORTNAMES_H
-#include "mbed.h"
-#pragma diag_suppress 1293  //  suppress squeamish warning of "assignment in condition"
-#endif
+//#pragma diag_suppress 1293  //  suppress squeamish warning of "assignment in condition"
 
 #define ARRAY_LEN(x) (sizeof x / sizeof *x)
 
