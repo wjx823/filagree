@@ -191,7 +191,7 @@
 				INSTALL_PATH = /usr/local/bin;
 				OTHER_CFLAGS = (
 					"-DDEBUG",
-					"-fnested-functions",
+					"-DCLI",
 				);
 				PRODUCT_NAME = filagree;
 			};
@@ -205,7 +205,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_MODEL_TUNING = G5;
 				INSTALL_PATH = /usr/local/bin;
-				OTHER_CFLAGS = "-fnested-functions";
+				OTHER_CFLAGS = "-DCLI";
 				PRODUCT_NAME = filagree;
 			};
 			name = Release;
@@ -219,7 +219,10 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = "-fnested-functions";
+				OTHER_CFLAGS = (
+					"-DCLI",
+					"-fnested-functions",
+				);
 				SDKROOT = macosx;
 				VALID_ARCHS = x86_64;
 			};
@@ -234,7 +237,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
-					"-DVOID_INT=uint64_t",
+					"-DCLI",
 					"-fnested-functions",
 				);
 				SDKROOT = macosx;

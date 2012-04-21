@@ -82,7 +82,7 @@ struct variable *interpret_string(const char *str, bridge *callback)
     return NULL;
 }
 
-#ifndef EXECUTABLE
+#ifdef CLI
 int main (int argc, char** argv)
 {
     struct variable *v = NULL;
