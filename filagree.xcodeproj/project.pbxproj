@@ -1,0 +1,271 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		881AC0FF14B09B2B00EAAE3F /* sys.c in Sources */ = {isa = PBXBuildFile; fileRef = 881AC0FD14B09B2B00EAAE3F /* sys.c */; };
+		88A65DA0147757400055DACF /* compile.c in Sources */ = {isa = PBXBuildFile; fileRef = 88A65D9A147757400055DACF /* compile.c */; };
+		88A65DA1147757400055DACF /* serial.c in Sources */ = {isa = PBXBuildFile; fileRef = 88A65D9B147757400055DACF /* serial.c */; };
+		88A65DA2147757400055DACF /* struct.c in Sources */ = {isa = PBXBuildFile; fileRef = 88A65D9C147757400055DACF /* struct.c */; };
+		88A65DA4147757400055DACF /* util.c in Sources */ = {isa = PBXBuildFile; fileRef = 88A65D9E147757400055DACF /* util.c */; };
+		88A65DA5147757400055DACF /* vm.c in Sources */ = {isa = PBXBuildFile; fileRef = 88A65D9F147757400055DACF /* vm.c */; };
+		88C760B315428A5F00A4F8E7 /* interpret.c in Sources */ = {isa = PBXBuildFile; fileRef = 88C760B215428A5F00A4F8E7 /* interpret.c */; };
+		88E65DE61510F46F00E6207D /* variable.c in Sources */ = {isa = PBXBuildFile; fileRef = 88E65DE41510F46F00E6207D /* variable.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8DD76FAF0486AB0100D96B5E /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 8;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		881AC0FD14B09B2B00EAAE3F /* sys.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sys.c; sourceTree = "<group>"; };
+		881AC0FE14B09B2B00EAAE3F /* sys.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sys.h; sourceTree = "<group>"; };
+		88A65D95147757400055DACF /* compile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = compile.h; sourceTree = "<group>"; };
+		88A65D96147757400055DACF /* serial.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = serial.h; sourceTree = "<group>"; };
+		88A65D97147757400055DACF /* struct.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = struct.h; sourceTree = "<group>"; };
+		88A65D98147757400055DACF /* util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = util.h; sourceTree = "<group>"; };
+		88A65D99147757400055DACF /* vm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vm.h; sourceTree = "<group>"; };
+		88A65D9A147757400055DACF /* compile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = compile.c; sourceTree = "<group>"; };
+		88A65D9B147757400055DACF /* serial.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = serial.c; sourceTree = "<group>"; };
+		88A65D9C147757400055DACF /* struct.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = struct.c; sourceTree = "<group>"; };
+		88A65D9E147757400055DACF /* util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = util.c; sourceTree = "<group>"; };
+		88A65D9F147757400055DACF /* vm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = vm.c; sourceTree = "<group>"; };
+		88A65DA81477574E0055DACF /* test.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test.fg; sourceTree = "<group>"; };
+		88A65DA91477574E0055DACF /* unit_test.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = unit_test.fg; sourceTree = "<group>"; };
+		88BC3EE3151076EF00600744 /* try.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = try.fg; sourceTree = "<group>"; };
+		88C760B015428A5100A4F8E7 /* interpret.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = interpret.h; sourceTree = "<group>"; };
+		88C760B215428A5F00A4F8E7 /* interpret.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = interpret.c; sourceTree = "<group>"; };
+		88E65DE41510F46F00E6207D /* variable.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = variable.c; sourceTree = "<group>"; };
+		88E65DE51510F46F00E6207D /* variable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variable.h; sourceTree = "<group>"; };
+		8DD76FB20486AB0100D96B5E /* filagree */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = filagree; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8DD76FAD0486AB0100D96B5E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		08FB7794FE84155DC02AAC07 /* filagree */ = {
+			isa = PBXGroup;
+			children = (
+				08FB7795FE84155DC02AAC07 /* source */,
+				C6A0FF2B0290797F04C91782 /* test */,
+				1AB674ADFE9D54B511CA2CBB /* Products */,
+			);
+			name = filagree;
+			sourceTree = "<group>";
+		};
+		08FB7795FE84155DC02AAC07 /* source */ = {
+			isa = PBXGroup;
+			children = (
+				88A65D9A147757400055DACF /* compile.c */,
+				88A65D95147757400055DACF /* compile.h */,
+				88A65D9B147757400055DACF /* serial.c */,
+				88A65D96147757400055DACF /* serial.h */,
+				88A65D9C147757400055DACF /* struct.c */,
+				88A65D97147757400055DACF /* struct.h */,
+				881AC0FD14B09B2B00EAAE3F /* sys.c */,
+				881AC0FE14B09B2B00EAAE3F /* sys.h */,
+				88A65D9E147757400055DACF /* util.c */,
+				88A65D98147757400055DACF /* util.h */,
+				88E65DE41510F46F00E6207D /* variable.c */,
+				88E65DE51510F46F00E6207D /* variable.h */,
+				88A65D9F147757400055DACF /* vm.c */,
+				88A65D99147757400055DACF /* vm.h */,
+				88C760B015428A5100A4F8E7 /* interpret.h */,
+				88C760B215428A5F00A4F8E7 /* interpret.c */,
+			);
+			name = source;
+			sourceTree = "<group>";
+		};
+		1AB674ADFE9D54B511CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8DD76FB20486AB0100D96B5E /* filagree */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C6A0FF2B0290797F04C91782 /* test */ = {
+			isa = PBXGroup;
+			children = (
+				88A65DA81477574E0055DACF /* test.fg */,
+				88BC3EE3151076EF00600744 /* try.fg */,
+				88A65DA91477574E0055DACF /* unit_test.fg */,
+			);
+			name = test;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8DD76FA90486AB0100D96B5E /* filagree */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1DEB928508733DD80010E9CD /* Build configuration list for PBXNativeTarget "filagree" */;
+			buildPhases = (
+				8DD76FAB0486AB0100D96B5E /* Sources */,
+				8DD76FAD0486AB0100D96B5E /* Frameworks */,
+				8DD76FAF0486AB0100D96B5E /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = filagree;
+			productInstallPath = "$(HOME)/bin";
+			productName = filagree;
+			productReference = 8DD76FB20486AB0100D96B5E /* filagree */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		08FB7793FE84155DC02AAC07 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 0430;
+			};
+			buildConfigurationList = 1DEB928908733DD80010E9CD /* Build configuration list for PBXProject "filagree" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 1;
+			knownRegions = (
+				English,
+				Japanese,
+				French,
+				German,
+			);
+			mainGroup = 08FB7794FE84155DC02AAC07 /* filagree */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8DD76FA90486AB0100D96B5E /* filagree */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		8DD76FAB0486AB0100D96B5E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				88A65DA0147757400055DACF /* compile.c in Sources */,
+				88A65DA1147757400055DACF /* serial.c in Sources */,
+				88A65DA2147757400055DACF /* struct.c in Sources */,
+				88A65DA4147757400055DACF /* util.c in Sources */,
+				88A65DA5147757400055DACF /* vm.c in Sources */,
+				881AC0FF14B09B2B00EAAE3F /* sys.c in Sources */,
+				88E65DE61510F46F00E6207D /* variable.c in Sources */,
+				88C760B315428A5F00A4F8E7 /* interpret.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1DEB928608733DD80010E9CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/bin;
+				OTHER_CFLAGS = (
+					"-DDEBUG",
+					"-fnested-functions",
+				);
+				PRODUCT_NAME = filagree;
+			};
+			name = Debug;
+		};
+		1DEB928708733DD80010E9CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/bin;
+				OTHER_CFLAGS = "-fnested-functions";
+				PRODUCT_NAME = filagree;
+			};
+			name = Release;
+		};
+		1DEB928A08733DD80010E9CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = "-fnested-functions";
+				SDKROOT = macosx;
+				VALID_ARCHS = x86_64;
+			};
+			name = Debug;
+		};
+		1DEB928B08733DD80010E9CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"-DVOID_INT=uint64_t",
+					"-fnested-functions",
+				);
+				SDKROOT = macosx;
+				VALID_ARCHS = x86_64;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1DEB928508733DD80010E9CD /* Build configuration list for PBXNativeTarget "filagree" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEB928608733DD80010E9CD /* Debug */,
+				1DEB928708733DD80010E9CD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		1DEB928908733DD80010E9CD /* Build configuration list for PBXProject "filagree" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEB928A08733DD80010E9CD /* Debug */,
+				1DEB928B08733DD80010E9CD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
+}
