@@ -180,7 +180,6 @@ struct byte_array* serial_encode_array(struct byte_array* buf, int32_t key, int3
     return buf;
 }
 
-/*
 #ifdef DEBUG
 
 bool display_serial(const struct key_value_pair* kvp) {
@@ -197,9 +196,9 @@ bool display_serial(const struct key_value_pair* kvp) {
         case SERIAL_FLOAT:
             DEBUGPRINT("float %f\n", kvp->value.floater)
         case SERIAL_STRING:
-            str = (char*)malloc(kvp->value.bytes->size + 1);
-            memcpy(str, kvp->value.bytes->data, kvp->value.bytes->size);
-            str[kvp->value.bytes->size] = 0;
+            str = (char*)malloc(kvp->value.bytes->length + 1);
+            memcpy(str, kvp->value.bytes->data, kvp->value.bytes->length);
+            str[kvp->value.bytes->length] = 0;
             DEBUGPRINT("bytes %s\n", str);
             break;
         case SERIAL_ARRAY:
@@ -210,4 +209,3 @@ bool display_serial(const struct key_value_pair* kvp) {
 }
 
 #endif // DEBUG
-*/

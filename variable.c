@@ -4,9 +4,9 @@
 #include <stdarg.h>
 #include <time.h>
 #include "util.h"
-#include "vm.h"
 #include "sys.h"
 */
+#include "vm.h"
 #include "struct.h"
 #include "serial.h"
 #include "variable.h"
@@ -149,7 +149,7 @@ struct variable *variable_new_c(struct Context *context, bridge *cfnc) {
     return v;
 }
 
-const char *variable_value(struct Context *context, const struct variable* v)
+const char *variable_value_str(struct Context *context, const struct variable* v)
 {
 	null_check(v);
     char* str = (char*)malloc(100);
@@ -165,17 +165,6 @@ const char *variable_value(struct Context *context, const struct variable* v)
         case VAR_FNC:    sprintf(str, "f(%dB)", v->str->length);                 break;
         case VAR_C:      sprintf(str, "c-function");                             break;
         case VAR_MAP:                                                            break;
-			/*        case VAR_SRC: {
-			 strcpy(str, "[");
-			 vm_null_check(list);
-			 for (int i=0; i<list->length; i++) {
-			 struct variable* element = (struct variable*)array_get(list, i);
-			 vm_null_check(element);
-			 const char *c = i ? "," : "";
-			 sprintf(str, "%s%s%s", str, c, variable_value(element));
-			 }
-			 strcat(str, "]");
-			 } break;*/
         case VAR_LST: {
             strcpy(str, "[");
             vm_null_check(context, list);
@@ -184,7 +173,8 @@ const char *variable_value(struct Context *context, const struct variable* v)
                 vm_null_check(context, element);
                 const char *q = (element->type == VAR_STR || element->type == VAR_FNC) ? "'" : "";
                 const char *c = i ? "," : "";
-                sprintf(str, "%s%s%s%s%s", str, c, q, variable_value(context, element), q);
+				const char *estr = variable_value_str(context, element);
+                sprintf(str, "%s%s%s%s%s", str, c, q, estr, q);
             }
         } break;
         case VAR_ERR:
@@ -194,7 +184,7 @@ const char *variable_value(struct Context *context, const struct variable* v)
             vm_exit_message(context, ERROR_VAR_TYPE);
             break;
     }
-	
+
     if (v->map) {
         const struct array *a = map_keys(v->map);
         const struct array *b = map_values(v->map);
@@ -210,15 +200,24 @@ const char *variable_value(struct Context *context, const struct variable* v)
             strcat(str, byte_array_to_string((struct byte_array*)array_get(a,i)));
             strcat(str, "'");
             strcat(str, ":");
-            strcat(str, variable_value(context, (const struct variable*)array_get(b,i)));
+			const struct variable *biv = (const struct variable*)array_get(b,i);
+			const char *bistr = variable_value_str(context, biv);
+            strcat(str, bistr);
         }
         strcat(str, "]");
     }
     else if (vt == VAR_LST)
         strcat(str, "]");
-	
-    return str;
+
+	return str;
 }
+
+struct byte_array *variable_value(struct Context *c, const struct variable *v) {
+	const char *str = variable_value_str(c, v);
+    return byte_array_from_string(str);
+}
+
+
 
 struct variable *variable_pop(struct Context *context)
 {

@@ -5,25 +5,23 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include "struct.h"
+#include "util.h"
+#include "variable.h"
 
-
-#define ERROR_NULL    "null pointer"
-#define ERROR_INDEX    "index out of bounds"
-
-typedef struct Context *context_p; // forward declaration
-typedef void(bridge)(context_p context, struct stack*);
+#define ERROR_NULL  "null pointer"
+#define ERROR_INDEX "index out of bounds"
 
 struct Context {
-	struct program_state *vm_state;
-	struct stack *program_stack;
-	struct stack *operand_stack;
-	struct stack *rhs;
-	struct variable *vm_exception;
-	bridge *callback2c;
-	bool runtime;
-	uint32_t num_vars;
-	struct variable* error;
-	uint8_t indent;
+    struct program_state *vm_state;
+    struct stack *program_stack;
+    struct stack *operand_stack;
+    struct stack *rhs;
+    struct variable *vm_exception;
+    bridge *callback2c;
+    bool runtime;
+    uint32_t num_vars;
+    struct variable* error;
+    uint8_t indent;
 };
 
 enum Opcode {
@@ -78,11 +76,11 @@ void display_program(struct byte_array* program);
 #endif
 struct Context *vm_init();
 struct variable *execute(struct byte_array *program,
-						 bool in_context,
-						 bridge *callback_to_c);
+                         bool in_context,
+                         bridge *callback_to_c);
 void garbage_collect(struct Context *context);
 
-void vm_call();
+void vm_call(struct Context *context);
 void *vm_exit_message(struct Context *context, const char *format, ...);
 void vm_null_check(struct Context *context, const void* p);
 void vm_assert(struct Context *context, bool assertion, const char *format, ...);

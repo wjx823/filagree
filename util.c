@@ -2,7 +2,6 @@
 #include "util.h"
 #include <string.h>
 #include <stdarg.h>
-//#include <sys/stat.h>
 
 char *make_message(const char *format, va_list list) // based on printf(3) man page
 {
@@ -55,7 +54,7 @@ void assert_message(bool assertion, const char *format, ...)
 void *exit_message(const char *format, ...)
 {
     PRINT_FORMATED_AND_EXIT(format);
-	return NULL;
+    return NULL;
 }
 
 void null_check(const void *pointer) {
@@ -102,7 +101,7 @@ struct byte_array *read_file(const struct byte_array *filename_ba)
         exit_message(ERROR_FSIZE);
     else if (size > INPUT_MAX_LEN)
         exit_message(ERROR_BIG);
-    if (!(str = malloc((size_t)size)))// + 1)))
+    if (!(str = (uint8_t*)malloc((size_t)size)))// + 1)))
         exit_message(ERROR_ALLOC);
     
     read = fread(str, 1, (size_t)size, file);
@@ -142,7 +141,7 @@ int write_file(const struct byte_array* filename, struct byte_array* bytes)
 char* build_path(const char* dir, const char* name)
 {
     int dirlen = dir ? strlen(dir) : 0;
-    char* path = malloc(dirlen + 1 + strlen(name));
+    char* path = (char*)malloc(dirlen + 1 + strlen(name));
     const char* slash = (dir && dirlen && (dir[dirlen] != '/')) ? "/" : "";
     sprintf(path, "%s%s%s", dir ? dir : "", slash, name);
     return path;

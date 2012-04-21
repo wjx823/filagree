@@ -1,9 +1,9 @@
 UNAME := $(shell uname -s)
 
 CC=gcc
-CFLAGS=-c -Wall -Os -std=c99 -I -fnested-functions -fms-extensions -DFILE_RW -ffunction-sections -fdata-sections
+CFLAGS=-c -Wall -Os -std=c99 -I -fnested-functions -fms-extensions -ffunction-sections -fdata-sections -DDEBUG
 LDFLAGS=-Wl --gc-sections
-SOURCES=vm.c struct.c serial.c compile.c util.c sys.c variable.c
+SOURCES=vm.c struct.c serial.c compile.c util.c sys.c variable.c interpret.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=filagree
 

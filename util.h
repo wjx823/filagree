@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 #ifdef __LP64__
 #define VOID_INT int64_t
@@ -22,12 +23,6 @@
 
 #define ARRAY_LEN(x) (sizeof x / sizeof *x)
 
-#ifdef DEBUG
-#define DEBUG_TEST 1
-#else
-#define DEBUG_TEST 0
-#endif
-
 #ifdef ANDROID
 
 #include <android/log.h>
@@ -39,12 +34,15 @@ __android_log_write(ANDROID_LOG_ERROR, TAG, log_message); } while(0)
 
 #else // not ANDROID
 
-#include <stdio.h>
 #define PRINT(...) fprintf( stderr, __VA_ARGS__ );
 
 #endif // (not) ANDROID
 
-#define DEBUGPRINT(...) if (DEBUG_TEST) PRINT( __VA_ARGS__ );
+#ifdef DEBUG
+#define DEBUGPRINT(...) PRINT( __VA_ARGS__ );
+#else
+#define DEBUGPRINT(...) {};
+#endif // #ifdef DEBUG
 
 #define ITOA_LEN    19 // enough for 64-bit integer
 

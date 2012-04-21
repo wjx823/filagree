@@ -16,13 +16,11 @@
 #define ERROR_LEX        "Lexigraphical error"
 #define ERROR_PARSE      "Parsological error"
 #define ERROR_TOKEN      "Unknown token"
-#define EXTENSION        ".fg"
 #define QUOTE            '\''
 #define ESCAPE           '\\'
 #define ESCAPED_NEWLINE  'n'
 #define ESCAPED_TAB      't'
 #define ESCAPED_QUOTE    '\''
-#define FG_MAX_INPUT     256
 
 uint32_t line;
 struct array* lex_list;
@@ -254,7 +252,7 @@ int insert_token_string(enum Lexeme lexeme, const char* input, int i)
                 case ESCAPED_TAB:        c = '\t';                        break;
                 case ESCAPED_QUOTE:      c = '\'';                        break;
                 default:
-					return (VOID_INT)exit_message("unknown escape");
+                    return (VOID_INT)exit_message("unknown escape");
             }
         }
         byte_array_add_byte(string, c);
@@ -281,7 +279,7 @@ int import(const char* input, int i)
     struct byte_array *path = byte_array_new();
     while (!isspace(input[i]) && input[i]!=QUOTE)
         byte_array_add_byte(path, input[i++]);
-    byte_array_append(path, byte_array_from_string(EXTENSION));
+    byte_array_append(path, byte_array_from_string(EXTENSION_SRC));
 
     if (!map_has(imports, path)) {
         map_insert(imports, path, NULL);
@@ -346,7 +344,7 @@ lexmore:
         else if (isspace(c))    i++;
         else if (c=='\'')       i = insert_token_string(LEX_STRING, input, i+1);
         else
-			return exit_message(ERROR_LEX);
+            return (struct array*)exit_message(ERROR_LEX);
     }
 #ifdef DEBUG
     display_lex_list();
@@ -1121,7 +1119,7 @@ void generate_boolean(struct byte_array *code, struct symbol *root) {
     switch (root->token->lexeme) {
         case        LEX_TRUE:  value = 1;               break;
         case        LEX_FALSE: value = 0;               break;
-        default:    exit_message("bad boolean value");	return;
+        default:    exit_message("bad boolean value");    return;
     }
     generate_step(code, 1, VM_BOOL);
     serial_encode_int(code, 0, value);
@@ -1180,7 +1178,7 @@ void generate_math(struct byte_array *code, struct symbol *root)
         case LEX_OR:        op = VM_OR;             break;
         case LEX_NOT:       op = VM_NOT;            break;
         case LEX_SAME:      op = VM_EQU;            break;
-        case LEX_DIFFERENT:	op = VM_NEQ;            break;
+        case LEX_DIFFERENT:    op = VM_NEQ;            break;
         case LEX_GREATER:   op = VM_GTN;            break;
         case LEX_LESSER:    op = VM_LTN;            break;
         default: exit_message("bad math lexeme");   break;
@@ -1327,7 +1325,7 @@ struct byte_array *generate_code(struct byte_array *code, struct symbol *root)
         case SYMBOL_TRYCATCH:        g = generate_trycatch;        break;
         case SYMBOL_THROW:            g = generate_throw;            break;
         default:
-            return exit_message(ERROR_TOKEN);
+            return (struct byte_array*)exit_message(ERROR_TOKEN);
     }
 
     if (!code)
@@ -1340,7 +1338,7 @@ struct byte_array *generate_code(struct byte_array *code, struct symbol *root)
 struct byte_array *generate_program(struct symbol *root)
 {
     DEBUGPRINT("generate:\n");
-	struct byte_array *code = byte_array_new();
+    struct byte_array *code = byte_array_new();
     generate_code(code, root);
     struct byte_array *program = serial_encode_int(0, 0, code->length);
     byte_array_append(program, code);
@@ -1353,7 +1351,7 @@ struct byte_array *generate_program(struct symbol *root)
 // build ///////////////////////////////////////////////////////////////////
 
 struct byte_array *build_string(const struct byte_array *input) {
-    assert_message(input!=0, ERROR_NULL);
+    assert_message(input, ERROR_NULL);
     struct byte_array *input_copy = byte_array_copy(input);
     DEBUGPRINT("lex %d:\n", input_copy->length);
     struct array* list = lex(input_copy);
@@ -1368,60 +1366,14 @@ struct byte_array *build_file(const struct byte_array* filename)
     return build_string(input);
 }
 
-struct variable *interpret_file(const char* str, bridge *callback)
+void compile_file(const char* str)
 {
     struct byte_array *filename = byte_array_from_string(str);
     struct byte_array *program = build_file(filename);
-    return execute(program, false, NULL);
+    struct byte_array *dotfg = byte_array_from_string(EXTENSION_SRC);
+    struct byte_array *dotfgbc = byte_array_from_string(EXTENSION_BC);
+    int offset = byte_array_find(filename, dotfg, 0);
+    assert_message(offset > 0, "invalid source file name");
+    byte_array_replace(filename, dotfgbc, offset, dotfg->length);
+    write_file(filename, program);
 }
-
-// main: read file, build, run /////////////////////////////////////////////
-
-#define ERROR_USAGE    "usage: filagree [file]"
-
-struct variable *interpret_string(const char *str, bridge *callback)
-{
-    struct variable *e;
-    struct byte_array *input = byte_array_from_string(str);
-    struct byte_array *program = build_string(input);
-    if (program && (e = execute(program, true, 0)) && (e->type == VAR_ERR))
-        printf("%s\n", byte_array_to_string(e->str));
-    return NULL;
-}
-
-struct variable *repl()
-{
-    char stdinput[FG_MAX_INPUT];
-    struct variable *v = NULL;
-    struct Context *context = vm_init();
-
-    for (;;) {
-        fflush(stdin);
-        stdinput[0] = 0;
-        if (!fgets(stdinput, FG_MAX_INPUT, stdin)) {
-            if (feof(stdin))
-                return 0;
-            if (ferror(stdin))
-				//return errno;
-				return variable_new_err(context, "unknown error reading stdin");
-        }
-        if ((v = interpret_string(stdinput, NULL)))
-            return v;
-    }
-	return NULL;
-}
-
-#ifndef EXECUTABLE
-int main (int argc, char** argv)
-{
-    struct variable *v = NULL;
-    switch (argc) {
-        case 1:     v = repl();                         break;
-        case 2:     v = interpret_file(argv[1], NULL);  break;
-        default:    exit_message(ERROR_USAGE);          break;
-    }
-	if (v && v->type==VAR_ERR)
-		PRINT("%s\n", variable_value(NULL, v));
-	return v && v->type == VAR_ERR;
-}
-#endif // EXECUTABLE

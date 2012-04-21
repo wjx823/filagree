@@ -1,6 +1,6 @@
 /* struct.c
  *
- * implements array, byte_array, [f|l]ifo and map
+ * implements array, byte_array, lifo and map
  */
 
 #include <stdio.h>
@@ -14,7 +14,7 @@
 #include "struct.h"
 #include "util.h"
 
-#define BYTE_ARRAY_MAX_LEN        10000
+#define BYTE_ARRAY_MAX_LEN      10000
 #define ERROR_BYTE_ARRAY_LEN    "byte array too long"
 
 
@@ -79,24 +79,24 @@ void array_set(struct array *a, uint32_t index, void* datum) {
 void *list_remove(void *data, uint32_t *end, uint32_t start, int32_t length, size_t width)
 {
     null_check(data);
-	null_check(end);
-	length = length < 0 ? *end - start : length;
+    null_check(end);
+    length = length < 0 ? *end - start : length;
     assert_message(start < *end && start+length <= *end, "index out of bounds");
-	
-	memmove(data+start*width, data+(start+length)*width, (*end-start-length)*width);
-	*end -= (uint32_t)length;
-	return realloc(data, *end * width);
+    
+    memmove((uint8_t*)data+start*width, (uint8_t*)data+(start+length)*width, (*end-start-length)*width);
+    *end -= (uint32_t)length;
+    return realloc(data, *end * width);
 }
 
 void array_remove(struct array *self, uint32_t start, int32_t length) {
-	self->data = list_remove(self->data, &self->length, start, length, sizeof(void*));
+    self->data = (void**)list_remove(self->data, &self->length, start, length, sizeof(void*));
 }
 
 struct array *array_copy(const struct array* original) {
     if (!original)
         return NULL;
     struct array* copy = (struct array*)malloc(sizeof(struct array));
-    copy->data = (void*)malloc(original->length);
+    copy->data = (void**)malloc(original->length);
     memcpy(copy->data, original->data, original->length);
     copy->length = original->length;
     copy->current = copy->data + (original->current - original->data);
@@ -105,19 +105,19 @@ struct array *array_copy(const struct array* original) {
 
 struct array *array_part(struct array *within, uint32_t start, uint32_t length)
 {
-	struct array *p = array_copy(within);
-	array_remove(p, start+length, within->length-start-length);
-	array_remove(p, 0, start);
-	return p;
+    struct array *p = array_copy(within);
+    array_remove(p, start+length, within->length-start-length);
+    array_remove(p, 0, start);
+    return p;
 }
 
 void array_append(struct array *a, const struct array* b)
 {
-	null_check(a);
-	null_check(b);
-	array_resize(a, a->length + b->length);
-	memcpy(&a->data[a->length], b->data, b->length);
-	a->current = a->data + a->length;
+    null_check(a);
+    null_check(b);
+    array_resize(a, a->length + b->length);
+    memcpy(&a->data[a->length], b->data, b->length);
+    a->current = a->data + a->length;
 }
 
 // byte_array ///////////////////////////////////////////////////////////////
@@ -187,15 +187,15 @@ void byte_array_append(struct byte_array *a, const struct byte_array* b) {
 }
 
 void byte_array_remove(struct byte_array *self, uint32_t start, int32_t length) {
-	self->data = list_remove(self->data, &self->length, start, length, sizeof(uint8_t));
+    self->data = (uint8_t*)list_remove(self->data, &self->length, start, length, sizeof(uint8_t));
 }
 
 struct byte_array *byte_array_part(struct byte_array *within, uint32_t start, uint32_t length)
 {
-	struct byte_array *p = byte_array_copy(within);
-	byte_array_remove(p, start+length, within->length-start-length);
-	byte_array_remove(p, 0, start);
-	return p;
+    struct byte_array *p = byte_array_copy(within);
+    byte_array_remove(p, start+length, within->length-start-length);
+    byte_array_remove(p, 0, start);
+    return p;
 }
 
 struct byte_array *byte_array_from_string(const char* str)
@@ -229,7 +229,7 @@ struct byte_array *byte_array_concatenate(int n, const struct byte_array* ba, ..
         if (!parameter)
             continue;
         assert_message(result->length + parameter->length < BYTE_ARRAY_MAX_LEN, ERROR_BYTE_ARRAY_LEN);
-		byte_array_append(result, parameter);
+        byte_array_append(result, parameter);
     }
 
     va_end(argp);
@@ -265,64 +265,12 @@ int32_t byte_array_find(struct byte_array *within, struct byte_array *sought, ui
     
     uint8_t *wd = within->data;
     uint8_t *sd = sought->data;
-    for (int32_t i=start; i<ws-ss; i++)
+    for (int32_t i=start; i<ws-ss+1; i++)
         if (!memcmp(wd + i, sd, ss)) 
             return i; 
     
     return -1;
 }
-
-/*
- int32_t byte_match(struct byte_array *within, struct byte_array *sought, uint32_t start, int32_t *length, int32_t i, int32_t j)
- {
- null_check(within);
- null_check(sought);
- uint8_t wi = within->data[i];
- uint8_t sj = sought->data[j];
- //    uint32_t ws = within->length;
- uint32_t ss = sought->length;
- 
- if (sj == '%') {
- j++;
- assert_message(j<ss, "last character is %");
- uint8_t m = sought->data[j];
- 
- return (m=='d' && isdigit(wi)) ||
- (m=='a' && isalpha(wi)) ||
- (m=='s' && isspace(wi)) ||
- (m=='.');
- }
- if (sj == '[') {
- while (sj != ']') {
- if (byte_match(within, sought, start, length, i, j))
- return i;
- sj = sought->data[++j];
- }        
- }
- return (wi == sj) ? i : -1;
- }
- 
- int32_t byte_array_match(struct byte_array *within, struct byte_array *sought, uint32_t start, int32_t *length)
- {
- null_check(within);
- null_check(sought);
- 
- uint32_t ws = within->length;
- uint32_t ss = sought->length;
- assert_message(start < within->length, "out of bounds");
- 
- for (int j,i=0; i<ws; i++) {
- for (j=0; j<ss; j++)
- if (!byte_match(within, sought, start, length, i, j))
- break;
- if (j == ss)
- return i;
- }
- 
- return -1;
- }
- */
-
 
 struct byte_array *byte_array_replace(struct byte_array *within, struct byte_array *replacement, uint32_t start, int32_t length)
 {

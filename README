@@ -1,6 +1,12 @@
-v0.5 2012/04/01
+v0.5 2012/04/21
 
-Filagree is a scripting language, with a compiler and virtual machine written in C99. On an ARM chip, the VM takes ~20KB.
+Filagree is a scripting language, with a compiler and virtual machine written in C99. It's easily embedded in a C program On an ARM chip, the VM takes ~20KB.
+
+Salient features:
+	- On an ARM chip, the compiler+VM take about 40KB; only 20KB for just the runtime VM with all features
+	- garbage collection, dynamic typing, exception handling
+	- easily embedded in a C program, with a handy 'yield' callback
+	- may be run as a Read-Evaluate-Print-Loop, or by compiling and/or executing bytecode
 
 You may run the unit test thusly:
 	make
@@ -29,15 +35,14 @@ tester = [
 	end,
 
 	'done' : function(self)
-		vm.print('unit tests done -- ' + self.passed +'/'+ self.tested +' passed')
+		vm.yield('unit tests done -- ', self.passed +'/'+ self.tested +' passed')
 	end
 ]
 
 
-
 // test.fg //////////////////////////////////////////////////////////////////
 
-import '/Users/yusuf/make/filagree/unit_test'
+import 'unit_test'
 
 tester.test('add integers',
 	function()

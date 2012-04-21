@@ -17,6 +17,6 @@ tester = [
 	end,
 
 	'done' : function(self)
-		vm.print('unit tests done -- ' + self.passed +'/'+ self.tested +' passed')
+		vm.yield('unit tests done -- ', self.passed +'/'+ self.tested +' passed')
 	end
 ]

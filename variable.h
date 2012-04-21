@@ -1,7 +1,7 @@
 #ifndef VARIABLE_H
 #define VARIABLE_H
 
-#include "vm.h"
+//#include "vm.h"
 
 enum VarType {
     VAR_NIL,
@@ -16,6 +16,9 @@ enum VarType {
     VAR_C,
 };    
 
+typedef struct Context *context_p; // forward declaration
+typedef void(bridge)(context_p context);
+
 struct variable {
     const struct byte_array* name;
     enum VarType type;
@@ -26,14 +29,15 @@ struct variable {
         int32_t integer;
         float floater;
         bool boolean;
-        void(*cfnc)(context_p, struct stack*); // i.e., bridge
+        void(*cfnc)(context_p); // i.e., bridge
     };
     struct map *map;
 };
 
 struct variable* variable_new(struct Context *context, enum VarType type);
 void variable_del(struct Context *context, struct variable *v);
-const char* variable_value(struct Context *context, const struct variable* v);
+struct byte_array* variable_value(struct Context *context, const struct variable* v);
+const char* variable_value_str(struct Context *context, const struct variable* v);
 struct byte_array *variable_serialize(struct Context *context, struct byte_array *bits,
                                       const struct variable *in);
 struct variable *variable_deserialize(struct Context *context, struct byte_array *str);
