@@ -93,7 +93,7 @@ int main (int argc, char** argv)
         default:    exit_message(ERROR_USAGE);	    break;
     }
     if (v && v->type==VAR_ERR)
-        PRINT("%s\n", variable_value_str(NULL, v));
+        log_print("%s\n", variable_value_str(NULL, v));
     return v && v->type == VAR_ERR;
 }
 #endif // EXECUTABLE

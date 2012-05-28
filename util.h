@@ -19,41 +19,26 @@
 //#pragma diag_suppress 1293  //  suppress squeamish warning of "assignment in condition"
 
 #define ARRAY_LEN(x) (sizeof x / sizeof *x)
+#define ITOA_LEN    19 // enough for 64-bit integer
 
-#ifdef ANDROID
-
-#include <android/log.h>
-#define TAG "filagree"
-#define LOG_LINE_LENGTH 100
-char log_message[LOG_LINE_LENGTH];
-#define PRINT(...) do { snprintf(log_message, LOG_LINE_LENGTH, __VA_ARGS__ );\
-__android_log_write(ANDROID_LOG_ERROR, TAG, log_message); } while(0)
-
-#else // not ANDROID
-
-#define PRINT(...) fprintf( stderr, __VA_ARGS__ );
-
-#endif // (not) ANDROID
+extern jmp_buf trying;
+const char *make_message(const char *fmt, va_list ap);
+void assert_message(bool assertion, const char *format, ...);
+void *exit_message(const char *format, ...);
+void null_check(const void* p);
+void log_print(const char *format, ...);
 
 #ifdef DEBUG
-#define DEBUGPRINT(...) PRINT( __VA_ARGS__ );
+#define DEBUGPRINT(...) log_print( __VA_ARGS__ );
 #else
 #define DEBUGPRINT(...) {};
 #endif // #ifdef DEBUG
 
-#define ITOA_LEN    19 // enough for 64-bit integer
-
-extern jmp_buf trying;
-char *make_message(const char *fmt, va_list ap);
-void assert_message(bool assertion, const char *format, ...);
-void *exit_message(const char *format, ...);
-void null_check(const void* p);
-
 // file
 
-#define ERROR_FSIZE        "Could not get length of file"
-#define ERROR_FOPEN        "Could not open file"
-#define ERROR_FREAD        "Could not read file"
+#define ERROR_FSIZE     "Could not get length of file"
+#define ERROR_FOPEN     "Could not open file"
+#define ERROR_FREAD     "Could not read file"
 #define ERROR_FCLOSE    "Could not close file"
 
 struct byte_array *read_file(const struct byte_array *filename);

@@ -3,57 +3,75 @@
 #include <string.h>
 #include <stdarg.h>
 
-char *make_message(const char *format, va_list list) // based on printf(3) man page
+#ifdef ANDROID
+#include <android/log.h>
+#define TAG "filagree"
+#endif
+
+#define MESSAGE_MAX 100
+
+void log_print(const char *format, ...)
 {
-    int n;
-    int size = 100;     // Guess we need no more than 100 bytes.
-    char *p, *np;
+    static char log_message[MESSAGE_MAX+1] = "";
+    char one_line[MESSAGE_MAX];
 
-    if ((p = (char*)malloc(size)) == NULL)
-        return NULL;
+    char *newline;
+    va_list list;
+    va_start(list, format);
+    const char *message = make_message(format, list);
+    va_end(list);
+    size_t log_len = strnlen(log_message, MESSAGE_MAX);
+    strncat(log_message, message, MESSAGE_MAX - log_len);
+    log_len = strnlen(log_message, MESSAGE_MAX);
+    if (log_len == MESSAGE_MAX)
+        log_message[MESSAGE_MAX-1] = '\n';
+    if (!(newline = strnstr(log_message, "\n", MESSAGE_MAX)))
+        return;
+    size_t line_len = newline - log_message;
+    memcpy(one_line, log_message, line_len);
+    one_line[line_len] = 0;
 
-    while (1) {
+#ifdef ANDROID
+    __android_log_write(ANDROID_LOG_ERROR, TAG, one_line);
+#elifdef IOS
+    NSLog(@"%s", one_line);
+#elifdef MBED
+    printf("%s\n\r", one_line);    
+#else
+    printf("%s\n", one_line);    
+#endif
 
-        // Try to print in the allocated space.
-        n = vsnprintf(p, size, format, list);
+    memmove(log_message, newline+1, log_len-line_len);
+}
 
-        // If that worked, return the string.
-        if (n > -1 && n < size)
-            return p;
-
-        // Else try again with more space.
-        if (n > -1)    // glibc 2.1
-            size = n+1;    // precisely what is needed
-        else        // glibc 2.0
-            size *= 2;    // twice the old size
-        
-        if ((np = (char*)realloc (p, size)) == NULL) {
-            free(p);
-            return NULL;
-        } else {
-            p = np; // QED
-        }
-    }
+const char *make_message(const char *format, va_list ap)
+{
+    static char message[MESSAGE_MAX];
+    vsnprintf(message, MESSAGE_MAX, format, ap);
+    return message;
 }
 
 #define PRINT_FORMATED_AND_EXIT(...)    \
-{    va_list list;                        \
+{    va_list list;                      \
         va_start(list, format );        \
-        vfprintf(stderr, format, list);    \
-        va_end(list );                    \
-        fprintf(stderr, "\n");            \
+        vfprintf(stderr, format, list); \
+        va_end(list );                  \
+        fprintf(stderr, "");            \
         exit(1);                        \
 }
 
 void assert_message(bool assertion, const char *format, ...)
 {
-    if (!assertion)
-        PRINT_FORMATED_AND_EXIT(format);
+    if (assertion)
+        return;
+    log_print(format);
+    exit(1);
 }
 
 void *exit_message(const char *format, ...)
 {
-    PRINT_FORMATED_AND_EXIT(format);
+    log_print(format);
+    exit(1);
     return NULL;
 }
 

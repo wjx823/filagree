@@ -312,7 +312,7 @@ lexmore:
             if (!strncmp(&input[i], lexstr, strlen(lexstr))) {
 
                 if (isKeyword(j) && i<binput->length-1 && isalpha(input[i+strlen(lexemes[j].chars)])) {
-                    DEBUGPRINT("%s is a keyword, %c is alpha\n", lexemes[j].chars, input[i+strlen(lexemes[j].chars)]);
+                    //DEBUGPRINT("%s is a keyword, %c is alpha\n", lexemes[j].chars, input[i+strlen(lexemes[j].chars)]);
                     continue; // just an identifier
                 }
                 enum Lexeme lexeme = (enum Lexeme)lexemes[j].number;
@@ -328,8 +328,7 @@ lexmore:
                 } else if (lexeme == LEX_IMPORT)
                     i = import(input, i);
                 else {
-                    if (lexeme == LEX_DIVIDE)
-                        DEBUGPRINT("lexeme=%d\n",lexeme);
+                    //DEBUGPRINT("lexeme=%d\n",lexeme);
                     i += insert_lexeme(j);
                 }
                 goto lexmore;
@@ -347,7 +346,7 @@ lexmore:
             return (struct array*)exit_message(ERROR_LEX);
     }
 #ifdef DEBUG
-    display_lex_list();
+//    display_lex_list();
 #endif
     return lex_list;
 }

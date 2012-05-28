@@ -20,9 +20,8 @@ void display_code(struct Context *context, struct byte_array *code);
 
 #ifdef DEBUG
 
-#define VM_DEBUGPRINT(...) fprintf( stderr, __VA_ARGS__ ); if (!context->runtime) return;
+#define VM_DEBUGPRINT(...) DEBUGPRINT(__VA_ARGS__ ); if (!context->runtime) return;
 
-void display_instruction(struct byte_array *program);
 void print_operand_stack();
 
 #define INDENT context->indent++;
