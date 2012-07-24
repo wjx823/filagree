@@ -152,7 +152,7 @@ struct variable *variable_new_c(struct Context *context, bridge *cfnc) {
 const char *variable_value_str(struct Context *context, const struct variable* v)
 {
 	null_check(v);
-    char* str = (char*)malloc(100);
+    char* str = (char*)malloc(1000);
     struct array* list = v->list;
 	
     enum VarType vt = (enum VarType)v->type;

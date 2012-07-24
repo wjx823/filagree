@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		880BFE9A15B7192400A90585 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 880BFE9915B7192400A90585 /* OpenGL.framework */; };
+		880BFE9C15B7192A00A90585 /* OpenAL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 880BFE9B15B7192A00A90585 /* OpenAL.framework */; };
+		880BFE9E15B7194400A90585 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 880BFE9D15B7194400A90585 /* Cocoa.framework */; };
 		881AC0FF14B09B2B00EAAE3F /* sys.c in Sources */ = {isa = PBXBuildFile; fileRef = 881AC0FD14B09B2B00EAAE3F /* sys.c */; };
 		88A65DA0147757400055DACF /* compile.c in Sources */ = {isa = PBXBuildFile; fileRef = 88A65D9A147757400055DACF /* compile.c */; };
 		88A65DA1147757400055DACF /* serial.c in Sources */ = {isa = PBXBuildFile; fileRef = 88A65D9B147757400055DACF /* serial.c */; };
@@ -30,8 +33,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		880BFE9915B7192400A90585 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		880BFE9B15B7192A00A90585 /* OpenAL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenAL.framework; path = System/Library/Frameworks/OpenAL.framework; sourceTree = SDKROOT; };
+		880BFE9D15B7194400A90585 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		881AC0FD14B09B2B00EAAE3F /* sys.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sys.c; sourceTree = "<group>"; };
 		881AC0FE14B09B2B00EAAE3F /* sys.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sys.h; sourceTree = "<group>"; };
+		882A967515BE7CEB00A413CC /* ui.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ui.fg; sourceTree = "<group>"; };
 		88A65D95147757400055DACF /* compile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = compile.h; sourceTree = "<group>"; };
 		88A65D96147757400055DACF /* serial.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = serial.h; sourceTree = "<group>"; };
 		88A65D97147757400055DACF /* struct.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = struct.h; sourceTree = "<group>"; };
@@ -48,6 +55,8 @@
 		88C760B215428A5F00A4F8E7 /* interpret.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = interpret.c; sourceTree = "<group>"; };
 		88E65DE41510F46F00E6207D /* variable.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = variable.c; sourceTree = "<group>"; };
 		88E65DE51510F46F00E6207D /* variable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variable.h; sourceTree = "<group>"; };
+		88FAF8A015B9ED5700A9B6D9 /* hal_osx.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = hal_osx.m; sourceTree = "<group>"; };
+		88FAF8A115B9ED5700A9B6D9 /* hal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = hal.h; sourceTree = "<group>"; };
 		8DD76FB20486AB0100D96B5E /* filagree */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = filagree; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -56,6 +65,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				880BFE9E15B7194400A90585 /* Cocoa.framework in Frameworks */,
+				880BFE9C15B7192A00A90585 /* OpenAL.framework in Frameworks */,
+				880BFE9A15B7192400A90585 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +77,9 @@
 		08FB7794FE84155DC02AAC07 /* filagree */ = {
 			isa = PBXGroup;
 			children = (
+				880BFE9D15B7194400A90585 /* Cocoa.framework */,
+				880BFE9B15B7192A00A90585 /* OpenAL.framework */,
+				880BFE9915B7192400A90585 /* OpenGL.framework */,
 				08FB7795FE84155DC02AAC07 /* source */,
 				C6A0FF2B0290797F04C91782 /* test */,
 				1AB674ADFE9D54B511CA2CBB /* Products */,
@@ -77,6 +92,8 @@
 			children = (
 				88A65D9A147757400055DACF /* compile.c */,
 				88A65D95147757400055DACF /* compile.h */,
+				88FAF8A115B9ED5700A9B6D9 /* hal.h */,
+				88FAF8A015B9ED5700A9B6D9 /* hal_osx.m */,
 				88A65D9B147757400055DACF /* serial.c */,
 				88A65D96147757400055DACF /* serial.h */,
 				88A65D9C147757400055DACF /* struct.c */,
@@ -107,6 +124,7 @@
 			isa = PBXGroup;
 			children = (
 				88A65DA81477574E0055DACF /* test.fg */,
+				882A967515BE7CEB00A413CC /* ui.fg */,
 				88A65DA91477574E0055DACF /* unit_test.fg */,
 			);
 			name = test;

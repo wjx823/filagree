@@ -6,6 +6,7 @@
 #include "util.h"
 #include <stdio.h>
 #include <string.h>
+#include "ui.h"
 
 // system functions
 
@@ -36,7 +37,6 @@ void sys_load(struct Context *context)
     stack_pop(context->rhs); // self
     struct variable *path = (struct variable*)stack_pop(context->rhs);
     struct variable *v = variable_load(context, path);
-
     if (v)
         stack_push(context->operand_stack, v);
 }
@@ -44,16 +44,24 @@ void sys_load(struct Context *context)
 void sys_rm(struct Context *context)
 {
     stack_pop(context->rhs); // self
-    struct variable *path = (struct variable*)(struct variable*)stack_pop(context->rhs);
+    struct variable *path = (struct variable*)stack_pop(context->rhs);
     remove(byte_array_to_string(path->str));
 }
 
+void sys_args(struct Context *context)
+{
+    stack_pop(context->rhs); // self
+    struct variable *result = variable_new_list(context, context->args);
+    stack_push(context->operand_stack, result);
+}
+
 struct string_func builtin_funcs[] = {
-	{"yield", (bridge*)&sys_callback2c},
-    {"print", (bridge*)&sys_print},
-    {"save", (bridge*)&sys_save},
-    {"load", (bridge*)(bridge*)&sys_load},
+	{"yield",  (bridge*)&sys_callback2c},
+    {"print",  (bridge*)&sys_print},
+    {"save",   (bridge*)&sys_save},
+    {"load",   (bridge*)&sys_load},
     {"remove", (bridge*)&sys_rm},
+    {"args",   (bridge*)&sys_args}
 };
 
 struct variable *func_map(struct Context *context)
@@ -81,8 +89,8 @@ struct variable *func_map(struct Context *context)
 #define FNC_FIND        "find"
 #define FNC_REPLACE     "replace"
 #define FNC_PART        "part"
-#define FNC_REMOVE        "remove"
-#define FNC_INSERT        "insert"
+#define FNC_REMOVE      "remove"
+#define FNC_INSERT      "insert"
 
 struct variable *comparator = NULL;
 
@@ -120,9 +128,9 @@ int (compar)(struct Context *context, const void *a, const void *b)
     }
 }
 
-int testarr[] = { 6, 5, 3, 1, 8, 7, 2, 4 };
+/*int testarr[] = { 6, 5, 3, 1, 8, 7, 2, 4 };
 //int testarr[] = { 2,1 };
-int len = sizeof(testarr)/sizeof(testarr[0]);
+int len = sizeof(testarr)/sizeof(testarr[0]);*/
 
 void heapset(size_t width, void *base0, uint32_t index0, void *base1, uint32_t index1) {
     uint8_t *p0 = (uint8_t*)base0 + index0 * width;
@@ -287,7 +295,7 @@ void cfnc_find(struct Context *context)
     stack_push(context->operand_stack, result);
 }
 
-void cfnc_insert(struct Context *context) // todo: support lst
+void cfnc_insert(struct Context *context)
 {
     struct variable *self = (struct variable*)stack_pop(context->rhs);
     struct variable *start = (struct variable*)stack_pop(context->rhs);

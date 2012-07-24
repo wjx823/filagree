@@ -1,6 +1,10 @@
 # test.fg ###################################################################
 
 import 'unit_test'
+import 'ui'
+vm.ui(1,2,'three')
+
+
 
 tester.test('add integers',
 	function()
@@ -222,4 +226,27 @@ tester.test('exception',
 	end,
 	2)
 
+tester.test('args',
+    function()
+        f = function()
+            sum = 0
+            for n in vm.args()
+                sum = sum + n
+            end
+            return sum
+        end
+        return f(3,1,4)
+    end,
+    8)
+
+/*
+tester.test('ui',
+	function()
+        vm.ui('vertical', ['button', 20, 10], ['input', 30, 40])
+        return 0
+	end,
+	0)
+*/
+
 tester.done()
+

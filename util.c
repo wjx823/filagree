@@ -8,6 +8,42 @@
 #define TAG "filagree"
 #endif
 
+#ifdef MBED
+
+#include "mbed.h"
+
+static Serial usbTxRx(USBTX, USBRX);
+
+size_t strnlen(char *s, size_t maxlen)
+{
+	size_t i;
+	for (i= 0; i<maxlen && *s; i++, s++);
+	return i;
+}
+
+char *strnstr(const char *s, const char *find, size_t slen)
+{
+	char c, sc;
+	size_t len;
+    
+	if ((c = *find++) != '\0') {
+		len = strlen(find);
+		do {
+			do {
+				if (slen-- < 1 || (sc = *s++) == '\0')
+					return (NULL);
+			} while (sc != c);
+			if (len > slen)
+				return (NULL);
+		} while (strncmp(s, find, len) != 0);
+		s--;
+	}
+	return ((char *)s);
+}
+
+#endif // MBED
+
+
 #define MESSAGE_MAX 100
 
 void log_print(const char *format, ...)
@@ -36,7 +72,7 @@ void log_print(const char *format, ...)
 #elifdef IOS
     NSLog(@"%s", one_line);
 #elifdef MBED
-    printf("%s\n\r", one_line);    
+    usbTxRx.printf("%s\n", one_line);    
 #else
     printf("%s\n", one_line);    
 #endif
@@ -51,27 +87,28 @@ const char *make_message(const char *format, va_list ap)
     return message;
 }
 
-#define PRINT_FORMATED_AND_EXIT(...)    \
-{    va_list list;                      \
-        va_start(list, format );        \
-        vfprintf(stderr, format, list); \
-        va_end(list );                  \
-        fprintf(stderr, "");            \
-        exit(1);                        \
+void exit_message2(const char *format, va_list list)
+{
+    const char *message = make_message(format, list);
+    log_print("%s\n", message);
+    va_end(list);
+    exit(1);
 }
 
 void assert_message(bool assertion, const char *format, ...)
 {
     if (assertion)
         return;
-    log_print(format);
-    exit(1);
+    va_list list;
+    va_start(list, format);
+    exit_message2(format, list);
 }
 
 void *exit_message(const char *format, ...)
 {
-    log_print(format);
-    exit(1);
+    va_list list;
+    va_start(list, format);
+    exit_message2(format, list);
     return NULL;
 }
 

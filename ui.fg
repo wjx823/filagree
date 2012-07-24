@@ -1,0 +1,8 @@
+# ui.fg ###################################################################
+
+vm.ui = function()
+    a = vm.args()
+    for b in a
+        vm.print(b)
+    end
+end

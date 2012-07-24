@@ -15,6 +15,7 @@ struct Context {
     struct program_state *vm_state;
     struct stack *program_stack;
     struct stack *operand_stack;
+    struct array *args;
     struct stack *rhs;
     struct variable *vm_exception;
     bridge *callback2c;

@@ -16,7 +16,9 @@
 #define VOID_FLT double)(int32_t
 #endif
 
-//#pragma diag_suppress 1293  //  suppress squeamish warning of "assignment in condition"
+#ifdef MBED
+#pragma diag_suppress 1293  //  suppress squeamish warning of "assignment in condition"
+#endif
 
 #define ARRAY_LEN(x) (sizeof x / sizeof *x)
 #define ITOA_LEN    19 // enough for 64-bit integer
