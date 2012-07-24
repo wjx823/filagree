@@ -1,4 +1,4 @@
-v0.5 2012/04/21
+v0.6 2012/07/24
 
 Filagree is a scripting language, with a compiler and virtual machine written in C99. It's easily embedded in a C program On an ARM chip, the VM takes ~20KB.
 
@@ -263,5 +263,19 @@ tester.test('exception',
 		return 4
 	end,
 	2)
+
+tester.test('args',
+    function()
+        f = function()
+	         sum = 0
+             for n in vm.args()
+                 sum = sum + n
+             end
+            return sum
+        end
+        return f(3,1,4)
+    end,
+    8)
+
 
 tester.done()
