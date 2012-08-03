@@ -11,6 +11,7 @@
 		880BFE9C15B7192A00A90585 /* OpenAL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 880BFE9B15B7192A00A90585 /* OpenAL.framework */; };
 		880BFE9E15B7194400A90585 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 880BFE9D15B7194400A90585 /* Cocoa.framework */; };
 		881AC0FF14B09B2B00EAAE3F /* sys.c in Sources */ = {isa = PBXBuildFile; fileRef = 881AC0FD14B09B2B00EAAE3F /* sys.c */; };
+		8871737A15BF555E00F2CF9B /* hal_osx.m in Sources */ = {isa = PBXBuildFile; fileRef = 88FAF8A015B9ED5700A9B6D9 /* hal_osx.m */; };
 		88A65DA0147757400055DACF /* compile.c in Sources */ = {isa = PBXBuildFile; fileRef = 88A65D9A147757400055DACF /* compile.c */; };
 		88A65DA1147757400055DACF /* serial.c in Sources */ = {isa = PBXBuildFile; fileRef = 88A65D9B147757400055DACF /* serial.c */; };
 		88A65DA2147757400055DACF /* struct.c in Sources */ = {isa = PBXBuildFile; fileRef = 88A65D9C147757400055DACF /* struct.c */; };
@@ -158,7 +159,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 0430;
+				LastUpgradeCheck = 0440;
 			};
 			buildConfigurationList = 1DEB928908733DD80010E9CD /* Build configuration list for PBXProject "filagree" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -184,6 +185,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8871737A15BF555E00F2CF9B /* hal_osx.m in Sources */,
 				88A65DA0147757400055DACF /* compile.c in Sources */,
 				88A65DA1147757400055DACF /* serial.c in Sources */,
 				88A65DA2147757400055DACF /* struct.c in Sources */,
@@ -236,6 +238,7 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-DCLI",
@@ -253,6 +256,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-DCLI",

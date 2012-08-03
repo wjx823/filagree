@@ -1,10 +1,6 @@
 # test.fg ###################################################################
 
 import 'unit_test'
-import 'ui'
-vm.ui(1,2,'three')
-
-
 
 tester.test('add integers',
 	function()
@@ -239,14 +235,12 @@ tester.test('args',
     end,
     8)
 
-/*
-tester.test('ui',
-	function()
-        vm.ui('vertical', ['button', 20, 10], ['input', 30, 40])
-        return 0
-	end,
-	0)
-*/
-
 tester.done()
 
+/*
+
+import 'ui'
+vm.ui('vertical', 20, 20, [['button', 100, 30, 'clickez moi'], ['input', 150, 20, ' ']])
+vm.loop()
+
+*/

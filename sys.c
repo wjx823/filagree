@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "ui.h"
+#include "hal.h"
 
 // system functions
 
@@ -48,6 +49,18 @@ void sys_rm(struct Context *context)
     remove(byte_array_to_string(path->str));
 }
 
+void sys_window(struct Context *context)
+{
+    stack_pop(context->rhs); // self
+    hal_window();
+}
+
+void sys_loop(struct Context *context)
+{
+    stack_pop(context->rhs); // self
+    hal_loop();
+}
+
 void sys_args(struct Context *context)
 {
     stack_pop(context->rhs); // self
@@ -55,13 +68,39 @@ void sys_args(struct Context *context)
     stack_push(context->operand_stack, result);
 }
 
+void sys_button(struct Context *context)
+{
+    stack_pop(context->rhs); // self
+    int32_t x = ((struct variable*)stack_pop(context->rhs))->integer;
+    int32_t y = ((struct variable*)stack_pop(context->rhs))->integer;
+    int32_t w = ((struct variable*)stack_pop(context->rhs))->integer;
+    int32_t h = ((struct variable*)stack_pop(context->rhs))->integer;
+    const char *str = byte_array_to_string(((struct variable*)stack_pop(context->rhs))->str);
+    hal_button(x, y, w, h, str, NULL, NULL);
+}
+
+void sys_input(struct Context *context)
+{
+    stack_pop(context->rhs); // self
+    int32_t x = ((struct variable*)stack_pop(context->rhs))->integer;
+    int32_t y = ((struct variable*)stack_pop(context->rhs))->integer;
+    int32_t w = ((struct variable*)stack_pop(context->rhs))->integer;
+    int32_t h = ((struct variable*)stack_pop(context->rhs))->integer;
+    const char *str = byte_array_to_string(((struct variable*)stack_pop(context->rhs))->str);
+    hal_input(x, y, w, h, str, false);
+}
+
 struct string_func builtin_funcs[] = {
-	{"yield",  (bridge*)&sys_callback2c},
-    {"print",  (bridge*)&sys_print},
-    {"save",   (bridge*)&sys_save},
-    {"load",   (bridge*)&sys_load},
-    {"remove", (bridge*)&sys_rm},
-    {"args",   (bridge*)&sys_args}
+	{"yield",   (bridge*)&sys_callback2c},
+	{"args",    (bridge*)&sys_args},
+    {"print",   (bridge*)&sys_print},
+    {"save",    (bridge*)&sys_save},
+    {"load",    (bridge*)&sys_load},
+    {"remove",  (bridge*)&sys_rm},
+    {"window",  (bridge*)&sys_window},
+    {"loop",    (bridge*)&sys_loop},
+    {"button",  (bridge*)&sys_button},
+    {"input",   (bridge*)&sys_input},
 };
 
 struct variable *func_map(struct Context *context)

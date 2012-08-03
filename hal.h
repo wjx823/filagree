@@ -1,6 +1,11 @@
+// Hardware Abstraction Layer
+
 #ifndef HAL_H
 #define HAL_H
 
+#include <stdbool.h>
+
+void hal_loop();
 void hal_window();
 void hal_graphics();
 void hal_image();

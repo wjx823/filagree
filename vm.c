@@ -180,40 +180,40 @@ void garbage_collect(struct Context *context)
 #ifdef DEBUG
 
 const struct number_string opcodes[] = {
-    {VM_NIL,        "NIL"},
-    {VM_INT,        "INT"},
-    {VM_BOOL,       "BUL"},
-    {VM_FLT,        "FLT"},
-    {VM_STR,        "STR"},
-    {VM_VAR,        "VAR"},
-    {VM_FNC,        "FNC"},
-    {VM_SRC,        "SRC"},
-    {VM_LST,        "LST"},
-    {VM_DST,        "DST"},
-    {VM_MAP,        "MAP"},
-    {VM_GET,        "GET"},
-    {VM_PUT,        "PUT"},
-    {VM_ADD,        "ADD"},
-    {VM_SUB,        "SUB"},
-    {VM_MUL,        "MUL"},
-    {VM_DIV,        "DIV"},
-    {VM_MOD,        "MOD"},
-    {VM_AND,        "AND"},
-    {VM_OR,         "ORR"},
-    {VM_NOT,        "NOT"},
-    {VM_NEG,        "NEG"},
-    {VM_EQU,        "EQU"},
-    {VM_NEQ,        "NEQ"},
-    {VM_GTN,        "GTN"},
-    {VM_LTN,        "LTN"},
-    {VM_IFF,        "IFF"},
-    {VM_JMP,        "JMP"},
-    {VM_CAL,        "CAL"},
-    {VM_MET,        "MET"},
-    {VM_RET,        "RET"},
-    {VM_ITR,        "ITR"},
-    {VM_COM,        "COM"},
-    {VM_TRY,        "TRY"},
+    {VM_NIL,    "NIL"},
+    {VM_INT,    "INT"},
+    {VM_BUL,    "BUL"},
+    {VM_FLT,    "FLT"},
+    {VM_STR,    "STR"},
+    {VM_VAR,    "VAR"},
+    {VM_FNC,    "FNC"},
+    {VM_SRC,    "SRC"},
+    {VM_LST,    "LST"},
+    {VM_DST,    "DST"},
+    {VM_MAP,    "MAP"},
+    {VM_GET,    "GET"},
+    {VM_PUT,    "PUT"},
+    {VM_ADD,    "ADD"},
+    {VM_SUB,    "SUB"},
+    {VM_MUL,    "MUL"},
+    {VM_DIV,    "DIV"},
+    {VM_MOD,    "MOD"},
+    {VM_AND,    "AND"},
+    {VM_OR,     "ORR"},
+    {VM_NOT,    "NOT"},
+    {VM_NEG,    "NEG"},
+    {VM_EQU,    "EQU"},
+    {VM_NEQ,    "NEQ"},
+    {VM_GTN,    "GTN"},
+    {VM_LTN,    "LTN"},
+    {VM_IFF,    "IFF"},
+    {VM_JMP,    "JMP"},
+    {VM_CAL,    "CAL"},
+    {VM_MET,    "MET"},
+    {VM_RET,    "RET"},
+    {VM_ITR,    "ITR"},
+    {VM_COM,    "COM"},
+    {VM_TRY,    "TRY"},
 };
 
 void print_operand_stack(struct Context *context)
@@ -388,6 +388,7 @@ struct variable* variable_set(struct Context *context, struct variable *dst, con
     vm_null_check(context, src);
     switch (src->type) {
         case VAR_NIL:                                           break;
+        case VAR_BOOL:  dst->boolean = src->boolean;            break;
         case VAR_INT:   dst->integer = src->integer;            break;
         case VAR_FLT:   dst->floater = src->floater;            break;
         case VAR_FNC:
@@ -507,7 +508,9 @@ static int32_t jump(struct Context *context, struct byte_array *program)
     if (!context->runtime)
         return 0;
 
-    return offset - (program->current - start);
+    if (offset < 0) // skip over current VM_JMP instruction when going backward
+        offset -= (program->current - start) + 1;
+    return offset;// - (program->current - start);
 }
 
 bool test_operand(struct Context *context)
@@ -846,6 +849,27 @@ static struct variable *binary_op_lst(struct Context *context,
     return w;
 }
 
+static struct variable *binary_op_nil(struct Context *context,
+                                      enum Opcode op,
+                                      const struct variable *u,
+                                      const struct variable *v)
+{
+    null_check(context);
+    vm_assert(context, u->type==VAR_NIL || v->type==VAR_NIL, "nil op with non-nils");
+    if (v->type == VAR_NIL) {
+        if (u->type == VAR_NIL)
+            return variable_new_nil(context);
+        return binary_op_nil(context, op, v, u); // 1st var should be nil
+    }
+
+    switch (op) {
+        case VM_OR:     return variable_copy(context, v);
+        case VM_AND:    return variable_new_nil(context);
+        default:
+            return vm_exit_message(context, "unknown binary nil op");
+    }
+}
+
 static void binary_op(struct Context *context, enum Opcode op)
 {
     null_check(context);
@@ -854,15 +878,16 @@ static void binary_op(struct Context *context, enum Opcode op)
 
     const struct variable *u = variable_pop(context);
     const struct variable *v = variable_pop(context);
+    enum VarType ut = (enum VarType)u->type;
+    enum VarType vt = (enum VarType)v->type;
     struct variable *w;
 
-    if (op == VM_EQU) {
+    if (ut == VAR_NIL || vt == VAR_NIL) {
+        w = binary_op_nil(context, op, u, v);
+    } else if (op == VM_EQU) {
         bool same = variable_compare(context, u, v);
         w = variable_new_int(context, same);
     } else {
-
-        enum VarType ut = (enum VarType)u->type;
-        enum VarType vt = (enum VarType)v->type;
         bool floater  = (ut == VAR_FLT && is_num(vt)) || (vt == VAR_FLT && is_num(ut));
 
         if (vt == VAR_STR || ut == VAR_STR)         w = binary_op_str(context, op, u, v);
@@ -895,7 +920,7 @@ static void unary_op(struct Context *context, enum Opcode op)
         case VAR_NIL:
         {
             switch (op) {
-                case VM_NEG:    result = variable_new_nil(context);            break;
+                case VM_NEG:    result = variable_new_nil(context);              break;
                 case VM_NOT:    result = variable_new_bool(context, true);       break;
                 default:        vm_exit_message(context, "bad math operator");   break;
             }
@@ -910,7 +935,10 @@ static void unary_op(struct Context *context, enum Opcode op)
             }
         } break;
         default:
-            vm_exit_message(context, "bad math type");
+            if (op == VM_NOT)
+                result = variable_new_bool(context, false);
+            else
+                vm_exit_message(context, "bad math type");
             break;
     }
 
@@ -973,6 +1001,12 @@ static void iterate(struct Context *context,
 
     if (comprehending)
         stack_push(context->operand_stack, result);
+}
+
+static inline void build_arg_list(struct Context *context)
+{
+    struct variable *result = variable_new_list(context, context->args);
+    stack_push(context->operand_stack, result);
 }
 
 static inline void vm_trycatch(struct Context *context, struct byte_array *program)
@@ -1063,7 +1097,7 @@ struct variable *run(struct Context *context, struct byte_array *program, bool i
             case VM_NIL:    push_nil(context);                      break;
             case VM_INT:    push_int(context, program);             break;
             case VM_FLT:    push_float(context, program);           break;
-            case VM_BOOL:   push_bool(context, program);            break;
+            case VM_BUL:    push_bool(context, program);            break;
             case VM_STR:    push_str(context, program);             break;
             case VM_VAR:    push_var(context, program);             break;
             case VM_FNC:    push_fnc(context, program);             break;

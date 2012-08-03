@@ -10,6 +10,10 @@
 
 static NSWindow *window;
 
+void hal_loop() {
+    [NSApp run];
+}
+
 void hal_window()
 {
     [NSApplication sharedApplication];
@@ -36,7 +40,6 @@ void hal_window()
     [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
     [window setTitle:appName];
     [window makeKeyAndOrderFront:nil];
-    [NSApp activateIgnoringOtherApps:YES];
 }
 
 @interface GLView : NSOpenGLView
@@ -399,7 +402,8 @@ void hal_label(int x, int y, int w, int h, const char *str) {
 
 void hal_button(int x, int y, int w, int h, const char *str, const char *img1, const char* img2) {
     NSView *content = [window contentView];
-    NSRect rect = NSMakeRect(x, y, w, h);
+    int frameHeight = [content frame].size.height;
+    NSRect rect = NSMakeRect(x, frameHeight - y - h, w, h);
 
     NSButton *my = [[NSButton alloc] initWithFrame:rect];
     [content addSubview: my];
@@ -421,7 +425,8 @@ void hal_button(int x, int y, int w, int h, const char *str, const char *img1, c
 
 void hal_input(int x, int y, int w, int h, const char *str, BOOL multiline) {
     NSView *content = [window contentView];
-    NSRect rect = NSMakeRect(x, y, w, h);
+    int frameHeight = [content frame].size.height;
+    NSRect rect = NSMakeRect(x, frameHeight - y - h, w, h);
     NSString *string = [NSString stringWithUTF8String:str];
 
     NSView *textField;
