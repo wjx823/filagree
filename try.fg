@@ -1,0 +1,15 @@
+import 'unit_test'
+
+tester.test('args',
+    function()
+        f = function()
+            sum = 0
+            a = vm.args()
+            for n in vm.args()
+                sum = sum + n
+            end
+#            return sum
+        end
+        return f(3,1,4)
+    end,
+    8)

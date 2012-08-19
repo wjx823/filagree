@@ -81,7 +81,7 @@ void *list_remove(void *data, uint32_t *end, uint32_t start, int32_t length, siz
     null_check(data);
     null_check(end);
     length = length < 0 ? *end - start : length;
-    assert_message(start < *end && start+length <= *end, "index out of bounds");
+    assert_message(!length || (start < *end && start+length <= *end), "index out of bounds");
     
     memmove((uint8_t*)data+start*width, (uint8_t*)data+(start+length)*width, (*end-start-length)*width);
     *end -= (uint32_t)length;
@@ -96,8 +96,8 @@ struct array *array_copy(const struct array* original) {
     if (!original)
         return NULL;
     struct array* copy = (struct array*)malloc(sizeof(struct array));
-    copy->data = (void**)malloc(original->length);
-    memcpy(copy->data, original->data, original->length);
+    copy->data = (void**)malloc(original->length * sizeof(void**));
+    memcpy(copy->data, original->data, original->length * sizeof(void*));
     copy->length = original->length;
     copy->current = copy->data + (original->current - original->data);
     return copy;
@@ -115,9 +115,10 @@ void array_append(struct array *a, const struct array* b)
 {
     null_check(a);
     null_check(b);
-    array_resize(a, a->length + b->length);
-    memcpy(&a->data[a->length], b->data, b->length);
-    a->current = a->data + a->length;
+    uint32_t alen = a->length;
+    array_resize(a, alen + b->length);
+    memcpy(&a->data[alen], b->data, b->length * sizeof(void*));
+    a->current = a->data + alen;
 }
 
 // byte_array ///////////////////////////////////////////////////////////////
@@ -305,6 +306,7 @@ struct stack_node* stack_node_new() {
 void stack_push(struct stack* stack, void* data)
 {
     null_check(data);
+    //DEBUGPRINT("stack_push %x on %x\n", data, stack);
     if (!stack->head)
         stack->head = stack->tail = stack_node_new();
     else {
@@ -323,6 +325,7 @@ void* stack_pop(struct stack* stack)
     void* data = stack->head->data;
     stack->head = stack->head->next;
     null_check(data);
+    //DEBUGPRINT("stack_pop %x de %x\n", data, stack);
     return data;
 }
 
@@ -337,7 +340,7 @@ void* stack_peek(const struct stack* stack, uint8_t index)
 bool stack_empty(const struct stack* stack)
 {
     null_check(stack);
-    return stack->head == NULL;// && stack->tail == NULL;
+    return stack->head == NULL;
 }
 
 // map /////////////////////////////////////////////////////////////////////

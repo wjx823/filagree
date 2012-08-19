@@ -1,0 +1,59 @@
+compiler = [
+
+    'digits' : '0123456789',
+
+    'vocabulary' : [ '+', '-', '/*', '*/'],
+
+    'lex' : function(self, script)
+
+        result = []
+        i = 0
+
+        next_lexeme = function(script, i)
+            i = skip_white(script, i)
+            if digits.has(script[i])
+                return atoi(script, i)
+            else
+                for word in vocabulary
+                    if script.find(word, i) == i then
+                        return word, i
+                    end
+                end
+            end
+            return false
+        end
+
+        while next_lexeme(script, lexd) end
+        return result
+
+    end,
+
+    'parse' : function(self, lexemes)
+        return 8
+    end,
+
+    'generate' : function(self, symbols)
+        return 'vm.print(9)'
+    end,
+
+    'build' : function(self, input)
+
+        lexd = self.lex(input)
+        vm.print('lexd = ' + lexd)
+        parsed = self.parse(lexd)
+        program = self.generate(parsed)
+
+        return program
+
+    end,
+
+    'interpret_file' : function(self, filename)
+
+        script = vm.read(filename)
+        bytecode = self.build(script)
+        /* vm.run(bytecode) /* bytecode() */
+
+    end
+]
+
+compiler.interpret_file('program.fg')

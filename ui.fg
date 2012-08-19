@@ -7,7 +7,6 @@ vm.ui = function(self, type, w, h, item, parent, x, y)
         y = 0
         vm.window()
     end
-    vm.print(type + ': ' + x + ',' + y)
 
     if (type == 'vertical') then
         for i in item
@@ -25,3 +24,6 @@ vm.ui = function(self, type, w, h, item, parent, x, y)
         vm.input(x, y, w, h, item)
     end
 end
+
+vm.ui('vertical', 20, 20, [['button', 100, 30, 'clickez moi'], ['input', 150, 20, ' ']])
+vm.loop()

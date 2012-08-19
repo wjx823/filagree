@@ -18,14 +18,14 @@
 const struct number_string var_types[] = {
     {VAR_NIL,        "nil"},
     {VAR_INT,        "integer"},
-    {VAR_BOOL,        "boolean"},
+    {VAR_BOOL,       "boolean"},
     {VAR_FLT,        "float"},
     {VAR_STR,        "string"},
     {VAR_LST,        "list"},
     {VAR_FNC,        "function"},
     {VAR_MAP,        "map"},
     {VAR_ERR,        "error"},
-    {VAR_C,            "c-function"},
+    {VAR_C,          "c-function"},
 };
 
 const char *var_type_str(enum VarType vt)
@@ -110,6 +110,26 @@ void variable_del(struct Context *context, struct variable *v)
     free(v);
 }
 
+struct variable *variable_new_src(struct Context *context, uint32_t size)
+{
+	null_check(context);
+    struct variable *v = variable_new(context, VAR_SRC);
+    v->list = array_new();
+//    if (!size)
+//        array_add(v->list, variable_new_nil(context));
+//    else
+    while (size--) {
+        struct variable *o = (struct variable*)stack_pop(context->operand_stack);
+        if (o->type == VAR_SRC) {
+            array_append(o->list, v->list);
+            v = o;
+        } else
+            array_insert(v->list, 0, o);
+    }
+//    DEBUGPRINT("src = %s\n", variable_value_str(context, v));
+    return v;
+}
+
 struct variable* variable_new_float(struct Context *context, float f)
 {
 	null_check(context);
@@ -120,6 +140,7 @@ struct variable* variable_new_float(struct Context *context, float f)
 }
 
 struct variable *variable_new_str(struct Context *context, struct byte_array *str) {
+	null_check(context);
     struct variable *v = variable_new(context, VAR_STR);
     v->str = str;
     return v;
@@ -165,6 +186,8 @@ const char *variable_value_str(struct Context *context, const struct variable* v
         case VAR_FNC:    sprintf(str, "f(%dB)", v->str->length);                 break;
         case VAR_C:      sprintf(str, "c-function");                             break;
         case VAR_MAP:                                                            break;
+        case VAR_SRC:
+            vt = vt;
         case VAR_LST: {
             strcpy(str, "[");
             vm_null_check(context, list);
@@ -206,7 +229,7 @@ const char *variable_value_str(struct Context *context, const struct variable* v
         }
         strcat(str, "]");
     }
-    else if (vt == VAR_LST)
+    else if (vt == VAR_LST || vt == VAR_SRC)
         strcat(str, "]");
 
 	return str;
@@ -217,14 +240,17 @@ struct byte_array *variable_value(struct Context *c, const struct variable *v) {
     return byte_array_from_string(str);
 }
 
-
-
 struct variable *variable_pop(struct Context *context)
 {
 	null_check(context);
     struct variable *v = (struct variable*)stack_pop(context->operand_stack);
     //DEBUGPRINT("\nvariable_pop\n");// %s\n", variable_value(v));
     //    print_operand_stack();
+    if (v->type == VAR_SRC) {
+        if (v->list->length) {
+            v = (struct variable*)array_get(v->list, 0);
+        } else v = variable_new_nil(context);
+    }
     return v;
 }
 
@@ -332,3 +358,76 @@ struct variable *variable_load(struct Context *context, const struct variable *p
     return v;
 }
 
+/*struct variable *variable_get(struct Context *context, const struct variable *v, uint32_t i)
+{
+    switch (v->type) {
+        case VAR_LST: return (struct variable*)array_get(v->list, i);
+        case VAR_STR: return variable_new_str(context, byte_array_part(v->str, i, 1));
+        default:      return vm_exit_message(context, "non-indexable get");
+    }
+}*/
+
+uint32_t variable_length(struct Context *context, const struct variable *v)
+{
+    switch (v->type) {
+        case VAR_LST: return v->list->length;
+        case VAR_STR: return v->str->length;
+        default:
+            vm_exit_message(context, "non-indexable length");
+            return 0;
+    }
+}
+
+struct variable *variable_part(struct Context *context, struct variable *self, uint32_t start, int32_t length)
+{
+    null_check(self);
+    switch (self->type) {
+        case VAR_STR: {
+            struct byte_array *str = byte_array_part(self->str, start, length);
+            return variable_new_str(context, str);
+        }
+        case VAR_LST: {
+            struct array *list = array_part(self->list, start, length);
+            return variable_new_list(context, list);
+        }
+        default:
+            return (struct variable*)exit_message("bad part type");
+    }
+}
+
+void variable_remove(struct variable *self, uint32_t start, int32_t length)
+{
+    null_check(self);
+    switch (self->type) {
+        case VAR_STR:
+            byte_array_remove(self->str, start, length);
+            break;
+        case VAR_LST:
+            array_remove(self->list, start, length);
+            break;
+        default:
+            exit_message("bad remove type");
+    }
+}
+
+struct variable *variable_concatenate(struct Context *context, int n, const struct variable* v, ...)
+{
+    struct variable* result = variable_copy(context, v);
+    
+    va_list argp;
+    for(va_start(argp, v); --n;) {
+        struct variable* parameter = va_arg(argp, struct variable* );
+        if (!parameter)
+            continue;
+        else if (!result)
+            result = variable_copy(context, parameter);
+        else switch (result->type) {
+            case VAR_STR: byte_array_append(result->str, parameter->str); break;
+            case VAR_LST: array_append(result->list, parameter->list);    break;
+            default: return (struct variable*)exit_message("bad concat type");
+        }
+    }
+    
+    va_end(argp);
+    return result;
+}

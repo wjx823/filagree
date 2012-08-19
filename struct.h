@@ -34,6 +34,7 @@ void array_set(struct array *a, uint32_t index, void *datum);
 void array_remove(struct array *a, uint32_t start, int32_t length);
 struct array *array_part(struct array *within, uint32_t start, uint32_t length);
 void array_append(struct array *a, const struct array* b);
+struct array *array_copy(const struct array* original);
 
 // byte_array ///////////////////////////////////////////////////////////////
 

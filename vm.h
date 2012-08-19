@@ -15,14 +15,23 @@ struct Context {
     struct program_state *vm_state;
     struct stack *program_stack;
     struct stack *operand_stack;
-    struct array *args;
-    struct stack *rhs;
+    //struct array *args;
+    //struct stack *rhs;
     struct variable *vm_exception;
     bridge *callback2c;
     bool runtime;
+    bool done;
     uint32_t num_vars;
     struct variable* error;
     uint8_t indent;
+};
+
+struct program_state {
+    //    struct byte_array *code;
+    struct array *args;
+    struct map *named_variables;
+    struct array *all_variables;
+    uint32_t pc;
 };
 
 enum Opcode {

@@ -1,92 +1,115 @@
-#include "serial.h"
-#include "sys.h"
-#include "struct.h"
-#include "variable.h"
-#include "vm.h"
-#include "util.h"
 #include <stdio.h>
 #include <string.h>
-#include "ui.h"
 #include "hal.h"
+#include "interpret.h"
+#include "serial.h"
+#include "struct.h"
+#include "sys.h"
+#include "variable.h"
+#include "vm.h"
+#include "ui.h"
+#include "util.h"
 
 // system functions
 
 void sys_callback2c(struct Context *context)
 {
-    stack_pop(context->rhs); // self
 	context->callback2c(context);
 }
 
 void sys_print(struct Context *context)
 {
-    stack_pop(context->rhs); // self
+    stack_pop(context->operand_stack); // self
     struct variable *v;
-    while ((v = (struct variable*)stack_pop(context->rhs)))
+    while ((v = (struct variable*)stack_pop(context->operand_stack)))
         printf("%s\n", variable_value_str(context, v));
 }
 
 void sys_save(struct Context *context)
 {
-    stack_pop(context->rhs); // self
-    struct variable *v = (struct variable*)stack_pop(context->rhs);
-    struct variable *path = (struct variable*)stack_pop(context->rhs);
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *v = (struct variable*)array_get(value->list, 1); // (struct variable*)stack_pop(context->operand_stack);
+    struct variable *path = (struct variable*)array_get(value->list, 2);  // (struct variable*)stack_pop(context->operand_stack);
     variable_save(context, v, path);
 }
 
 void sys_load(struct Context *context)
 {
-    stack_pop(context->rhs); // self
-    struct variable *path = (struct variable*)stack_pop(context->rhs);
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *path = (struct variable*)array_get(value->list, 1);  // (struct variable*)stack_pop(context->operand_stack);
     struct variable *v = variable_load(context, path);
     if (v)
         stack_push(context->operand_stack, v);
 }
 
+void sys_read(struct Context *context)
+{
+    stack_pop(context->operand_stack); // self
+    struct variable *path = (struct variable*)stack_pop(context->operand_stack);
+    struct byte_array *bytes = read_file(path->str);
+    if (bytes != NULL) {
+        struct variable *v = variable_new_str(context, bytes);
+        stack_push(context->operand_stack, v);
+    } else {
+        struct byte_array *str = byte_array_from_string("could not load file");
+        context->vm_exception = variable_new_str(context, str);
+    }
+}
+
+void sys_run(struct Context *context)
+{
+    stack_pop(context->operand_stack); // self
+    struct variable *script = (struct variable*)stack_pop(context->operand_stack);
+    char *str = byte_array_to_string(script->str);
+    interpret_string(str, NULL);
+}
+
 void sys_rm(struct Context *context)
 {
-    stack_pop(context->rhs); // self
-    struct variable *path = (struct variable*)stack_pop(context->rhs);
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *path = (struct variable*)array_get(value->list, 1);
     remove(byte_array_to_string(path->str));
 }
 
 void sys_window(struct Context *context)
 {
-    stack_pop(context->rhs); // self
+    stack_pop(context->operand_stack); // self
     hal_window();
 }
 
 void sys_loop(struct Context *context)
 {
-    stack_pop(context->rhs); // self
+    stack_pop(context->operand_stack); // self
     hal_loop();
 }
 
 void sys_args(struct Context *context)
 {
-    stack_pop(context->rhs); // self
-    struct variable *result = variable_new_list(context, context->args);
-    stack_push(context->operand_stack, result);
+    stack_pop(context->operand_stack); // self
+    struct program_state *above = (struct program_state*)stack_peek(context->program_stack, 1);
+    struct variable *v = variable_new_list(context, above->args);
+    variable_push(context, v);
 }
 
 void sys_button(struct Context *context)
 {
-    stack_pop(context->rhs); // self
-    int32_t x = ((struct variable*)stack_pop(context->rhs))->integer;
-    int32_t y = ((struct variable*)stack_pop(context->rhs))->integer;
-    int32_t w = ((struct variable*)stack_pop(context->rhs))->integer;
-    int32_t h = ((struct variable*)stack_pop(context->rhs))->integer;
-    const char *str = byte_array_to_string(((struct variable*)stack_pop(context->rhs))->str);
+    stack_pop(context->operand_stack); // self
+    int32_t x = ((struct variable*)stack_pop(context->operand_stack))->integer;
+    int32_t y = ((struct variable*)stack_pop(context->operand_stack))->integer;
+    int32_t w = ((struct variable*)stack_pop(context->operand_stack))->integer;
+    int32_t h = ((struct variable*)stack_pop(context->operand_stack))->integer;
+    const char *str = byte_array_to_string(((struct variable*)stack_pop(context->operand_stack))->str);
     hal_button(x, y, w, h, str, NULL, NULL);
 }
 
 void sys_input(struct Context *context)
 {
-    stack_pop(context->rhs); // self
-    int32_t x = ((struct variable*)stack_pop(context->rhs))->integer;
-    int32_t y = ((struct variable*)stack_pop(context->rhs))->integer;
-    int32_t w = ((struct variable*)stack_pop(context->rhs))->integer;
-    int32_t h = ((struct variable*)stack_pop(context->rhs))->integer;
-    const char *str = byte_array_to_string(((struct variable*)stack_pop(context->rhs))->str);
+    stack_pop(context->operand_stack); // self
+    int32_t x = ((struct variable*)stack_pop(context->operand_stack))->integer;
+    int32_t y = ((struct variable*)stack_pop(context->operand_stack))->integer;
+    int32_t w = ((struct variable*)stack_pop(context->operand_stack))->integer;
+    int32_t h = ((struct variable*)stack_pop(context->operand_stack))->integer;
+    const char *str = byte_array_to_string(((struct variable*)stack_pop(context->operand_stack))->str);
     hal_input(x, y, w, h, str, false);
 }
 
@@ -94,8 +117,10 @@ struct string_func builtin_funcs[] = {
 	{"yield",   (bridge*)&sys_callback2c},
 	{"args",    (bridge*)&sys_args},
     {"print",   (bridge*)&sys_print},
+    {"read",    (bridge*)&sys_read},
     {"save",    (bridge*)&sys_save},
     {"load",    (bridge*)&sys_load},
+    {"run",     (bridge*)&sys_run},
     {"remove",  (bridge*)&sys_rm},
     {"window",  (bridge*)&sys_window},
     {"loop",    (bridge*)&sys_loop},
@@ -130,10 +155,9 @@ struct variable *func_map(struct Context *context)
 #define FNC_PART        "part"
 #define FNC_REMOVE      "remove"
 #define FNC_INSERT      "insert"
+#define FNC_ADD         "add"
 
-struct variable *comparator = NULL;
-
-int (compar)(struct Context *context, const void *a, const void *b)
+int (compar)(struct Context *context, const void *a, const void *b, struct variable *comparator)
 {
     struct variable *av = *(struct variable**)a;
     struct variable *bv = *(struct variable**)b;
@@ -141,13 +165,15 @@ int (compar)(struct Context *context, const void *a, const void *b)
     if (comparator) {
 
         assert_message(comparator->type == VAR_FNC, "non-function comparator");
-        stack_push(context->rhs, av);
-        stack_push(context->rhs, bv);
+        stack_push(context->operand_stack, av);
+        stack_push(context->operand_stack, bv);
         byte_array_reset(comparator->str);
         stack_push(context->operand_stack, comparator);
         vm_call(context);
 
-        struct variable *result = (struct variable*)stack_pop(context->rhs);
+        struct variable *result = (struct variable*)stack_pop(context->operand_stack);
+        if (result->type == VAR_SRC)
+            result = array_get(result->list, 0);
         assert_message(result->type == VAR_INT, "non-integer comparison result");
         return result->integer;
 
@@ -167,6 +193,7 @@ int (compar)(struct Context *context, const void *a, const void *b)
     }
 }
 
+
 /*int testarr[] = { 6, 5, 3, 1, 8, 7, 2, 4 };
 //int testarr[] = { 2,1 };
 int len = sizeof(testarr)/sizeof(testarr[0]);*/
@@ -179,16 +206,15 @@ void heapset(size_t width, void *base0, uint32_t index0, void *base1, uint32_t i
 }
 
 int heapcmp(struct Context *context,
-            int (*compar)(struct Context *, const void *, const void *),
-            size_t width, void *base0, uint32_t index0, void *base1, uint32_t index1) {
+            size_t width, void *base0, uint32_t index0, void *base1, uint32_t index1,
+            struct variable *comparator)
+{
     uint8_t *p0 = (uint8_t*)base0 + index0 * width;
     uint8_t *p1 = (uint8_t*)base1 + index1 * width;
-    return compar(context, p0, p1);
+    return compar(context, p0, p1, comparator);
 }
 
-int heapsortfg(struct Context *context,
-               void *base, size_t nel, size_t width,
-               int (*compar)(struct Context *, const void *, const void *))
+int heapsortfg(struct Context *context, void *base, size_t nel, size_t width, struct variable *comparator)
 {
     void *t = malloc(width); // the temporary value
     unsigned int n = nel, parent = nel/2, index, child; // heap indexes
@@ -208,11 +234,11 @@ int heapsortfg(struct Context *context,
         child = index * 2 + 1; // get its left child index
         while (child < n) {
             if (child + 1 < n  && // choose the largest child
-                heapcmp(context, compar, width, base, child+1, base, child) > 0) {
+                heapcmp(context, width, base, child+1, base, child, comparator) > 0) {
                 child++; // right child exists and is bigger
             }
             // is the largest child larger than the entry?
-            if (heapcmp(context, compar, width, base, child, t, 0) > 0) {
+            if (heapcmp(context, width, base, child, t, 0, comparator) > 0) {
                 heapset(width, base, index, base, child);
                 index = child; // move index to the child
                 child = index * 2 + 1; // get the left child and go around again
@@ -226,75 +252,27 @@ int heapsortfg(struct Context *context,
 
 void cfnc_sort(struct Context *context)
 {
-    struct variable *self = (struct variable*)stack_pop(context->rhs);
+    struct variable *args = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *self = (struct variable*)array_get(args->list, 0);
+
     assert_message(self->type == VAR_LST, "sorting a non-list");
-    comparator = (struct variable*)stack_pop(context->rhs);
+    struct variable *comparator = (args->list->length > 1) ?
+        (struct variable*)array_get(args->list, 1) :
+        NULL;
 
     int num_items = self->list->length;
 
-    int success = heapsortfg(context, self->list->data, num_items, sizeof(struct variable*), &compar);
+    int success = heapsortfg(context, self->list->data, num_items, sizeof(struct variable*), comparator);
     assert_message(!success, "error sorting");
-}
-
-struct variable *variable_part(struct Context *context, struct variable *self, uint32_t start, int32_t length)
-{
-    null_check(self);
-    switch (self->type) {
-        case VAR_STR: {
-            struct byte_array *str = byte_array_part(self->str, start, length);
-            return variable_new_str(context, str);
-        }
-        case VAR_LST: {
-            struct array *list = array_part(self->list, start, length);
-            return variable_new_list(context, list);
-        }
-        default:
-            return (struct variable*)exit_message("bad part type");
-    }
-}
-
-void variable_remove(struct variable *self, uint32_t start, int32_t length)
-{
-    null_check(self);
-    switch (self->type) {
-        case VAR_STR:
-            byte_array_remove(self->str, start, length);
-            break;
-        case VAR_LST:
-            array_remove(self->list, start, length);
-            break;
-        default:
-            exit_message("bad remove type");
-    }
-}
-
-struct variable *variable_concatenate(struct Context *context, int n, const struct variable* v, ...)
-{
-    struct variable* result = variable_copy(context, v);
-
-    va_list argp;
-    for(va_start(argp, v); --n;) {
-        struct variable* parameter = va_arg(argp, struct variable* );
-        if (!parameter)
-            continue;
-        else if (!result)
-            result = variable_copy(context, parameter);
-        else switch (result->type) {
-            case VAR_STR: byte_array_append(result->str, parameter->str); break;
-            case VAR_LST: array_append(result->list, parameter->list);    break;
-            default: return (struct variable*)exit_message("bad concat type");
-        }
-    }
-
-    va_end(argp);
-    return result;
 }
 
 void cfnc_chop(struct Context *context, bool part)
 {
-    struct variable *self = (struct variable*)stack_pop(context->rhs);
-    struct variable *start = (struct variable*)stack_pop(context->rhs);
-    struct variable *length = (struct variable*)stack_pop(context->rhs);
+    struct variable *args = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *self = (struct variable*)array_get(args->list, 0);
+    struct variable *start = (struct variable*)array_get(args->list, 1);
+    struct variable *length = (struct variable*)array_get(args->list, 2);
+
     assert_message(start->type == VAR_INT, "non-integer index");
     assert_message(length->type == VAR_INT, "non-integer length");
     int32_t beginning = start->integer;
@@ -318,15 +296,17 @@ static inline void cfnc_remove(struct Context *context) {
 
 void cfnc_find(struct Context *context)
 {
-    struct variable *self = (struct variable*)stack_pop(context->rhs);
-    struct variable *sought = (struct variable*)stack_pop(context->rhs);
-    struct variable *start = (struct variable*)stack_pop(context->rhs);
+    struct variable *args = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *self = (struct variable*)array_get(args->list, 0);
+    struct variable *sought = (struct variable*)array_get(args->list, 1);
+    struct variable *start = args->list->length > 2 ? (struct variable*)array_get(args->list, 2) : NULL;
 
     null_check(self);
     null_check(sought);
     assert_message(self->type == VAR_STR, "searching in a non-list");
     assert_message(sought->type == VAR_STR, "searching for a non-list");
-    if (start) assert_message(start->type == VAR_INT, "non-integer index");
+    if (start)
+        assert_message(start->type == VAR_INT, "non-integer index");
 
     int32_t beginning = start ? start->integer : 0;
     int32_t index = byte_array_find(self->str, sought->str, beginning);
@@ -336,12 +316,12 @@ void cfnc_find(struct Context *context)
 
 void cfnc_insert(struct Context *context)
 {
-    struct variable *self = (struct variable*)stack_pop(context->rhs);
-    struct variable *start = (struct variable*)stack_pop(context->rhs);
-    struct variable *insertion = (struct variable*)stack_pop(context->rhs);
+    struct variable *self = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *start = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *insertion = (struct variable*)stack_pop(context->operand_stack);
     assert_message(start->type == VAR_INT, "non-integer index");
-    assert_message(insertion && insertion->type == self->type, "insertion doesn't match destination");
-
+    assert_message(self->type == VAR_LST || (self->type == VAR_STR && insertion->type == VAR_STR), "insertion doesn't match destination");
+    
     int32_t position = start->integer;
     struct variable *first = variable_part(context, variable_copy(context, self), 0, position);
     struct variable *second = variable_part(context, variable_copy(context, self), position, -1);
@@ -349,15 +329,32 @@ void cfnc_insert(struct Context *context)
     stack_push(context->operand_stack, joined);
 }
 
+void cfnc_add(struct Context *context)
+{
+    struct variable *self = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *insertion = (struct variable*)stack_pop(context->operand_stack);
+    assert_message(self->type == VAR_LST || (self->type == VAR_STR && insertion->type == VAR_STR), "insertion doesn't match destination");
+
+    struct variable *inserted;
+    if (self->type == inserted->type)
+        inserted = variable_concatenate(context, 3, self, insertion);
+    else {
+        inserted = variable_copy(context, self);
+        array_add(inserted->list, insertion);
+    }
+    stack_push(context->operand_stack, inserted);
+}
+
 //    a                b        c
 // <sought> <replacement> [<start>]
 // <start> <length> <replacement>
 void replace(struct Context *context)
 {
-    struct variable *self = (struct variable*)stack_pop(context->rhs);
-    struct variable *a = (struct variable*)stack_pop(context->rhs);
-    struct variable *b = (struct variable*)stack_pop(context->rhs);
-    struct variable *c = (struct variable*)stack_pop(context->rhs);
+    struct variable *args = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *self = (struct variable*)array_get(args->list, 0);
+    struct variable *a = (struct variable*)array_get(args->list, 1);
+    struct variable *b = (struct variable*)array_get(args->list, 2);
+    struct variable *c = args->list->length > 3 ? (struct variable*)array_get(args->list, 3) : NULL;
     
     null_check(self);
     null_check(b);
@@ -469,7 +466,10 @@ struct variable *builtin_method(struct Context *context,
 
     if (!strcmp(idxstr, FNC_INSERT))
         return variable_new_c(context, &cfnc_insert);
-
+    
+    if (!strcmp(idxstr, FNC_ADD))
+        return variable_new_c(context, &cfnc_add);
+    
     if (!strcmp(idxstr, FNC_REPLACE))
         return variable_new_c(context, &replace);
 
