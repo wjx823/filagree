@@ -12,11 +12,11 @@ tester = [
 		else
 			result = 'failed'
 		end
-		vm.print('#' + (self.tested+1) + ' ' + title + ': ' + result)
+		sys.print('#' + (self.tested+1) + ' ' + title + ': ' + result)
 		self.tested = self.tested + 1
 	end,
 
 	'done' : function(self)
-		vm.yield('unit tests done -- ', self.passed +'/'+ self.tested +' passed')
+		sys.print('unit tests done -- ', self.passed +'/'+ self.tested +' passed')
 	end
 ]

@@ -59,6 +59,4 @@ const char* num_to_string(const struct number_string *ns, int num_items, int num
 
 #define ERROR_ALLOC        "Could not allocate memory"
 
-
-
 #endif // UTIL_H

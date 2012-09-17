@@ -3,18 +3,16 @@
 
 #include "vm.h"
 
+/*
 void print();
 void save();
 void load();
 void rm();
+*/
 
-struct string_func
-{
-    const char* name;
-    bridge* func;
-};
+struct variable *sys_find(context_p context, const struct byte_array *name);
 
-struct variable *func_map(struct Context *context);
+struct variable *sys_func(struct Context *context, struct byte_array *name);
 
 struct variable *builtin_method(struct Context *context,
 								struct variable *indexable,

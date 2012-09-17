@@ -85,6 +85,7 @@ struct byte_array *read_file(const struct byte_array *filename);
         LEX_THROW,
         LEX_DO,
         LEX_NEG,
+        LEX_NIL,
     };
 
 struct token {
@@ -113,10 +114,10 @@ struct number_string lexemes[] = {
     {LEX_AND,                   "and"},
     {LEX_OR,                    "or"},
     {LEX_NOT,                   "not"},
-    {LEX_GREATER,               ">"},
-    {LEX_LESSER,                "<"},
     {LEX_GREAQUAL,              ">="},
     {LEX_LEAQUAL,               "<="},
+    {LEX_GREATER,               ">"},
+    {LEX_LESSER,                "<"},
     {LEX_SAME,                  "=="},
     {LEX_SET,                   "="},
     {LEX_DIFFERENT,             "!="},
@@ -144,7 +145,8 @@ struct number_string lexemes[] = {
     {LEX_TRY,                   "try"},
     {LEX_CATCH,                 "catch"},
     {LEX_THROW,                 "throw"},
-    {LEX_DO,                    "do"}
+    {LEX_DO,                    "do"},
+    {LEX_NIL,                   "nil"},
 };
 
 const char* lexeme_to_string(enum Lexeme lexeme)
@@ -374,18 +376,19 @@ BNF:
 <comprehension> --> LEX_LEFTSQUARE <expression> <iterator> LEX_RIGHTSQUARE
 
 <rejoinder> --> LEX_RETURN <source>,
-<fdecl> --> FUNCTION LEX_LEFTHESIS <variable>, LEX_RIGHTHESIS <statements> LEX_END
+<paramdecl> --> LEX_LEFTHESIS <variable>, LEX_RIGHTHESIS
+<fdecl> --> FUNCTION <paramdecl> (<paramdecl>) <statements> LEX_END
 <fcall> --> <expression> <call>
 <call> --> LEX_LEFTHESIS <source>, LEX_RIGHTHESIS
 
-<expression> --> <exp2> ( ( LEX_SAME | LEX_DIFFERENT | LEX_GREATER | LEX_LESSER ) <exp2> )?
+<expression> --> <exp2> ( ( LEX_SAME | LEX_DIFFERENT | LEX_GREATER | LEX_GREAQUAL | LEX_LEAQUAL | LEX_LESSER ) <exp2> )?
 <exp2> --> <exp3> ( ( LEX_PLUS | LEX_MINUS ) <exp3> )*
 <exp3> --> <exp4> ( ( LEX_TIMES | LEX_DIVIDE | LEX_MODULO | LEX_AND | LEX_OR
                       LEX_BAND | LEX_BOR | LEX_XOR | LEX_LSHIFT | LEX_RSHIFT) <exp3> )*
 <exp4> --> (LEX_NOT | LEX_MINUS | LEX_INVERSE)? <exp5>
 <exp5> --> <exp6> ( <call> | <member> )*
 <exp6> --> ( LEX_LEFTTHESIS <expression> LEX_RIGHTTHESIS ) | <atom>
-<atom> -->  LEX_IDENTIFIER | <float> | <integer> | <boolean> | <table> | <comprehension> | <fdecl>
+<atom> -->  LEX_IDENTIFIER | <float> | <integer> | <boolean> | <nil> | <table> | <comprehension> | <fdecl>
 
 <variable> --> LEX_IDENTIFIER
 <boolean> --> LEX_TRUE | LEX_FALSE
@@ -428,7 +431,7 @@ struct symbol {
     enum Nonterminal nonterminal;
     struct token *token;
     struct array* list;
-    struct symbol *index, *value;
+    struct symbol *index, *value, *other;
     float floater;
     bool lhs;
 };
@@ -472,7 +475,7 @@ struct symbol *symbol_new(enum Nonterminal nonterminal)
     struct symbol *s = (struct symbol*)malloc(sizeof(struct symbol));
     s->nonterminal = nonterminal;
     s->list = array_new();
-    s->index = s->value = NULL;
+    s->index = s->value = s->other = NULL;
     s->lhs = false;
     return s;
 }
@@ -574,7 +577,7 @@ struct token *fetch(enum Lexeme lexeme) {
         //DEBUGPRINT("fetched %s instead of %s at %d\n", lexeme_to_string(token->lexeme), lexeme_to_string(lexeme), parse_index);
         return NULL;
     }
-    // DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
+    DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
     // display_token(token, 0);
 
     parse_index++;
@@ -629,7 +632,7 @@ struct symbol *symbol_fetch(enum Nonterminal n, enum Lexeme goal, ...)
 
             symbol = symbol_new(n);
             symbol->token = token;
-            // DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
+            DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
             // display_token(token, 0);
 
             parse_index++;
@@ -678,24 +681,37 @@ struct symbol *destination()
     return e;
 };
 
-//<variable> --> LEX_IDENTIFIER
+// <variable> --> LEX_IDENTIFIER
 struct symbol *variable()
 {
     return symbol_fetch(SYMBOL_VARIABLE, LEX_IDENTIFIER, NULL);
 }
 
+// <paramdecl> --> LEX_LEFTHESIS <variable>, LEX_RIGHTHESIS
+struct symbol *paramdecl()
+{
+    FETCH_OR_QUIT(LEX_LEFTHESIS);
+    struct symbol *s = repeated(SYMBOL_VARIABLE, &variable);
+    FETCH_OR_ERROR(LEX_RIGHTHESIS)
+    return s;
+}
 
-// <fdecl> --> FUNCTION LEX_LEFTHESIS <variable>, LEX_RIGHTHESIS <statements> LEX_END
+// <fdecl> --> FUNCTION <paramdecl> ( <paramdecl> ) <statements> LEX_END
 struct symbol *fdecl()
 {
     FETCH_OR_QUIT(LEX_FUNCTION)
-    FETCH_OR_ERROR(LEX_LEFTHESIS);
     struct symbol *s = symbol_new(SYMBOL_FDECL);
+
+    FETCH_OR_ERROR(LEX_LEFTHESIS);
     s->index = repeated(SYMBOL_DESTINATION, &destination);
     FETCH_OR_ERROR(LEX_RIGHTHESIS)
+
+    if (fetch_lookahead(LEX_LEFTHESIS)) {
+        s->other = repeated(SYMBOL_VARIABLE, &variable);
+        FETCH_OR_ERROR(LEX_RIGHTHESIS)
+    }
+
     s->value = statements();
-    //DEBUGPRINT("fdecl: %d statements\n", s->value->list->length);
-    //DEBUGPRINT("lookahead=%s\n", NUM_TO_STRING(lexemes, LOOKAHEAD));
     FETCH_OR_ERROR(LEX_END);
     return s;
 }
@@ -710,14 +726,12 @@ struct symbol *element()
         p->value = expression();
         return p;
     } else {
-//        p->index = symbol_new(SYMBOL_NIL);
         return e;
     }
 }
 
 // <table> --> LEX_LEFTSQUARE <element>, LEX_RIGHTSQUARE
 struct symbol *table() {
-    //return list(SYMBOL_TABLE, LEX_LEFTSQUARE, LEX_RIGHTSQUARE, LEX_COLON);
     FETCH_OR_QUIT(LEX_LEFTSQUARE);
     struct symbol *s = repeated(SYMBOL_TABLE, &element);
     FETCH_OR_ERROR(LEX_RIGHTSQUARE);
@@ -726,7 +740,6 @@ struct symbol *table() {
 
 struct symbol *integer()
 {
-    //    DEBUGPRINT("integer\n");
     struct token *t = fetch(LEX_INTEGER);
     if (!t)
         return NULL;
@@ -745,9 +758,18 @@ struct symbol *boolean()
     return s;
 }
 
+struct symbol *nil()
+{
+    struct token *t = fetch(LEX_NIL);
+    if (!t)
+        return NULL;
+    struct symbol *s = symbol_new(SYMBOL_NIL);
+    s->token = t;
+    return s;
+}
+
 struct symbol *floater()
 {
-    //    DEBUGPRINT("floater\n");
     struct token *t = fetch(LEX_INTEGER);
     if (!t)
         return NULL;
@@ -774,10 +796,10 @@ struct symbol *string()
     return s;
 }
 
-//  <atom> -->  LEX_IDENTIFIER | <float> | <integer> | <boolean> | <table> | <comprehension> | <fdecl>
+//  <atom> -->  LEX_IDENTIFIER | <float> | <integer> | <boolean> | <nil> | <table> | <comprehension> | <fdecl>
 struct symbol *atom()
 {
-    return one_of(&variable, &string, &floater, &integer, &boolean, &comprehension, &table, &fdecl, NULL);
+    return one_of(&variable, &string, &floater, &integer, &boolean, &nil, &comprehension, &table, &fdecl, NULL);
 }
 
 // <exp5> --> ( LEX_LEFTTHESIS <expression> LEX_RIGHTTHESIS ) | <atom>
@@ -860,11 +882,11 @@ struct symbol *expTwo()
     return e;
 }
 
-// <expression> --> <exp2> ( ( LEX_SAME | LEX_DIFFERENT | LEX_GREATER | LEX_LESSER ) <exp2> )?
+// <expression> --> <exp2> ( ( LEX_SAME | LEX_DIFFERENT | LEX_GREATER | LEX_GREAQAL | LEX_LEQUAL | LEX_LESSER ) <exp2> )?
 struct symbol *expression()
 {
     struct symbol *f, *e = expTwo();
-    while ((f = symbol_fetch(SYMBOL_EXPRESSION, LEX_SAME, LEX_DIFFERENT, LEX_GREATER, LEX_LESSER, NULL)))
+    while ((f = symbol_fetch(SYMBOL_EXPRESSION, LEX_SAME, LEX_DIFFERENT, LEX_GREATER, LEX_LESSER, LEX_GREAQUAL, LEX_LEAQUAL, NULL)))
         e = symbol_adds(f, e, expTwo(), NULL);
     return e;
 }
@@ -1044,6 +1066,8 @@ void generate_step(struct byte_array *code, int count, int action,...)
 
 void generate_items(struct byte_array *code, const struct symbol* root, bool reverse)
 {
+    if (!root)
+        return;
     const struct array *items = root->list;
     uint32_t num_items = items->length;
 
@@ -1064,7 +1088,7 @@ void generate_items_then_op(struct byte_array *code, enum Opcode opcode, const s
 {
     generate_items(code, root, false);
     generate_step(code, 1, opcode);
-    serial_encode_int(code, 0, root->list->length);
+    serial_encode_int(code, 0, root ? root->list->length : 0);
 }
 
 void generate_statements(struct byte_array *code, struct symbol *root) {
@@ -1144,10 +1168,22 @@ void generate_boolean(struct byte_array *code, struct symbol *root) {
 
 void generate_fdecl(struct byte_array *code, struct symbol *root)
 {
-    struct byte_array *f = byte_array_new();
-    generate_code(f, root->index);
-    generate_code(f, root->value);
     generate_step(code, 1, VM_FNC);
+
+    if (root->other) {
+        struct array *closure = root->other->list;
+        serial_encode_int(code, 0, closure->length);
+        for (int i=0; i<closure->length; i++) {
+            struct symbol *name = (struct symbol*)array_get(closure, i);
+            serial_encode_string(code, 0, name->token->string);
+        }
+    }
+    else
+        serial_encode_int(code, 0, 0);
+
+    struct byte_array *f = byte_array_new();
+    generate_code(f, root->index); // params
+    generate_code(f, root->value); // statements
     serial_encode_string(code, 0, f);
 }
 
@@ -1191,22 +1227,50 @@ void generate_math(struct byte_array *code, struct symbol *root)
     generate_statements(code, root);
     enum Opcode op = VM_NIL;
     switch (lexeme) {
-        case LEX_PLUS:      op = VM_ADD;            break;
-        case LEX_MINUS:     op = VM_SUB;            break;
-        case LEX_TIMES:     op = VM_MUL;            break;
-        case LEX_DIVIDE:    op = VM_DIV;            break;
-        case LEX_MODULO:    op = VM_MOD;            break;
-        case LEX_AND:       op = VM_AND;            break;
-        case LEX_OR:        op = VM_OR;             break;
-        case LEX_NOT:       op = VM_NOT;            break;
-        case LEX_NEG:       op = VM_NEG;            break;
-        case LEX_SAME:      op = VM_EQU;            break;
-        case LEX_DIFFERENT: op = VM_NEQ;            break;
-        case LEX_GREATER:   op = VM_GTN;            break;
-        case LEX_LESSER:    op = VM_LTN;            break;
+        case LEX_PLUS:      op = VM_ADD;    break;
+        case LEX_MINUS:     op = VM_SUB;    break;
+        case LEX_TIMES:     op = VM_MUL;    break;
+        case LEX_DIVIDE:    op = VM_DIV;    break;
+        case LEX_MODULO:    op = VM_MOD;    break;
+        case LEX_AND:       op = VM_AND;    break;
+        case LEX_OR:        op = VM_ORR;    break;
+        case LEX_NOT:       op = VM_NOT;    break;
+        case LEX_NEG:       op = VM_NEG;    break;
+        case LEX_SAME:      op = VM_EQU;    break;
+        case LEX_DIFFERENT: op = VM_NEQ;    break;
+        case LEX_GREATER:   op = VM_GTN;    break;
+        case LEX_LESSER:    op = VM_LTN;    break;
+        case LEX_GREAQUAL:  op = VM_GRQ;    break;
+        case LEX_LEAQUAL:   op = VM_LEQ;    break;
         default: exit_message("bad math lexeme");   break;
     }
     generate_step(code, 1, op);
+}
+
+// if A then ( B + jmp back )
+void generate_loop(struct byte_array *code, struct symbol *root)
+{
+    struct byte_array *ifa, *b, *jmp;
+
+    int32_t loop_length, jmp_len = 2;
+    do {
+        ifa = byte_array_new();
+        b = byte_array_new();
+        jmp = byte_array_new();
+
+        generate_code(b, root->value);
+
+        generate_code(ifa, root->index);
+        generate_step(ifa, 1, VM_IFF);
+        serial_encode_int(ifa, 0, b->length + jmp_len);
+
+        loop_length = ifa->length + b->length;
+        generate_jump(jmp, -loop_length);
+
+    } while (jmp_len++ < jmp->length);
+
+    struct byte_array *while_a_do_b = byte_array_concatenate(3, ifa, b, jmp);
+    byte_array_append(code, while_a_do_b);
 }
 
 void generate_ifthenelse(struct byte_array *code, struct symbol *root)
@@ -1255,24 +1319,6 @@ void generate_ifthenelse(struct byte_array *code, struct symbol *root)
         combined = byte_array_concatenate(3, if_code, then_code, combined);
     }
     byte_array_append(code, combined);
-}
-
-void generate_loop(struct byte_array *code, struct symbol *root)
-{
-    struct byte_array *ifa = byte_array_new();
-    generate_code(ifa, root->index);
-
-    struct byte_array *b = byte_array_new();
-    generate_code(b, root->value);
-
-    struct byte_array *thn = byte_array_new();
-    generate_step(thn, 1, VM_IFF);
-    serial_encode_int(thn, 0, b->length + 2);
-
-    struct byte_array *while_a_do_b = byte_array_concatenate(4, code, ifa, thn, b);
-    byte_array_append(code, while_a_do_b);
-    int32_t loop_length = ifa->length + thn->length + b->length;
-    generate_jump(code, -loop_length);
 }
 
 // <iterator> --> LEX_FOR LEX_IDENTIFIER LEX_IN <expression> ( LEX_WHERE <expression> )?

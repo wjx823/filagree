@@ -262,7 +262,8 @@ int32_t byte_array_find(struct byte_array *within, struct byte_array *sought, ui
     
     uint32_t ws = within->length;
     uint32_t ss = sought->length;
-    assert_message(start < within->length, "out of bounds");
+    if (start >= within->length)
+        return -1;
     
     uint8_t *wd = within->data;
     uint8_t *sd = sought->data;

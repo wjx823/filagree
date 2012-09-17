@@ -69,7 +69,7 @@ void log_print(const char *format, ...)
 
 #ifdef ANDROID
     __android_log_write(ANDROID_LOG_ERROR, TAG, one_line);
-#elifdef IOS
+#elif defined IOS
     NSLog(@"%s", one_line);
 #elifdef MBED
     usbTxRx.printf("%s\n", one_line);    

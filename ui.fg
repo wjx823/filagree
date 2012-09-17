@@ -1,29 +1,29 @@
 # ui.fg ###################################################################
 
-vm.ui = function(self, type, w, h, item, parent, x, y)
+sys.ui = function(self, type, w, h, item, parent, x, y)
 
     if not parent then
         x = 0
         y = 0
-        vm.window()
+        sys.window()
     end
 
     if (type == 'vertical') then
         for i in item
-            vm.ui(i[0], i[1], i[2], i[3], true, x, y)
+            sys.ui(i[0], i[1], i[2], i[3], true, x, y)
             y = y + i[2]
         end
     else if (type == 'horizontal') then
         for i in item
-            vm.ui(i[0], i[1], i[2], i[3], true, x, y)
+            sys.ui(i[0], i[1], i[2], i[3], true, x, y)
             x = x + i[1]
         end
     else if type == 'button' then
-        vm.button(x, y, w, h, item)
+        sys.button(x, y, w, h, item)
     else if type == 'input' then
-        vm.input(x, y, w, h, item)
+        sys.input(x, y, w, h, item)
     end
 end
 
-vm.ui('vertical', 20, 20, [['button', 100, 30, 'clickez moi'], ['input', 150, 20, ' ']])
-vm.loop()
+sys.ui('vertical', 20, 20, [['button', 100, 30, 'clickez moi'], ['input', 150, 20, ' ']])
+sys.loop()

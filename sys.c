@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include "hal.h"
 #include "interpret.h"
 #include "serial.h"
@@ -10,19 +11,40 @@
 #include "ui.h"
 #include "util.h"
 
-// system functions
+#define RESERVED_SYS  "sys"
+#define RESERVED_LIST "List"
+#define RESERVED_LENGTH "length"
 
-void sys_callback2c(struct Context *context)
+struct string_func
 {
-	context->callback2c(context);
-}
+    const char* name;
+    callback2func* func;
+};
+
+/*
+ typedef struct variable *(callback2method)(context_p context, struct variable *indexable, struct variable *index);
+
+struct string_method
+{
+    const char *name;
+    callback2method *method;
+};
+*/
+
+struct variable *sys = NULL;
+
+
+// system functions
 
 void sys_print(struct Context *context)
 {
-    stack_pop(context->operand_stack); // self
-    struct variable *v;
-    while ((v = (struct variable*)stack_pop(context->operand_stack)))
-        printf("%s\n", variable_value_str(context, v));
+    null_check(context);
+    struct variable *args = (struct variable*)stack_pop(context->operand_stack);
+    assert_message(args && args->type==VAR_SRC && args->list, "bad print arg");
+    for (int i=1; i<args->list->length; i++) {
+        struct variable *arg = (struct variable*)array_get(args->list, i);
+        DEBUGPRINT("%s\n", variable_value_str(context, arg));
+    }
 }
 
 void sys_save(struct Context *context)
@@ -36,7 +58,7 @@ void sys_save(struct Context *context)
 void sys_load(struct Context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
-    struct variable *path = (struct variable*)array_get(value->list, 1);  // (struct variable*)stack_pop(context->operand_stack);
+    struct variable *path = (struct variable*)array_get(value->list, 1);
     struct variable *v = variable_load(context, path);
     if (v)
         stack_push(context->operand_stack, v);
@@ -44,8 +66,8 @@ void sys_load(struct Context *context)
 
 void sys_read(struct Context *context)
 {
-    stack_pop(context->operand_stack); // self
-    struct variable *path = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *path = (struct variable*)array_get(value->list, 1);
     struct byte_array *bytes = read_file(path->str);
     if (bytes != NULL) {
         struct variable *v = variable_new_str(context, bytes);
@@ -102,6 +124,27 @@ void sys_button(struct Context *context)
     hal_button(x, y, w, h, str, NULL, NULL);
 }
 
+void sys_atoi(struct Context *context)
+{
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    char *str = (char*)((struct variable*)array_get(value->list, 1))->str->data;
+    uint32_t offset = value->list->length > 2 ? ((struct variable*)array_get(value->list, 2))->integer : 0;
+
+    int n=0, i=0;
+    bool negative = false;
+    if (str[offset] == '-') {
+        negative = true;
+        i++;
+    };
+
+    while (isdigit(str[offset+i]))
+        n = n*10 + str[offset + i++] - '0';
+
+    variable_push(context, variable_new_int(context, n));
+    variable_push(context, variable_new_int(context, i));
+    variable_push(context, variable_new_src(context, 2));
+}
+
 void sys_input(struct Context *context)
 {
     stack_pop(context->operand_stack); // self
@@ -114,29 +157,36 @@ void sys_input(struct Context *context)
 }
 
 struct string_func builtin_funcs[] = {
-	{"yield",   (bridge*)&sys_callback2c},
-	{"args",    (bridge*)&sys_args},
-    {"print",   (bridge*)&sys_print},
-    {"read",    (bridge*)&sys_read},
-    {"save",    (bridge*)&sys_save},
-    {"load",    (bridge*)&sys_load},
-    {"run",     (bridge*)&sys_run},
-    {"remove",  (bridge*)&sys_rm},
-    {"window",  (bridge*)&sys_window},
-    {"loop",    (bridge*)&sys_loop},
-    {"button",  (bridge*)&sys_button},
-    {"input",   (bridge*)&sys_input},
+    //	{"yield",   (callback2c*)&sys_callback2c},
+	{"args",    (callback2func*)&sys_args},
+    {"print",   (callback2func*)&sys_print},
+    {"read",    (callback2func*)&sys_read},
+    {"save",    (callback2func*)&sys_save},
+    {"load",    (callback2func*)&sys_load},
+    {"run",     (callback2func*)&sys_run},
+    {"remove",  (callback2func*)&sys_rm},
+    {"window",  (callback2func*)&sys_window},
+    {"loop",    (callback2func*)&sys_loop},
+    {"button",  (callback2func*)&sys_button},
+    {"input",   (callback2func*)&sys_input},
+    {"atoi",    (callback2func*)&sys_atoi},
 };
 
-struct variable *func_map(struct Context *context)
+struct variable *sys_find(struct Context *context, const struct byte_array *name)
 {
-    struct map *map = map_new();
-    for (int i=0; i<ARRAY_LEN(builtin_funcs); i++) {
-        struct byte_array *name = byte_array_from_string(builtin_funcs[i].name);
-        struct variable *value = variable_new_c(context, builtin_funcs[i].func);
-        map_insert(map, name, value);
+    if (strncmp(RESERVED_SYS, (const char*)name->data, strlen(RESERVED_SYS)))
+        return NULL;
+    if (!sys) {
+        struct map *sys_func_map = map_new();
+        for (int i=0; i<ARRAY_LEN(builtin_funcs); i++) {
+            struct byte_array *name = byte_array_from_string(builtin_funcs[i].name);
+            struct variable *value = variable_new_c(context, builtin_funcs[i].func);
+            map_insert(sys_func_map, name, value);
+        }
+        sys = variable_new_map(context, sys_func_map);
     }
-    return variable_new_map(context, map);
+//    return map_get(func_map, name);
+    return sys;
 }
 
 // built-in member functions
@@ -145,6 +195,7 @@ struct variable *func_map(struct Context *context)
 #define FNC_LIST        "list"
 #define FNC_TYPE        "type"
 #define FNC_LENGTH      "length"
+#define FNC_HAS         "has"
 #define FNC_KEYS        "keys"
 #define FNC_VALUES      "values"
 #define FNC_SERIALIZE   "serialize"
@@ -156,6 +207,17 @@ struct variable *func_map(struct Context *context)
 #define FNC_REMOVE      "remove"
 #define FNC_INSERT      "insert"
 #define FNC_ADD         "add"
+
+static inline struct variable *sys_string(struct Context *context, struct variable *indexable, struct variable *index)
+{
+    return variable_new_str(context, variable_value(context, indexable));
+}
+
+/*
+struct string_method builtin_methods[] = {
+    {"string",     (callback2method*)&sys_string},
+};
+*/
 
 int (compar)(struct Context *context, const void *a, const void *b, struct variable *comparator)
 {
@@ -271,12 +333,17 @@ void cfnc_chop(struct Context *context, bool part)
     struct variable *args = (struct variable*)stack_pop(context->operand_stack);
     struct variable *self = (struct variable*)array_get(args->list, 0);
     struct variable *start = (struct variable*)array_get(args->list, 1);
-    struct variable *length = (struct variable*)array_get(args->list, 2);
-
+    
     assert_message(start->type == VAR_INT, "non-integer index");
-    assert_message(length->type == VAR_INT, "non-integer length");
     int32_t beginning = start->integer;
-    int32_t foraslongas = length->integer;
+
+    int32_t foraslongas;
+    if (args->list->length > 2) {
+        struct variable *length = (struct variable*)array_get(args->list, 2);
+        assert_message(length->type == VAR_INT, "non-integer length");
+        foraslongas = length->integer;
+    } else
+        foraslongas = self->str->length - beginning;
 
     struct variable *result = variable_copy(context, self);
     if (part)
@@ -294,25 +361,39 @@ static inline void cfnc_remove(struct Context *context) {
     cfnc_chop(context, false);
 }
 
-void cfnc_find(struct Context *context)
+void cfnc_find2(struct Context *context, bool has)
 {
     struct variable *args = (struct variable*)stack_pop(context->operand_stack);
     struct variable *self = (struct variable*)array_get(args->list, 0);
     struct variable *sought = (struct variable*)array_get(args->list, 1);
     struct variable *start = args->list->length > 2 ? (struct variable*)array_get(args->list, 2) : NULL;
-
     null_check(self);
     null_check(sought);
-    assert_message(self->type == VAR_STR, "searching in a non-list");
-    assert_message(sought->type == VAR_STR, "searching for a non-list");
-    if (start)
-        assert_message(start->type == VAR_INT, "non-integer index");
-
-    int32_t beginning = start ? start->integer : 0;
-    int32_t index = byte_array_find(self->str, sought->str, beginning);
-    struct variable *result = variable_new_int(context, index);
+    
+    struct variable *result;
+    if (self->type == VAR_STR && sought->type == VAR_STR) {                     // search for substring
+        assert_message(!start || start->type == VAR_INT, "non-integer index");
+        int32_t beginning = start ? start->integer : 0;
+        int32_t index = byte_array_find(self->str, sought->str, beginning);
+        if (has)
+            result = variable_new_bool(context, index != -1);
+        else
+            result = variable_new_int(context, index);
+    } else if (self->type == VAR_LST) {
+        return;
+        // todo
+    }
     stack_push(context->operand_stack, result);
 }
+
+void cfnc_find(struct Context *context) {
+    cfnc_find2(context, false);
+}
+
+void cfnc_has(struct Context *context) {
+    cfnc_find2(context, true);
+}
+
 
 void cfnc_insert(struct Context *context)
 {
@@ -331,8 +412,9 @@ void cfnc_insert(struct Context *context)
 
 void cfnc_add(struct Context *context)
 {
-    struct variable *self = (struct variable*)stack_pop(context->operand_stack);
-    struct variable *insertion = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *args = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *self = (struct variable*)array_get(args->list, 0);
+    struct variable *insertion = (struct variable*)array_get(args->list, 1);
     assert_message(self->type == VAR_LST || (self->type == VAR_STR && insertion->type == VAR_STR), "insertion doesn't match destination");
 
     struct variable *inserted;
@@ -393,16 +475,17 @@ void replace(struct Context *context)
     stack_push(context->operand_stack, result);
 }
 
-
-struct variable *builtin_method(struct Context *context, 
+struct variable *builtin_method(struct Context *context,
                                 struct variable *indexable,
                                 const struct variable *index)
 {
     enum VarType it = indexable->type;
     const char *idxstr = byte_array_to_string(index->str);
 
-    if (!strcmp(idxstr, FNC_LENGTH))
+    if (!strcmp(idxstr, FNC_LENGTH)) {
+        assert_message(indexable->type==VAR_LST || indexable->type==VAR_STR, "no length for non-indexable");
         return variable_new_int(context, indexable->list->length);
+    }
     if (!strcmp(idxstr, FNC_TYPE)) {
         const char *typestr = var_type_str(it);
         return variable_new_str(context, byte_array_from_string(typestr));
@@ -453,10 +536,11 @@ struct variable *builtin_method(struct Context *context,
         return variable_new_c(context, &cfnc_sort);
     }
 
-    if (!strcmp(idxstr, FNC_FIND)) {
-        assert_message(indexable->type == VAR_STR, "searching in non-string");
+    if (!strcmp(idxstr, FNC_HAS))
+        return variable_new_c(context, &cfnc_has);
+
+    if (!strcmp(idxstr, FNC_FIND))
         return variable_new_c(context, &cfnc_find);
-    }
 
     if (!strcmp(idxstr, FNC_PART))
         return variable_new_c(context, &cfnc_part);

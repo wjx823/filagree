@@ -18,7 +18,8 @@ enum VarType {
 };    
 
 typedef struct Context *context_p; // forward declaration
-typedef void(bridge)(context_p context);
+typedef void(callback2func)(context_p context);
+typedef struct variable *(find_c_var)(context_p context, const struct byte_array *name);
 
 struct variable {
     const struct byte_array* name;
@@ -47,13 +48,13 @@ extern struct variable *variable_load(struct Context *context, const struct vari
 
 struct variable* variable_new_bool(struct Context *context, bool b);
 struct variable *variable_new_err(struct Context *context, const char* message);
-struct variable *variable_new_c(struct Context *context, bridge *cfnc);
+struct variable *variable_new_c(struct Context *context, callback2func *cfnc);
 struct variable *variable_new_int(struct Context *context, int32_t i);
 struct variable *variable_new_nil(struct Context *context);
 struct variable *variable_new_map(struct Context *context, struct map *map);
 struct variable *variable_new_float(struct Context *context, float f);
 struct variable *variable_new_str(struct Context *context, struct byte_array *str);
-struct variable *variable_new_fnc(struct Context *context, struct byte_array *fnc);
+struct variable *variable_new_fnc(struct Context *context, struct byte_array *body, struct map *closures);
 struct variable *variable_new_list(struct Context *context, struct array *list);
 struct variable *variable_new_src(struct Context *context, uint32_t size);
 struct variable *variable_copy(struct Context *context, const struct variable *v);
@@ -64,7 +65,7 @@ void variable_push(struct Context *context, struct variable *v);
 struct variable *variable_concatenate(struct Context *context, int n, const struct variable* v, ...);
 void variable_remove(struct variable *self, uint32_t start, int32_t length);
 struct variable *variable_part(struct Context *context, struct variable *self, uint32_t start, int32_t length);
-
+int variable_map_insert(struct variable* v, const struct byte_array *key, void *data);
 
 const char *var_type_str(enum VarType vt);
 

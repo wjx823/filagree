@@ -1,15 +1,15 @@
-import 'unit_test'
+/*
+f = function(a)
+    x = 7
+end
+f(2)
+*/
 
-tester.test('args',
-    function()
-        f = function()
-            sum = 0
-            a = vm.args()
-            for n in vm.args()
-                sum = sum + n
-            end
-#            return sum
-        end
-        return f(3,1,4)
-    end,
-    8)
+
+x = 7
+f = function(a)(x)
+    sys.print(a+x)
+end
+
+f(2)
+f(3)

@@ -115,9 +115,7 @@ struct variable *variable_new_src(struct Context *context, uint32_t size)
 	null_check(context);
     struct variable *v = variable_new(context, VAR_SRC);
     v->list = array_new();
-//    if (!size)
-//        array_add(v->list, variable_new_nil(context));
-//    else
+
     while (size--) {
         struct variable *o = (struct variable*)stack_pop(context->operand_stack);
         if (o->type == VAR_SRC) {
@@ -146,9 +144,12 @@ struct variable *variable_new_str(struct Context *context, struct byte_array *st
     return v;
 }
 
-struct variable *variable_new_fnc(struct Context *context, struct byte_array *fnc) {
+struct variable *variable_new_fnc(struct Context *context, struct byte_array *body, struct map *closures)
+{
     struct variable *v = variable_new(context, VAR_FNC);
-    v->str = fnc;
+    v->str = body;
+    struct variable *vc = variable_new_map(context, closures);
+    variable_map_insert(v, byte_array_from_string(RESERVED_ENV), vc);
     return v;
 }
 
@@ -164,7 +165,7 @@ struct variable *variable_new_map(struct Context *context, struct map *map) {
     return v;
 }
 
-struct variable *variable_new_c(struct Context *context, bridge *cfnc) {
+struct variable *variable_new_c(struct Context *context, callback2func *cfnc) {
     struct variable *v = variable_new(context, VAR_C);
     v->cfnc = cfnc;
     return v;
@@ -308,7 +309,7 @@ struct variable *variable_deserialize(struct Context *context, struct byte_array
         case VAR_NIL:    return variable_new_nil(context);
         case VAR_INT:    return variable_new_int(context, serial_decode_int(bits));
         case VAR_FLT:    return variable_new_float(context, serial_decode_float(bits));
-        case VAR_FNC:    return variable_new_fnc(context, serial_decode_string(bits));
+        case VAR_FNC:    return variable_new_fnc(context, serial_decode_string(bits), NULL);
         case VAR_STR:    return variable_new_str(context, serial_decode_string(bits));
         case VAR_LST: {
             uint32_t size = serial_decode_int(bits);
@@ -430,4 +431,11 @@ struct variable *variable_concatenate(struct Context *context, int n, const stru
     
     va_end(argp);
     return result;
+}
+
+int variable_map_insert(struct variable* v, const struct byte_array *key, void *data)
+{
+    if (!v->map)
+        v->map = map_new();
+    return map_insert(v->map, key, data);
 }

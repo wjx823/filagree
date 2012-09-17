@@ -1,36 +1,91 @@
+# todo: has, and/or shortcut
+
 compiler = [
 
-    'digits' : '0123456789',
-
-    'vocabulary' : [ '+', '-', '/*', '*/'],
-
     'lex' : function(self, script)
+
+        lexeme = function(type, value)
+            return ['type' : type, 'value' : value]
+        end
 
         result = []
         i = 0
 
-        next_lexeme = function(script, i)
-            i = skip_white(script, i)
-            if digits.has(script[i])
-                return atoi(script, i)
-            else
-                for word in vocabulary
-                    if script.find(word, i) == i then
-                        return word, i
-                    end
-                end
-            end
-            return false
-        end
+        white = ' \t\n'
+        digits = '0123456789'
+        vocabulary = [ '+', '-', '/*', '*/']
 
-        while next_lexeme(script, lexd) end
+        while i < script.length
+
+            while white.find(script[i]) != -1           # white space
+                i = i + 1
+            end
+
+            if digits.find(script[i]) != -1             # number
+                n,j = vm.atoi(script, i)
+                i = i + j
+                result.add(lexeme('number', n))
+            else
+                for word in vocabulary                  # in vocab
+                    if script.find(word, i) == i then
+                        result.add(lexeme('word', word))
+                        i = i + word.length
+        end end end end
+
         return result
 
     end,
 
-    'parse' : function(self, lexemes)
-        return 8
-    end,
+    'parser' : [
+
+        'parse' : function(self, lexemes)
+            self.lexemes = lexemes
+            self.parse_index = 0
+            return self.statements()
+        end,
+
+        'statements' : function(self)
+            return self.exp()
+        end,
+
+        'exp' : function(self)
+            return self.symbol('expression', '+-/*', self.exp2(), self.exp2)
+        end,
+
+        'exp2' : function(self)
+            return self.fetch_may(['variable', 'number', 'string'])
+        end,
+
+        'symbol' : function(self, type, sought, before, after)
+            b = before
+            f = self.fetch_may(sought)
+            if not f then
+                return b
+            end
+            a = self.fetch_must([after()])
+            return ['type':type, 'children':[b,a]]
+        end,
+
+        'fetch_may' : function(self, options)
+            if self.parse_index >= self.lexemes.length then
+                return nil
+            end
+            l = self.lexemes[parse_index]
+            if options.find(l.type) != -1 then
+                return l
+            end
+            return nil
+        end,
+
+        'fetch_must' : function(self, options)
+            f = self.fetch_may(options)
+            if not f then
+                throw('parse error')
+            end
+            return f
+        end,
+
+    ],
 
     'generate' : function(self, symbols)
         return 'vm.print(9)'
@@ -38,9 +93,9 @@ compiler = [
 
     'build' : function(self, input)
 
-        lexd = self.lex(input)
-        vm.print('lexd = ' + lexd)
-        parsed = self.parse(lexd)
+        lexemes = self.lex(input)
+        vm.print('lexd = ' + lexemes)
+        parsed = self.parser.parse(lexemes)
         program = self.generate(parsed)
 
         return program
@@ -49,9 +104,13 @@ compiler = [
 
     'interpret_file' : function(self, filename)
 
-        script = vm.read(filename)
-        bytecode = self.build(script)
-        /* vm.run(bytecode) /* bytecode() */
+        try
+            script = vm.read(filename)
+            bytecode = self.build(script)
+            /* vm.run(bytecode) /* bytecode() */
+        catch err
+            vm.print(err)
+        end
 
     end
 ]

@@ -37,6 +37,7 @@
 		880BFE9915B7192400A90585 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		880BFE9B15B7192A00A90585 /* OpenAL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenAL.framework; path = System/Library/Frameworks/OpenAL.framework; sourceTree = SDKROOT; };
 		880BFE9D15B7194400A90585 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		880E6A3F15FB1B0B008A06F7 /* sys.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sys.fg; sourceTree = "<group>"; };
 		881AC0FD14B09B2B00EAAE3F /* sys.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sys.c; sourceTree = "<group>"; };
 		881AC0FE14B09B2B00EAAE3F /* sys.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sys.h; sourceTree = "<group>"; };
 		882A967515BE7CEB00A413CC /* ui.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ui.fg; sourceTree = "<group>"; };
@@ -98,6 +99,8 @@
 				88A65D95147757400055DACF /* compile.h */,
 				88FAF8A115B9ED5700A9B6D9 /* hal.h */,
 				88FAF8A015B9ED5700A9B6D9 /* hal_osx.m */,
+				88C760B015428A5100A4F8E7 /* interpret.h */,
+				88C760B215428A5F00A4F8E7 /* interpret.c */,
 				88A65D9B147757400055DACF /* serial.c */,
 				88A65D96147757400055DACF /* serial.h */,
 				88A65D9C147757400055DACF /* struct.c */,
@@ -110,8 +113,6 @@
 				88E65DE51510F46F00E6207D /* variable.h */,
 				88A65D9F147757400055DACF /* vm.c */,
 				88A65D99147757400055DACF /* vm.h */,
-				88C760B015428A5100A4F8E7 /* interpret.h */,
-				88C760B215428A5F00A4F8E7 /* interpret.c */,
 			);
 			name = source;
 			sourceTree = "<group>";
@@ -133,6 +134,7 @@
 				88E1FA6015CBBEE9001E6488 /* compile.fg */,
 				88E1FA6515CC5263001E6488 /* try.fg */,
 				88784E0615CDC8860052A0F2 /* program.fg */,
+				880E6A3F15FB1B0B008A06F7 /* sys.fg */,
 			);
 			name = test;
 			sourceTree = "<group>";

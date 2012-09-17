@@ -11,19 +11,22 @@
 #define ERROR_NULL  "null pointer"
 #define ERROR_INDEX "index out of bounds"
 
+#define RESERVED_ENV "env"
+
 struct Context {
     struct program_state *vm_state;
     struct stack *program_stack;
     struct stack *operand_stack;
-    //struct array *args;
-    //struct stack *rhs;
     struct variable *vm_exception;
-    bridge *callback2c;
+    /*bridge_callback *callback;
+    bridge_find *find;*/
+    find_c_var *find;
     bool runtime;
     bool done;
     uint32_t num_vars;
     struct variable* error;
     uint8_t indent;
+//    struct map *reserved_var_map;
 };
 
 struct program_state {
@@ -66,8 +69,10 @@ enum Opcode {
     VM_NEQ, // diff
     VM_GTN, // greater than
     VM_LTN, // less than
+    VM_GRQ, // greater than or equal to
+    VM_LEQ, // less than or equal to
     VM_AND, // logical and
-    VM_OR,  // logical or
+    VM_ORR, // logical or
     VM_IFF, // if then
     VM_JMP, // jump the program counter
     VM_CAL, // call a function
@@ -87,9 +92,9 @@ void display_program(struct byte_array* program);
 struct Context *vm_init();
 struct variable *execute(struct byte_array *program,
                          bool in_context,
-                         bridge *callback_to_c);
+                         //bridge_callback *callback_to_c,
+                         find_c_var *find);
 void garbage_collect(struct Context *context);
-
 void vm_call(struct Context *context);
 void *vm_exit_message(struct Context *context, const char *format, ...);
 void vm_null_check(struct Context *context, const void* p);

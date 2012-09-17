@@ -1,0 +1,40 @@
+class = function(init, proto)
+    f = function()(proto)
+        self = init(sys.args)
+        self.proto = proto
+        return self
+    end
+    return f
+end
+
+List = class( function(name) return ['name':name] end )
+List.has = function(self, sought) return sys.find(self, sought) != nil end
+
+list = List('x')
+
+/*
+List.has = function(self, sought)
+    return self.find(sought) != -1
+end
+
+List.find = function(self, sought, start, finish, all, reverse)
+    start = start or 0
+    if ( not finish ) or ( finish > self.length - 1 ) then
+        finish = self.length - 1
+    end
+
+    strings = self.type == 'string' and sought.type == 'string'
+
+    while start < finish
+        if (strings and self.part(start, start + sought.length) == sought) or
+           (self[start] == sought) then
+            return start
+        end
+        start = start + 1
+    end
+    return -1
+end
+
+List.replace = function(self, old, new, start, finish, all, reverse)
+end
+*/
