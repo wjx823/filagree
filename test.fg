@@ -247,4 +247,14 @@ tester.test('no return',
     end,
     3)
 
+tester.test('closure',
+    function()
+        x = 7
+        f = function(a)(x)
+            return a+x
+        end
+        return f(3)
+    end,
+    10)
+
 tester.done()
