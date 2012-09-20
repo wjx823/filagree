@@ -12,6 +12,7 @@
 #define ERROR_INDEX "index out of bounds"
 
 #define RESERVED_ENV "env"
+#define RESERVED_GET "get"
 
 struct Context {
     struct program_state *vm_state;

@@ -148,8 +148,10 @@ struct variable *variable_new_fnc(struct Context *context, struct byte_array *bo
 {
     struct variable *v = variable_new(context, VAR_FNC);
     v->str = body;
-    struct variable *vc = variable_new_map(context, closures);
-    variable_map_insert(v, byte_array_from_string(RESERVED_ENV), vc);
+    if (closures) {
+        struct variable *vc = variable_new_map(context, closures);
+        variable_map_insert(v, byte_array_from_string(RESERVED_ENV), vc);
+    }
     return v;
 }
 

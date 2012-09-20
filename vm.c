@@ -313,19 +313,20 @@ struct variable *src(struct Context *context, enum Opcode op, struct byte_array 
     return v;
 }
 
-void vm_call(struct Context *context)
+void call_var(struct Context *context, struct variable *func)
 {
-    null_check(context);
-    // get the function pointer from the stack
-    struct variable *func = variable_pop(context);
     INDENT
-
-    struct variable *env = func->map ? map_get(func->map, byte_array_from_string(RESERVED_ENV)) : NULL;
+    struct map *env = NULL;
+    if (func->map) {
+        struct variable *v = map_get(func->map, byte_array_from_string(RESERVED_ENV));
+        if (v)
+            env = v->map;
+    }
 
     // call the function
     switch (func->type) {
         case VAR_FNC:
-            run(context, func->str, env->map, false);
+            run(context, func->str, env, false);
             break;
         case VAR_C:
             func->cfnc(context);
@@ -335,6 +336,14 @@ void vm_call(struct Context *context)
             break;
     }
     UNDENT
+}
+
+void vm_call(struct Context *context)
+{
+    null_check(context);
+    // get the function pointer from the stack
+    struct variable *func = variable_pop(context);
+    call_var(context, func);
 }
 
 static inline void func_call(struct Context *context, struct byte_array *program)
@@ -425,6 +434,7 @@ struct variable* variable_set(struct Context *context, struct variable *dst, con
         case VAR_BOOL:  dst->boolean = src->boolean;            break;
         case VAR_INT:   dst->integer = src->integer;            break;
         case VAR_FLT:   dst->floater = src->floater;            break;
+        case VAR_C:     dst->cfnc = src->cfnc;                  break;
         case VAR_FNC:
         case VAR_STR:   dst->str = byte_array_copy(src->str);   break;
         case VAR_MAP:   dst->map = src->map;                    break;
@@ -484,6 +494,16 @@ void lookup(struct Context *context, struct variable *indexable, struct variable
     null_check(context);
     if (!context->runtime)
         VM_DEBUGPRINT("GET\n");
+/*
+    // check for custom get
+    struct variable *getter;
+    if (indexable->map && (getter = (struct variable*)map_get(indexable->map, byte_array_from_string(RESERVED_GET)))) {
+        stack_push(context->operand_stack, index);
+        struct variable *src = variable_new_src(context, 1);
+        stack_push(context->operand_stack, src);
+        call_var(context, getter);
+        return;
+    }*/
 
     struct variable *item=0;
 
@@ -543,9 +563,8 @@ bool test_operand(struct Context *context)
         case VAR_NIL:   indeed = false;                     break;
         case VAR_BOOL:  indeed = v->boolean;                break;
         case VAR_INT:   indeed = v->integer;                break;
-        default:
-            vm_exit_message(context, "bad iff operand");
-            break;
+        case VAR_FLT:   indeed = v->floater;                break;
+        default:        indeed = true;                      break;
     }
     return indeed;
 }
@@ -772,10 +791,10 @@ static struct variable *binary_op_int(struct Context *context,
         case VM_DIV:    i = m / n;    break;
         case VM_ADD:    i = m + n;    break;
         case VM_SUB:    i = m - n;    break;
-        case VM_AND:    i = m && n;   break;
+        //case VM_AND:    i = m && n;   break;
         case VM_EQU:    i = m == n;   break;
         case VM_NEQ:    i = m != n;   break;
-        case VM_ORR:    i = m || n;   break;
+        //case VM_ORR:    i = m || n;   break;
         case VM_GTN:    i = m > n;    break;
         case VM_LTN:    i = m < n;    break;
         case VM_GRQ:    i = m >= n;   break;
@@ -919,12 +938,37 @@ static struct variable *binary_op_nil(struct Context *context,
         return binary_op_nil(context, op, v, u); // 1st var should be nil
 
     switch (op) {
-        case VM_ORR:    return variable_copy(context, v);
-        case VM_AND:    return variable_new_nil(context);
+        //case VM_ORR:    return variable_copy(context, v);
+        //case VM_AND:    return variable_new_nil(context);
         case VM_EQU:    return variable_new_bool(context, v->type == u->type);
         default:
             return vm_exit_message(context, "unknown binary nil op");
     }
+}
+
+static int32_t boolean_op(struct Context *context, struct byte_array *program, enum Opcode op)
+{
+    null_check(context);
+    null_check(program);
+    int32_t short_circuit = serial_decode_int(program);
+
+    DEBUGPRINT("%s %d\n", NUM_TO_STRING(opcodes, op), short_circuit);
+    if (!context->runtime)
+        return 0;
+    struct variable *v = variable_pop(context);
+    null_check(v);
+    bool indeed_quite_so;
+    switch (v->type) {
+        case VAR_BOOL:  indeed_quite_so = v->boolean;   break;
+        case VAR_FLT:   indeed_quite_so = v->floater;   break;
+        case VAR_INT:   indeed_quite_so = v->integer;   break;
+        default:        indeed_quite_so = true;         break;
+    }
+    if (indeed_quite_so ^ (op == VM_AND)) {
+        stack_push(context->operand_stack, v);
+        return short_circuit;
+    }
+    return 0;
 }
 
 static void binary_op(struct Context *context, enum Opcode op)
@@ -1130,7 +1174,6 @@ struct variable *run(struct Context *context, struct byte_array *program, struct
             case VM_DIV:
             case VM_ADD:
             case VM_SUB:
-            case VM_AND:
             case VM_EQU:
             case VM_NEQ:
             case VM_GTN:
@@ -1143,31 +1186,32 @@ struct variable *run(struct Context *context, struct byte_array *program, struct
             case VM_XOR:
             case VM_INV:
             case VM_RSF:
-            case VM_LSF:
-            case VM_ORR:    binary_op(context, inst);               break;
+            case VM_LSF:    binary_op(context, inst);                       break;
+            case VM_ORR:
+            case VM_AND:    pc_offset = boolean_op(context, program, inst); break;
             case VM_NEG:
-            case VM_NOT:    unary_op(context, inst);                break;
-            case VM_SRC:    src(context, inst, program);            break;
-            case VM_DST:    dst(context);                           break;
-            case VM_SET:    set(context, state, program);           break;
-            case VM_JMP:    pc_offset = jump(context, program);     break;
-            case VM_IFF:    pc_offset = iff(context, program);      break;
-            case VM_CAL:    func_call(context, program);            break;
-            case VM_LST:    push_list(context, program);            break;
-            case VM_MAP:    push_map(context, program);             break;
-            case VM_GET:    list_get(context);                      break;
-            case VM_PUT:    list_put(context);                      break;
-            case VM_NIL:    push_nil(context);                      break;
-            case VM_INT:    push_int(context, program);             break;
-            case VM_FLT:    push_float(context, program);           break;
-            case VM_BUL:    push_bool(context, program);            break;
-            case VM_STR:    push_str(context, program);             break;
-            case VM_VAR:    push_var(context, program);             break;
-            case VM_FNC:    push_fnc(context, program);             break;
-            case VM_MET:    method(context, program);               break;
+            case VM_NOT:    unary_op(context, inst);                        break;
+            case VM_SRC:    src(context, inst, program);                    break;
+            case VM_DST:    dst(context);                                   break;
+            case VM_SET:    set(context, state, program);                   break;
+            case VM_JMP:    pc_offset = jump(context, program);             break;
+            case VM_IFF:    pc_offset = iff(context, program);              break;
+            case VM_CAL:    func_call(context, program);                    break;
+            case VM_LST:    push_list(context, program);                    break;
+            case VM_MAP:    push_map(context, program);                     break;
+            case VM_NIL:    push_nil(context);                              break;
+            case VM_INT:    push_int(context, program);                     break;
+            case VM_FLT:    push_float(context, program);                   break;
+            case VM_BUL:    push_bool(context, program);                    break;
+            case VM_STR:    push_str(context, program);                     break;
+            case VM_VAR:    push_var(context, program);                     break;
+            case VM_FNC:    push_fnc(context, program);                     break;
+            case VM_GET:    list_get(context);                              break;
+            case VM_PUT:    list_put(context);                              break;
+            case VM_MET:    method(context, program);                       break;
             case VM_COM:
-            case VM_ITR:    iterate(context, inst, state, program); break;
-            case VM_TRY:    vm_trycatch(context, program);          break;
+            case VM_ITR:    iterate(context, inst, state, program);         break;
+            case VM_TRY:    vm_trycatch(context, program);                  break;
             default:
                 return (struct variable*)vm_exit_message(context, ERROR_OPCODE);
         }

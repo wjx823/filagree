@@ -1,15 +1,1 @@
-/*
-f = function(a)
-    x = 7
-end
-f(2)
-*/
-
-
-x = 7
-f = function(a)(x)
-    sys.print(a+x)
-end
-
-f(2)
-f(3)
+x = 8 and 0

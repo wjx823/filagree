@@ -376,8 +376,7 @@ BNF:
 <comprehension> --> LEX_LEFTSQUARE <expression> <iterator> LEX_RIGHTSQUARE
 
 <rejoinder> --> LEX_RETURN <source>,
-<paramdecl> --> LEX_LEFTHESIS <variable>, LEX_RIGHTHESIS
-<fdecl> --> FUNCTION <paramdecl> (<paramdecl>) <statements> LEX_END
+<fdecl> --> FUNCTION LEX_LEFTHESIS <variable>, LEX_RIGHTHESIS (LEX_LEFTHESIS <variable>, LEX_RIGHTHESIS) <statements> LEX_END
 <fcall> --> <expression> <call>
 <call> --> LEX_LEFTHESIS <source>, LEX_RIGHTHESIS
 
@@ -1224,16 +1223,29 @@ void generate_fcall(struct byte_array *code, struct symbol *root)
 void generate_math(struct byte_array *code, struct symbol *root)
 {
     enum Lexeme lexeme = root->token->lexeme;
-    generate_statements(code, root);
     enum Opcode op = VM_NIL;
+
+    if (lexeme == LEX_AND || lexeme == LEX_OR) {
+        struct array *ops = root->list;
+        assert_message(ops->length == 2, ">2 operands for and/or");
+        struct symbol *op0 = array_get(ops, 0);
+        struct symbol *op1 = array_get(ops, 1);
+        struct byte_array *second = generate_code(NULL, op1);
+        generate_code(code, op0);
+        op = lexeme == LEX_AND ? VM_AND : VM_ORR;
+        generate_step(code, 1, op);
+        serial_encode_int(code, 0, second->length);
+        byte_array_append(code, second);
+        return;
+    }
+
+    generate_statements(code, root);
     switch (lexeme) {
         case LEX_PLUS:      op = VM_ADD;    break;
         case LEX_MINUS:     op = VM_SUB;    break;
         case LEX_TIMES:     op = VM_MUL;    break;
         case LEX_DIVIDE:    op = VM_DIV;    break;
         case LEX_MODULO:    op = VM_MOD;    break;
-        case LEX_AND:       op = VM_AND;    break;
-        case LEX_OR:        op = VM_ORR;    break;
         case LEX_NOT:       op = VM_NOT;    break;
         case LEX_NEG:       op = VM_NEG;    break;
         case LEX_SAME:      op = VM_EQU;    break;

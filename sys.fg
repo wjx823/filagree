@@ -1,16 +1,27 @@
-class = function(init, proto)
-    f = function()(proto)
-        self = init(sys.args)
-        self.proto = proto
+class = function(init, super)
+    f = function()(init, super)
+        if init and (init.type == 'function') then
+            self = init(sys.args())
+        end
+        self.super = super
         return self
     end
     return f
 end
 
+# todo : auto-call get, set, add, del, etc.
+# todo : and/or shortcircuit
 List = class( function(name) return ['name':name] end )
+
+#List.set('has', function(self, sought) return sys.find(self, sought) != nil end)
 List.has = function(self, sought) return sys.find(self, sought) != nil end
 
 list = List('x')
+
+list.add(6)
+
+sys.print(list.has(7))
+
 
 /*
 List.has = function(self, sought)
