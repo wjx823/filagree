@@ -15,6 +15,7 @@
 #define    ERROR_VAR_TYPE    "type error"
 #define VAR_MAX    100
 
+                      
 const struct number_string var_types[] = {
     {VAR_NIL,        "nil"},
     {VAR_INT,        "integer"},
@@ -188,7 +189,7 @@ const char *variable_value_str(struct Context *context, const struct variable* v
         case VAR_STR:    sprintf(str, "%s", byte_array_to_string(v->str));       break;
         case VAR_FNC:    sprintf(str, "f(%dB)", v->str->length);                 break;
         case VAR_C:      sprintf(str, "c-function");                             break;
-        case VAR_MAP:                                                            break;
+        case VAR_MAP:    sprintf(str, "map");                                    break;
         case VAR_SRC:
             vt = vt;
         case VAR_LST: {
@@ -214,6 +215,7 @@ const char *variable_value_str(struct Context *context, const struct variable* v
     if (v->map) {
         const struct array *a = map_keys(v->map);
         const struct array *b = map_values(v->map);
+        DEBUGPRINT("%s v->map=%x %d\n", v->name ? byte_array_to_string(v->name):"", v->map, a->length);
 		
         if (vt != VAR_LST)
             strcat(str, "[");
@@ -435,9 +437,31 @@ struct variable *variable_concatenate(struct Context *context, int n, const stru
     return result;
 }
 
-int variable_map_insert(struct variable* v, const struct byte_array *key, void *data)
+int variable_map_insert(struct variable* v, const struct byte_array *key, struct variable *datum)
 {
     if (!v->map)
         v->map = map_new();
-    return map_insert(v->map, key, data);
+    return map_insert(v->map, key, datum);
+}
+
+struct variable *variable_map_get(struct Context *context, struct variable* v, const struct byte_array *key)
+{
+    if (!v->map)
+        return variable_new_nil(context);
+    return (struct variable*)map_get(v->map, key);
+}
+
+int variable_func_env(struct Context *context, struct variable* f, const struct byte_array *key, struct variable *datum)
+{
+    null_check((void*)(f && key && datum));
+    assert_message(f->type == VAR_FNC, "non-func for env");
+    struct byte_array *renv = byte_array_from_string(RESERVED_ENV);
+    struct variable *env = (struct variable*)variable_map_get(context, f, renv);
+    if (env->type == VAR_NIL)
+        env = variable_new_map(context, NULL);
+env->name = byte_array_from_string("env0");
+f->name = byte_array_from_string("f0");
+    int result = variable_map_insert(env, key, datum) || variable_map_insert(f, renv, env);
+    DEBUGPRINT("fmap=%x, envmap=%x\n", f->map, env->map);
+    return result;
 }

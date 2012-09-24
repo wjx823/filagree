@@ -226,12 +226,9 @@ int (compar)(struct Context *context, const void *a, const void *b, struct varia
 
     if (comparator) {
 
-        assert_message(comparator->type == VAR_FNC, "non-function comparator");
-        stack_push(context->operand_stack, av);
-        stack_push(context->operand_stack, bv);
         byte_array_reset(comparator->str);
         stack_push(context->operand_stack, comparator);
-        vm_call(context);
+        vm_call(context, comparator, av, bv, NULL);
 
         struct variable *result = (struct variable*)stack_pop(context->operand_stack);
         if (result->type == VAR_SRC)

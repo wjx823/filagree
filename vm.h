@@ -96,9 +96,10 @@ struct variable *execute(struct byte_array *program,
                          //bridge_callback *callback_to_c,
                          find_c_var *find);
 void garbage_collect(struct Context *context);
-void vm_call(struct Context *context);
+void vm_call(struct Context *context, struct variable *func, struct variable *arg,...);
 void *vm_exit_message(struct Context *context, const char *format, ...);
 void vm_null_check(struct Context *context, const void* p);
 void vm_assert(struct Context *context, bool assertion, const char *format, ...);
+
 
 #endif // VM_H

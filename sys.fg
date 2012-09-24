@@ -10,7 +10,6 @@ class = function(init, super)
 end
 
 # todo : auto-call get, set, add, del, etc.
-# todo : and/or shortcircuit
 List = class( function(name) return ['name':name] end )
 
 #List.set('has', function(self, sought) return sys.find(self, sought) != nil end)

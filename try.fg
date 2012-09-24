@@ -1,1 +1,2 @@
-x = 8 and 0
+x = ['get': function(m,n,o,p,q) if sought == 'q' then return [] else if sought == 'z' then return 'hi' end end ]
+y = x.z(7,8,9)

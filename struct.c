@@ -518,3 +518,12 @@ void map_update(struct map *a, const struct map *b)
             map_insert(a, key, map_get(b, key));
     }
 }
+
+struct map *map_copy(struct map *original)
+{
+    struct map *copy = map_new();
+    if (!original)
+        return copy;
+    map_update(copy, original);
+    return copy;
+}

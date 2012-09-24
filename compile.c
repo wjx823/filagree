@@ -576,7 +576,7 @@ struct token *fetch(enum Lexeme lexeme) {
         //DEBUGPRINT("fetched %s instead of %s at %d\n", lexeme_to_string(token->lexeme), lexeme_to_string(lexeme), parse_index);
         return NULL;
     }
-    DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
+    //DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
     // display_token(token, 0);
 
     parse_index++;
@@ -631,7 +631,7 @@ struct symbol *symbol_fetch(enum Nonterminal n, enum Lexeme goal, ...)
 
             symbol = symbol_new(n);
             symbol->token = token;
-            DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
+            //DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
             // display_token(token, 0);
 
             parse_index++;
@@ -1205,18 +1205,26 @@ void generate_member(struct byte_array *code, struct symbol *root)
 
 void generate_fcall(struct byte_array *code, struct symbol *root)
 {
-
-    if (root->value->nonterminal == SYMBOL_MEMBER) {
-        generate_items(code, root, false); // arguments
-//        generate_code(code, root->value); // member
-        generate_code(code, root->value->index);
-        generate_code(code, root->value->value);
+/*    if (root->value->nonterminal == SYMBOL_MEMBER) {
+        generate_items(code, root, false);          // arguments
+        generate_code(code, root->value->index);    // member
+        generate_code(code, root->value->value);    // function
         generate_step(code, 1, VM_MET);
     } else {
-        generate_items(code, root, false); // arguments
-        generate_code(code, root->value); // function
+        generate_items(code, root, false);          // arguments
+        generate_code(code, root->value);           // function
         generate_step(code, 1, VM_CAL);
-    }
+    }*/
+    if (root->value->nonterminal == SYMBOL_MEMBER) {
+        generate_items(code, root, false);          // arguments
+        generate_code(code, root->value->index);    // member
+        generate_code(code, root->value->value);    // function
+        generate_step(code, 1, VM_MET);
+     } else {
+        generate_items(code, root, false);          // arguments
+        generate_code(code, root->value);           // function
+        generate_step(code, 1, VM_CAL);
+     }
     serial_encode_int(code, 0, root->list->length);
 }
 
