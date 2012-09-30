@@ -1,4 +1,4 @@
-v0.11 2012/09/23
+v0.12 2012/09/29
 
 Filagree is a scripting language, with a compiler and virtual machine written in C99. It's easily embedded in a C program On an ARM chip, the VM takes ~20KB.
 
@@ -42,235 +42,237 @@ tester = [
 
 // test.fg //////////////////////////////////////////////////////////////////
 
+# test.fg ###################################################################
+
 import 'unit_test'
 
 tester.test('add integers',
-	function()
-		a = 7
-		b = 8
-		c = a + b
-		return c
-	end,
-	15)
+    function()
+        a = 7
+        b = 8
+        c = a + b
+        return c
+    end,
+    15)
 
 tester.test('add strings',
-	function()
-		p = 'hello, '
-		q = p + 'world!'
-		return q
-	end,
-	'hello, world!')
+    function()
+        p = 'hello, '
+        q = p + 'world!'
+        return q
+    end,
+    'hello, world!')
 
 tester.test('add lists',
-	function()
-		a = [1,2,3,'p':4,'q':5]
-		b = [3,4,'q':6,'r':7]
-		return a+b
-	end,
-	[1,2,3,3,4,'p':4,'q':5,'r':7])
+    function()
+        a = [1,2,3,'p':4,'q':5]
+        b = [3,4,'q':6,'r':7]
+        return a+b
+    end,
+    [1,2,3,3,4,'p':4,'q':5,'r':7])
 
 tester.test('if-then',
-	function()
-		if true
-			then b=2
-		else
-			b=3
-		end
-		return b
-	end,
-	2)
+    function()
+        if true
+            then b=2
+        else
+            b=3
+        end
+        return b
+    end,
+    2)
 
 tester.test('index',
-	function()
-		a = [7,8,9]
-		return a[2]
-	end,
-	9)
+    function()
+        a = [7,8,9]
+        return a[2]
+    end,
+    9)
 
 tester.test('list set',
-	function()
-		a = [7,8,9]
-		a[2] = 19
-		return a[2]
-	end,
-	19)
+    function()
+        a = [7,8,9]
+        a[2] = 19
+        return a[2]
+    end,
+    19)
 
 tester.test('fdecl',
-	function()
-		f = function (a,b,c)
-			return a+b+c
-		end
-		return f(1,2,3)
-	end,
-	6)
+    function()
+        f = function (a,b,c)
+            return a+b+c
+        end
+        return f(1,2,3)
+    end,
+    6)
 
 tester.test('while',
-	function()
-		i = 1
-		while i < 7
-			i = i + 1
-		end
-		return i
-	end,
-	7)
+    function()
+        i = 1
+        while i < 7
+            i = i + 1
+        end
+        return i
+    end,
+    7)
 
 tester.test('comment',
-	function()
-		# return 1
-		return 2
-	end,
-	2)
+    function()
+        # return 1
+        return 2
+    end,
+    2)
 
 tester.test('float',
-	  function()
-		x = 1.2
-	  y = 3.4
-	  return x + y > 4
-	end,
-	1)
+      function()
+        x = 1.2
+      y = 3.4
+      return x + y > 4
+    end,
+    1)
 
 tester.test('serial',
-	function()
-		a = [2,3,4]
-		a.x = 7
-		b = a.serialize
-		c = b.deserialize
-		return c.x + c[2]
-	end,
-	11)
+    function()
+        a = [2,3,4]
+        a.x = 7
+        b = a.serialize
+        c = b.deserialize
+        return c.x + c[2]
+    end,
+    11)
 
 tester.test('map',
-	function()
-		x='y'
-		a = [2,3,4,'x':7,x:8]
-		a['z'] = 9
-		return  a.string +
-			a.type   +
-			a.length +
-			a.list   +
-			a.keys   +
-			a.values
-	end,
-	'[2,3,4,\'x\':7,\'y\':8,\'z\':9]list3[2,3,4][\'x\',\'y\',\'z\'][7,8,9]')
+    function()
+        x='y'
+        a = [2,3,4,'x':7,x:8]
+        a['z'] = 9
+        return  a.string +
+            a.type   +
+            a.length +
+            a.list   +
+            a.keys   +
+            a.values
+    end,
+    '[2,3,4,\'x\':7,\'y\':8,\'z\':9]list3[2,3,4][\'x\',\'y\',\'z\'][7,8,9]')
 
 tester.test('string',
-	function()
-		a = 'supercalifragilisticexpialidocious!' 
-		return a[34].string
-	end,
-	'!')
+    function()
+        a = 'supercalifragilisticexpialidocious!' 
+        return a[34].string
+    end,
+    '!')
 
 tester.test('scope',
-	function()
-		n = 2
-		f = function(n)
-			n = 3
-		end
-		f(4)
-		return n
-	end,
-	2)
+    function()
+        n = 2
+        f = function(n)
+            n = 3
+        end
+        f(4)
+        return n
+    end,
+    2)
 
 tester.test('file',
- 	function()
- 		x = [2,'3':4,'5']
- 		vm.save(x, 'test_file')
- 		y = vm.load('test_file')
- 		vm.remove('test_file')
- 		return x == y
- 	end,
- 	1)
+     function()
+         x = [2,'3':4,'5']
+         sys.save(x, 'test_file')
+         y = sys.load('test_file')
+         sys.remove('test_file')
+         return x == y
+     end,
+     1)
 
 tester.test('many returns',
-	function()
-		f = function()
-			return 12,6
-		end
-		x,y,z = f()
-		if not z then
-			return x/y
-		else
-			return 99
-		end
-	end,
-	2)
+    function()
+        f = function()
+            return 12,6
+        end
+        x,y,z = f()
+        if not z then
+            return x/y
+        else
+            return 99
+        end
+    end,
+    2)
 
 tester.test('sort',
-	function()
-		p = [3,1,4,1,5,9,6,2]
-		p.sort()
-		q = [['a':3, 'b':4], ['a':2, 'b':5]]
-		q.sort(function(x,y) return y.a - x.a end)
-		return p[0] + q[0].a
-	end,
-	3)
+    function()
+        p = [3,1,4,1,5,9,6,2]
+        p.sort()
+        q = [['a':3, 'b':4], ['a':2, 'b':5]]
+        q.sort(function(x,y) return y.a - x.a end)
+        return p[0] + q[0].a
+    end,
+    4)
 
 tester.test('find',
-	function()
-		p = 'one two three'
-		q = p.find('two')
-		r = p.find('o', 1)
-		return q+r
-	end,
-	10)
+    function()
+        p = 'one two three'
+        q = p.find('two')
+        r = p.find('o', 1)
+        return q+r
+    end,
+    10)
 
 tester.test('part',
-	function()
-		p = 'one two three'
-		q = p.part(4,3)
-		return q
-	end,
-	'two')
+    function()
+        p = 'one two three'
+        q = p.part(4,3)
+        return q
+    end,
+    'two')
 
 tester.test('replace',
-	function()
-		p = 'one two three four'
-		q = p.replace('two', '2')
-		r = q.replace('o', '0', 1) # specifying position means not global
-		s = r.replace('e', '3')
-		t = s.replace(6, 3, 'gl') # start, length, new_string
-		return t
-	end,
-	'on3 2 gl33 f0ur')
+    function()
+        p = 'one two three four'
+        q = p.replace('two', '2')
+        r = q.replace('o', '0', 1) # specifying position means not global
+        s = r.replace('e', '3')
+        t = s.replace(6, 3, 'gl') # start, length, new_string
+        return t
+    end,
+    'on3 2 gl33 f0ur')
 
 tester.test('for each',
-	function()
-		x = [3,1,4,1,5,9]
-		sum = 20
-		for n in x where n > 3
-			sum = sum - n
-		end
-		return sum
-	end,
-	2)
+    function()
+        x = [3,1,4,1,5,9]
+        sum = 20
+        for n in x where n > 3
+            sum = sum - n
+        end
+        return sum
+    end,
+    2)
 
 tester.test('comprehension',
-	function()
-		x = [3,1,4,1,5,9]
-		y = [n+1 for n in x where n > 3]
-		return y
-	end,
-	[5,6,10])
+    function()
+        x = [3,1,4,1,5,9]
+        y = [n+1 for n in x where n > 3]
+        return y
+    end,
+    [5,6,10])
 
 tester.test('exception',
-	function()
-		try
-			throw 2
-			return 3
-		catch x
-			return x
-		end
-		return 4
-	end,
-	2)
+    function()
+        try
+            throw 2
+            return 3
+        catch x
+            return x
+        end
+        return 4
+    end,
+    2)
 
 tester.test('args',
     function()
         f = function()
-	         sum = 0
-             for n in vm.args()
-                 sum = sum + n
-             end
+            sum = 0
+            for n in sys.args()
+                sum = sum + n
+            end
             return sum
         end
         return f(3,1,4)
@@ -312,5 +314,33 @@ tester.test('short circuit',
         return a+b+c+d+e+f+g+h
     end,
     14)
+
+tester.test('custom getter',
+    function()
+        x = ['get':
+                function(self, y)
+                    if not self:list then self:list = [] end
+                    if y == 'p' then return 2 else return 3 end
+                end
+        ]
+        return 10*x.p + x.q
+    end,
+    23)
+
+tester.test('custom setter',
+    function()
+        x = ['set':
+                function(self, y, z)
+                    if y == 'p' then
+                        self:a = z*2
+                    else
+                        self:b = z*4
+                    end
+                end
+            ]
+        x.p = 6
+        return 10*x.a + (x.b or 5)
+    end,
+    125)
 
 tester.done()
