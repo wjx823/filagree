@@ -304,6 +304,14 @@ struct stack_node* stack_node_new() {
     return (struct stack_node*)calloc(sizeof(struct stack_node), 1);
 }
 
+uint32_t stack_depth(struct stack *stack)
+{
+    uint32_t i;
+    struct stack_node *sn = stack->head;
+    for (i=0; sn; i++, sn=sn->next);
+    return i;
+}
+
 void stack_push(struct stack* stack, void* data)
 {
     null_check(data);
@@ -333,7 +341,7 @@ void* stack_pop(struct stack* stack)
 void* stack_peek(const struct stack* stack, uint8_t index)
 {
     null_check(stack);
-    struct stack_node*p = stack->head;
+    struct stack_node *p = stack->head;
     for (; index && p; index--, p=p->next);
     return p ? p->data : NULL;
 }

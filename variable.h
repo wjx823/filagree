@@ -68,7 +68,7 @@ struct variable *variable_part(struct Context *context, struct variable *self, u
 
 int variable_map_insert(struct variable* v, const struct byte_array *key, struct variable *data);
 struct variable *variable_map_get(struct Context *context, struct variable* v, const struct byte_array *key);
-int variable_func_env(struct Context *context, struct variable* v, const struct byte_array *key, struct variable *data);
+//int variable_func_env(struct Context *context, struct variable* v, const struct byte_array *key, struct variable *data);
 
 const char *var_type_str(enum VarType vt);
 

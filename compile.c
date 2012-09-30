@@ -395,7 +395,7 @@ BNF:
 <string> --> LEX_STRING
 <table> --> LEX_LEFTSQUARE <element>, LEX_RIGHTSQUARE
 <element> --> <expression> ( LEX_COLON <expression> )?
-<member> --> ( LEX_LEFTSQUARE <expression> LEX_RIGHTSQUARE ) | ( LEX_PERIOD LEX_STRING )
+<member> --> ( LEX_LEFTSQUARE <expression> LEX_RIGHTSQUARE ) | ( ( LEX_COLON | LEX_PERIOD ) LEX_STRING )
 
 *///////////////////////////////////////////////////////////////////////////
 
@@ -415,6 +415,7 @@ BNF:
         SYMBOL_PAIR,
         SYMBOL_FDECL,
         SYMBOL_FCALL,
+        SYMBOL_CALL,
         SYMBOL_MEMBER,
         SYMBOL_RETURN,
         SYMBOL_BOOLEAN,
@@ -451,6 +452,7 @@ struct number_string nonterminals[] = {
     {SYMBOL_PAIR,           "pair"},
     {SYMBOL_FDECL,          "fdecl"},
     {SYMBOL_FCALL,          "fcall"},
+    {SYMBOL_CALL,           "call"},
     {SYMBOL_MEMBER,         "member"},
     {SYMBOL_RETURN,         "return"},
     {SYMBOL_BOOLEAN,        "boolean"},
@@ -812,13 +814,15 @@ struct symbol *exp5()
     return atom();
 }
 
-// <member> --> ( LEX_LEFTSQUARE <expression> LEX_RIGHTSQUARE ) | ( LEX_PERIOD LEX_STRING )
+// <member> --> ( LEX_LEFTSQUARE <expression> LEX_RIGHTSQUARE ) | ( ( LEX_COLON | LEX_PERIOD ) LEX_STRING )
 struct symbol *member()
 {
     struct symbol *m = symbol_new(SYMBOL_MEMBER);
-
-    if (fetch(LEX_PERIOD)) {
-        m->index = variable();
+    m->token = fetch_lookahead(LEX_PERIOD, LEX_COLON, NULL);
+    
+    if (m->token) {
+        if (!(m->index = variable()))
+            return NULL;
         m->index->nonterminal = SYMBOL_STRING;
     }
     else {
@@ -832,10 +836,8 @@ struct symbol *member()
 // <call> --> LEX_LEFTHESIS <source>, LEX_RIGHTHESIS
 struct symbol *call()
 {
-//    struct symbol *s = symbol_new(SYMBOL_FCALL);
     FETCH_OR_QUIT(LEX_LEFTHESIS);
-//    s->index = repeated(SYMBOL_FCALL, &expression); // arguments
-    struct symbol *s = repeated(SYMBOL_FCALL, &expression); // arguments
+    struct symbol *s = repeated(SYMBOL_CALL, &expression); // arguments
     FETCH_OR_ERROR(LEX_RIGHTHESIS);
     return s;
 }
@@ -844,7 +846,11 @@ struct symbol *call()
 struct symbol *fcall()
 {
     struct symbol *e = expression();
-    return (e && e->nonterminal ==  SYMBOL_FCALL) ? e : NULL;
+    if (e && e->nonterminal ==  SYMBOL_CALL) {
+        e->nonterminal = SYMBOL_FCALL;
+        return e;
+    };
+    return NULL;
 }
 
 // <exp4> --> <exp5> ( <call> | member )*
@@ -1199,13 +1205,14 @@ void generate_member(struct byte_array *code, struct symbol *root)
     generate_code(code, root->value);
 
     enum Opcode op = root->lhs ? VM_PUT : VM_GET;
+    if (root->token && root->token->lexeme == LEX_COLON)
+        op |= VM_RLY;
     generate_step(code, 1, op);
-//    serial_encode_int(code, 0, root->list->length);
 }
 
 void generate_fcall(struct byte_array *code, struct symbol *root)
 {
-/*    if (root->value->nonterminal == SYMBOL_MEMBER) {
+    if (root->value->nonterminal == SYMBOL_MEMBER) {
         generate_items(code, root, false);          // arguments
         generate_code(code, root->value->index);    // member
         generate_code(code, root->value->value);    // function
@@ -1213,18 +1220,9 @@ void generate_fcall(struct byte_array *code, struct symbol *root)
     } else {
         generate_items(code, root, false);          // arguments
         generate_code(code, root->value);           // function
-        generate_step(code, 1, VM_CAL);
-    }*/
-    if (root->value->nonterminal == SYMBOL_MEMBER) {
-        generate_items(code, root, false);          // arguments
-        generate_code(code, root->value->index);    // member
-        generate_code(code, root->value->value);    // function
-        generate_step(code, 1, VM_MET);
-     } else {
-        generate_items(code, root, false);          // arguments
-        generate_code(code, root->value);           // function
-        generate_step(code, 1, VM_CAL);
-     }
+        enum Opcode op = root->nonterminal == SYMBOL_FCALL ? VM_FCL : VM_CAL;
+        generate_step(code, 1, op);
+    }
     serial_encode_int(code, 0, root->list->length);
 }
 
@@ -1406,6 +1404,7 @@ struct byte_array *generate_code(struct byte_array *code, struct symbol *root)
         case SYMBOL_LOOP:           g = generate_loop;          break;
         case SYMBOL_FDECL:          g = generate_fdecl;         break;
         case SYMBOL_TABLE:          g = generate_list;          break;
+        case SYMBOL_CALL:
         case SYMBOL_FCALL:          g = generate_fcall;         break;
         case SYMBOL_FLOAT:          g = generate_float;         break;
         case SYMBOL_MEMBER:         g = generate_member;        break;

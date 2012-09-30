@@ -161,7 +161,7 @@ tester.test('sort',
         q.sort(function(x,y) return y.a - x.a end)
         return p[0] + q[0].a
     end,
-    3)
+    4)
 
 tester.test('find',
     function()
@@ -270,5 +270,33 @@ tester.test('short circuit',
         return a+b+c+d+e+f+g+h
     end,
     14)
+
+tester.test('custom getter',
+    function()
+        x = ['get':
+                function(self, y)
+                    if not self:list then self:list = [] end
+                    if y == 'p' then return 2 else return 3 end
+                end
+        ]
+        return 10*x.p + x.q
+    end,
+    23)
+
+tester.test('custom setter',
+    function()
+        x = ['set':
+                function(self, y, z)
+                    if y == 'p' then
+                        self:a = z*2
+                    else
+                        self:b = z*4
+                    end
+                end
+            ]
+        x.p = 6
+        return 10*x.a + (x.b or 5)
+    end,
+    125)
 
 tester.done()

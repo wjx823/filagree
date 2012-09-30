@@ -128,7 +128,7 @@ const char* num_to_string(const struct number_string *ns, int num_items, int num
 
 // file
 
-#define INPUT_MAX_LEN    10000
+#define INPUT_MAX_LEN    100000
 #define ERROR_BIG        "Input file is too big"
 
 

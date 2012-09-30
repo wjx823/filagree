@@ -219,7 +219,7 @@ struct string_method builtin_methods[] = {
 };
 */
 
-int (compar)(struct Context *context, const void *a, const void *b, struct variable *comparator)
+int compar(struct Context *context, const void *a, const void *b, struct variable *comparator)
 {
     struct variable *av = *(struct variable**)a;
     struct variable *bv = *(struct variable**)b;

@@ -11,13 +11,11 @@
 
 struct variable *run(struct Context *context, struct byte_array *program, struct map *env, bool in_context);
 void display_code(struct Context *context, struct byte_array *code);
-void lookup(struct Context *context, struct variable *indexable, struct variable *index);
+void lookup(struct Context *context, struct variable *indexable, struct variable *index, bool really);
 
 #ifdef DEBUG
 
 #define VM_DEBUGPRINT(...) DEBUGPRINT(__VA_ARGS__ ); if (!context->runtime) return;
-
-void print_operand_stack();
 
 #define INDENT context->indent++;
 #define UNDENT context->indent--;
@@ -32,6 +30,7 @@ void print_operand_stack();
 #endif // not DEBUG
 
 #define RESERVED_SOUGHT "sought"
+#define RESERVED_SET    "set"
 
 // assertions //////////////////////////////////////////////////////////////
 
@@ -136,7 +135,6 @@ void mark(struct Context *context, struct variable *root)
         case VAR_FNC:
         case VAR_MAP:
             break;
-//        case VAR_SRC:
         case VAR_LST:
             for (int i=0; i<root->list->length; i++)
                 mark(context, (struct variable*)array_get(root->list, i));
@@ -209,6 +207,7 @@ const struct number_string opcodes[] = {
     {VM_IFF,    "IFF"},
     {VM_JMP,    "JMP"},
     {VM_CAL,    "CAL"},
+    {VM_FCL,    "FCL"},
     {VM_MET,    "MET"},
     {VM_RET,    "RET"},
     {VM_ITR,    "ITR"},
@@ -296,32 +295,23 @@ struct variable *src(struct Context *context, enum Opcode op, struct byte_array 
     return v;
 }
 
-void vm_call(struct Context *context, struct variable *func, struct variable *arg, ...)
+// todo: test get/set/met, add to meta
+
+void vm_call_src(struct Context *context, struct variable *func)
 {
-    INDENT
-
-    // add variables from vararg
-    if (arg) {
-        va_list argp;
-        va_start(argp, arg);
-        struct variable *s = (struct variable*)stack_peek(context->operand_stack, 0);
-        if (s->type == VAR_SRC)
-            s = variable_pop(context);
-        else
-            s = variable_new_src(context, 0);
-        for (; arg; arg = va_arg(argp, struct variable*))
-            array_insert(s->list, 0, arg);
-        va_end(argp);
-        variable_push(context, s);
-    }
-
     struct map *env = NULL;
     if (func->map) {
         struct variable *v = (struct variable*)variable_map_get(context, func, byte_array_from_string(RESERVED_ENV));
         if (v)
             env = v->map;
     }
-    
+
+    struct program_state *state = (struct program_state*)stack_peek(context->program_stack, 0);
+    struct variable *s = (struct variable*)stack_peek(context->operand_stack, 0);
+    state->args = array_copy(s->list);
+
+    INDENT
+
     // call the function
     switch (func->type) {
         case VAR_FNC:
@@ -334,7 +324,30 @@ void vm_call(struct Context *context, struct variable *func, struct variable *ar
             vm_exit_message(context, "not a function");
             break;
     }
+
+    state->args = NULL;
+
     UNDENT
+}
+
+void vm_call(struct Context *context, struct variable *func, struct variable *arg, ...)
+{
+    // add variables from vararg
+    if (arg) {
+        va_list argp;
+        va_start(argp, arg);
+        struct variable *s = (struct variable*)stack_peek(context->operand_stack, 0);
+        if (s && s->type == VAR_SRC)
+            s = (struct variable*)stack_pop(context->operand_stack);
+        else
+            s = variable_new_src(context, 0);
+        for (; arg; arg = va_arg(argp, struct variable*))
+            array_add(s->list, arg);
+        va_end(argp);
+        variable_push(context, s);
+    }
+
+    vm_call_src(context, func);
 }
 
 void func_call(struct Context *context, enum Opcode op, struct byte_array *program, struct variable *indexable)
@@ -347,20 +360,28 @@ void func_call(struct Context *context, enum Opcode op, struct byte_array *progr
 
     if (indexable)
         array_insert(s->list, 0, indexable);
-    struct program_state *state = (struct program_state*)stack_peek(context->program_stack, 0);
-    state->args = array_copy(s->list);
 
-    vm_call(context, func, NULL);
-    state->args = NULL;
+    vm_call_src(context, func);
+
+    struct variable *result = (struct variable*)stack_peek(context->operand_stack, 0);
+    bool resulted = (result && result->type == VAR_SRC);
+
+    if (op == VM_CAL && !resulted) { // need a result for an expression, so pretent it returned nil
+        struct variable *v = variable_new_src(context, 0);
+        array_add(v->list, variable_new_nil(context));
+        stack_push(context->operand_stack, v);
+    }
+    else if (op == VM_FCL && resulted) // just a statement, so drop the result
+        stack_pop(context->operand_stack);
 }
 
-static void method(struct Context *context, struct byte_array *program)
+static void method(struct Context *context, struct byte_array *program, bool really)
 {
     struct variable *indexable=NULL, *index;
     if (context->runtime) {
         indexable = variable_pop(context);
         index = variable_pop(context);
-        lookup(context, indexable, index);
+        lookup(context, indexable, index, really);
     }
     func_call(context, VM_MET, program, indexable);
 }
@@ -466,17 +487,29 @@ static struct variable *list_get_int(struct Context *context,
     }
 }
 
-// get the indexed item and push on operand stack
-void lookup(struct Context *context, struct variable *indexable, struct variable *index)
+// todo: get rid of struct
+
+bool custom_method(struct Context *context,
+                   const char *method,
+                   struct variable *indexable,
+                   struct variable *index,
+                   struct variable *value)
 {
-    // check for custom get
-    struct variable *getter;
-    if (indexable->map && (getter = (struct variable*)map_get(indexable->map, byte_array_from_string(RESERVED_GET)))) {
-        variable_func_env(context, getter, byte_array_from_string(RESERVED_SOUGHT), index);
-        variable_push(context, getter);
-        //DEBUGPRINT("getter is now %s\n", variable_value_str(context, getter));
-        return;
+    struct variable *custom;
+    struct byte_array *key = byte_array_from_string(method);
+    if (indexable->map && (custom = (struct variable*)map_get(indexable->map, key))) {
+        DEBUGPRINT("\n");
+        vm_call(context, custom, indexable, index, value, NULL);
+        return true;
     }
+    return false;
+}
+
+// get the indexed item and push on operand stack
+void lookup(struct Context *context, struct variable *indexable, struct variable *index, bool really)
+{
+    if (!really && custom_method(context, RESERVED_GET, indexable, index, NULL))
+        return;
 
     struct variable *item=0;
 
@@ -492,6 +525,9 @@ void lookup(struct Context *context, struct variable *indexable, struct variable
             if (!item)
                 item = variable_new_nil(context);
             break;
+        case VAR_NIL:
+            item = variable_new_nil(context);
+            break;
         default:
             vm_exit_message(context, "bad index type");
             break;
@@ -500,7 +536,7 @@ void lookup(struct Context *context, struct variable *indexable, struct variable
     variable_push(context, item);
 }
 
-static void list_get(struct Context *context)
+static void list_get(struct Context *context, bool really)
 {
     DEBUGPRINT("GET\n");
     if (!context->runtime)
@@ -508,7 +544,7 @@ static void list_get(struct Context *context)
     struct variable *indexable, *index;
     indexable = variable_pop(context);
     index = variable_pop(context);
-    lookup(context, indexable, index);
+    lookup(context, indexable, index, really);
 }
 
 static int32_t jump(struct Context *context, struct byte_array *program)
@@ -587,13 +623,10 @@ struct variable *find_var(struct Context *context, const struct byte_array *name
 {
     null_check(name);
 
-//    struct variable *v = (struct variable*)map_get(context->reserved_var_map, name);
-//    if (!v) {
-        const struct program_state *state = (const struct program_state*)stack_peek(context->program_stack, 0);
-        struct map *var_map = state->named_variables;
-        struct variable *v = (struct variable*)map_get(var_map, name);
-        //DEBUGPRINT("find_var(%s) in %p,%p = %p\n", byte_array_to_string(name), state, var_map, v);
-//    }
+    const struct program_state *state = (const struct program_state*)stack_peek(context->program_stack, 0);
+    struct map *var_map = state->named_variables;
+    struct variable *v = (struct variable*)map_get(var_map, name);
+
     if (!v)
         v = (struct variable*)map_get(context->vm_state->named_variables, name);
     if (!v && context->find)
@@ -637,9 +670,6 @@ static void push_fnc(struct Context *context, struct byte_array *program)
         }
     }
 
-/*    uint32_t fcodelen = serial_decode_int(program);
-    struct byte_array* fbody = byte_array_new_size(fcodelen);
-    memcpy(fbody->data, program->current, fcodelen);*/
     struct byte_array *body = serial_decode_string(program);
 
     DEBUGPRINT("FNC %u,%u\n", num_closures, body->length);
@@ -649,8 +679,6 @@ static void push_fnc(struct Context *context, struct byte_array *program)
         struct variable *f = variable_new_fnc(context, body, closures);
         variable_push(context, f);
     }
-
-//    program->current += fcodelen;
 }
 
 void set_named_variable(struct Context *context, 
@@ -699,22 +727,26 @@ static void set(struct Context *context, struct program_state *state, struct byt
 static void dst(struct Context *context) // drop unused assignment right-hand-side values
 {
     VM_DEBUGPRINT("DST\n");
-    
+
     if (stack_empty(context->operand_stack))
         return;
+
     struct variable *v = (struct variable*)stack_peek(context->operand_stack, 0);
     if (v->type == VAR_SRC)
-        variable_pop(context);
+        stack_pop(context->operand_stack);
 }
 
-static void list_put(struct Context *context)
+static void list_put(struct Context *context, bool really)
 {
     DEBUGPRINT("PUT");
     if (!context->runtime)
         VM_DEBUGPRINT("\n");
     struct variable* recipient = variable_pop(context);
     struct variable* key = variable_pop(context);
-    struct variable *value = variable_pop(context);// rhs_pop(context);
+    struct variable *value = variable_pop(context);
+
+    if (!really && custom_method(context, RESERVED_SET, recipient, key, value))
+        return;
 
     switch (key->type) {
         case VAR_INT:
@@ -729,15 +761,12 @@ static void list_put(struct Context *context)
                     vm_exit_message(context, "indexing non-indexable");
             } break;
         case VAR_STR:
-            if (!recipient->map)
-                recipient->map = map_new();
-            map_insert(recipient->map, key->str, value);
+            variable_map_insert(recipient, key->str, value);
             break;
         default:
             vm_exit_message(context, "bad index type");
             break;
     }
-    DEBUGPRINT(": %s\n", variable_value_str(context, recipient));
 }
 
 static struct variable *binary_op_int(struct Context *context,
@@ -896,8 +925,6 @@ static struct variable *binary_op_nil(struct Context *context,
         return binary_op_nil(context, op, v, u); // 1st var should be nil
 
     switch (op) {
-        //case VM_ORR:    return variable_copy(context, v);
-        //case VM_AND:    return variable_new_nil(context);
         case VM_EQU:    return variable_new_bool(context, v->type == u->type);
         default:
             return vm_exit_message(context, "unknown binary nil op");
@@ -919,6 +946,7 @@ static int32_t boolean_op(struct Context *context, struct byte_array *program, e
         case VAR_BOOL:  indeed_quite_so = v->boolean;   break;
         case VAR_FLT:   indeed_quite_so = v->floater;   break;
         case VAR_INT:   indeed_quite_so = v->integer;   break;
+        case VAR_NIL:   return 0;
         default:        indeed_quite_so = true;         break;
     }
     if (indeed_quite_so ^ (op == VM_AND)) {
@@ -1091,11 +1119,11 @@ struct variable *run(struct Context *context, struct byte_array *program, struct
         else
             state = program_state_new(context, env);
     }
-    //DEBUGPRINT("run %d %d %p\n", runtime, context, state);
-    //DEBUGPRINT("\t%p < %p + %d? %s\n", program->current, program->data, program->length, program->current < program->data + program->length ? "yes":"no");
 
     while (program->current < program->data + program->length) {
         inst = (enum Opcode)*program->current;
+        bool really = inst & VM_RLY;
+        inst &= ~VM_RLY;
 #ifdef DEBUG
         display_program_counter(context, program);
 #endif
@@ -1144,6 +1172,7 @@ struct variable *run(struct Context *context, struct byte_array *program, struct
             case VM_SET:    set(context, state, program);                   break;
             case VM_JMP:    pc_offset = jump(context, program);             break;
             case VM_IFF:    pc_offset = iff(context, program);              break;
+            case VM_FCL:
             case VM_CAL:    func_call(context, inst, program, NULL);        break;
             case VM_LST:    push_list(context, program);                    break;
             case VM_MAP:    push_map(context, program);                     break;
@@ -1154,9 +1183,9 @@ struct variable *run(struct Context *context, struct byte_array *program, struct
             case VM_STR:    push_str(context, program);                     break;
             case VM_VAR:    push_var(context, program);                     break;
             case VM_FNC:    push_fnc(context, program);                     break;
-            case VM_GET:    list_get(context);                              break;
-            case VM_PUT:    list_put(context);                              break;
-            case VM_MET:    method(context, program);                       break;
+            case VM_GET:    list_get(context, really);                      break;
+            case VM_PUT:    list_put(context, really);                      break;
+            case VM_MET:    method(context, program, really);               break;
             case VM_COM:
             case VM_ITR:    iterate(context, inst, state, program);         break;
             case VM_TRY:    vm_trycatch(context, program);                  break;
@@ -1176,11 +1205,11 @@ struct variable *run(struct Context *context, struct byte_array *program, struct
         return NULL;
     if (!in_context) {
         stack_pop(context->program_stack);
-        if (inst != VM_RET) {
+/*        if (inst != VM_RET) {
             struct variable *v = variable_new_src(context, 0);
             array_add(v->list, variable_new_nil(context));
             stack_push(context->operand_stack, v);
-        }
+        } */
     }
     return (struct variable*)stack_peek(context->operand_stack, 0);
 }

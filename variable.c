@@ -1,20 +1,12 @@
 #include <string.h>
-/*#include <stdio.h>
-#include <signal.h>
-#include <stdarg.h>
-#include <time.h>
-#include "util.h"
-#include "sys.h"
-*/
 #include "vm.h"
 #include "struct.h"
 #include "serial.h"
 #include "variable.h"
 #include "util.h"
 
-#define    ERROR_VAR_TYPE    "type error"
-#define VAR_MAX    100
-
+#define ERROR_VAR_TYPE  "type error"
+#define VAR_MAX         100
                       
 const struct number_string var_types[] = {
     {VAR_NIL,        "nil"},
@@ -215,7 +207,6 @@ const char *variable_value_str(struct Context *context, const struct variable* v
     if (v->map) {
         const struct array *a = map_keys(v->map);
         const struct array *b = map_values(v->map);
-        DEBUGPRINT("%s v->map=%x %d\n", v->name ? byte_array_to_string(v->name):"", v->map, a->length);
 		
         if (vt != VAR_LST)
             strcat(str, "[");
@@ -263,11 +254,9 @@ void variable_push(struct Context *context, struct variable *v)
 {
 	null_check(context);
     stack_push(context->operand_stack, v);
-    //DEBUGPRINT("\nvariable_push\n");
-    //print_operand_stack();
 }
 
-struct byte_array *variable_serialize(struct Context *context, 
+struct byte_array *variable_serialize(struct Context *context,
 									  struct byte_array *bits,
                                       const struct variable *in)
 {
@@ -451,17 +440,18 @@ struct variable *variable_map_get(struct Context *context, struct variable* v, c
     return (struct variable*)map_get(v->map, key);
 }
 
+/*
 int variable_func_env(struct Context *context, struct variable* f, const struct byte_array *key, struct variable *datum)
 {
-    null_check((void*)(f && key && datum));
+    null_check(f);
+    null_check(key);
+    null_check(datum);
     assert_message(f->type == VAR_FNC, "non-func for env");
     struct byte_array *renv = byte_array_from_string(RESERVED_ENV);
     struct variable *env = (struct variable*)variable_map_get(context, f, renv);
     if (env->type == VAR_NIL)
         env = variable_new_map(context, NULL);
-env->name = byte_array_from_string("env0");
-f->name = byte_array_from_string("f0");
     int result = variable_map_insert(env, key, datum) || variable_map_insert(f, renv, env);
-    DEBUGPRINT("fmap=%x, envmap=%x\n", f->map, env->map);
     return result;
 }
+*/

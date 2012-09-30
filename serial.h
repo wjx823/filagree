@@ -14,7 +14,7 @@
 enum serial_type {
 	SERIAL_ERROR,
 	SERIAL_INT,
-	SERIAL_FLOAT,	
+	SERIAL_FLOAT,
 	SERIAL_STRING,
 	SERIAL_ARRAY,
 };
@@ -23,19 +23,17 @@ enum serial_type {
 struct key_value_pair
 {
 	int32_t key;
-	
+
 	enum serial_type wire_type;
-	
+
 	union {
-		
-		int32_t integer;
+        int32_t integer;
 		float floater;
 		struct byte_array* bytes;
 		enum {
 			SOMETHING_HAS_GONE_HORRIBLY_WRONG,
 		} serialError;
-		
-	} value;
+    } value;
 };
 
 

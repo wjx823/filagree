@@ -1,7 +1,6 @@
 #ifndef VM_H
 #define VM_H
 
-
 #include <stdint.h>
 #include <inttypes.h>
 #include "struct.h"
@@ -37,6 +36,8 @@ struct program_state {
     struct array *all_variables;
     uint32_t pc;
 };
+
+#define VM_RLY 0x80 // high bit set to mean don't override
 
 enum Opcode {
     VM_NIL, // push nil
@@ -76,7 +77,8 @@ enum Opcode {
     VM_ORR, // logical or
     VM_IFF, // if then
     VM_JMP, // jump the program counter
-    VM_CAL, // call a function
+    VM_CAL, // call a function for result
+    VM_FCL, // call a function
     VM_MET, // call an object method
     VM_RET, // return from a function,
     VM_ITR, // iteration loop
@@ -100,6 +102,7 @@ void vm_call(struct Context *context, struct variable *func, struct variable *ar
 void *vm_exit_message(struct Context *context, const char *format, ...);
 void vm_null_check(struct Context *context, const void* p);
 void vm_assert(struct Context *context, bool assertion, const char *format, ...);
+void print_operand_stack(struct Context *context);
 
 
 #endif // VM_H
