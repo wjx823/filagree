@@ -13,24 +13,20 @@
 #define RESERVED_ENV "env"
 #define RESERVED_GET "get"
 
-struct Context {
+struct context {
     struct program_state *vm_state;
     struct stack *program_stack;
     struct stack *operand_stack;
     struct variable *vm_exception;
-    /*bridge_callback *callback;
-    bridge_find *find;*/
     find_c_var *find;
     bool runtime;
     bool done;
     uint32_t num_vars;
     struct variable* error;
     uint8_t indent;
-//    struct map *reserved_var_map;
 };
 
 struct program_state {
-    //    struct byte_array *code;
     struct array *args;
     struct map *named_variables;
     struct array *all_variables;
@@ -92,17 +88,17 @@ enum Opcode {
 #ifdef DEBUG
 void display_program(struct byte_array* program);
 #endif
-struct Context *vm_init();
+struct context *vm_init();
 struct variable *execute(struct byte_array *program,
                          bool in_context,
                          //bridge_callback *callback_to_c,
                          find_c_var *find);
-void garbage_collect(struct Context *context);
-void vm_call(struct Context *context, struct variable *func, struct variable *arg,...);
-void *vm_exit_message(struct Context *context, const char *format, ...);
-void vm_null_check(struct Context *context, const void* p);
-void vm_assert(struct Context *context, bool assertion, const char *format, ...);
-void print_operand_stack(struct Context *context);
+void garbage_collect(struct context *context);
+void vm_call(struct context *context, struct variable *func, struct variable *arg,...);
+void *vm_exit_message(struct context *context, const char *format, ...);
+void vm_null_check(struct context *context, const void* p);
+void vm_assert(struct context *context, bool assertion, const char *format, ...);
+void print_operand_stack(struct context *context);
 
 
 #endif // VM_H

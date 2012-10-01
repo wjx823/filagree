@@ -10,31 +10,23 @@
 #define FG_MAX_INPUT     256
 #define ERROR_USAGE    "usage: filagree [file]"
 
-void yield(struct Context *context) {
+void yield(struct context *context) {
     struct variable *args = stack_pop(context->operand_stack);
 	struct variable *f = array_get(args->list, 1);
 	struct byte_array *result = f->str;
 	byte_array_append(result, byte_array_from_string(": "));
     for (int i=1; i<args->list->length; i++) {
         struct variable *v = array_get(args->list, i);
-/*
-	struct stack *stack = context->rhs;
-	struct variable *f = stack_pop(stack);
-	struct byte_array *result = f->str;
-	byte_array_append(result, byte_array_from_string(": "));
-	while (!stack_empty(stack)) {
-		struct variable *v = stack_pop(stack); */
 		byte_array_append(result, variable_value(context, v));
 	}
 	DEBUGPRINT("%s\n", byte_array_to_string(result));
 }
 
-
 struct variable *repl()
 {
     char stdinput[FG_MAX_INPUT];
     struct variable *v = NULL;
-    struct Context *context = vm_init();
+    struct context *context = vm_init();
 	
     for (;;) {
         fflush(stdin);

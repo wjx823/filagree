@@ -9,9 +9,9 @@
 #include "variable.h"
 #include "sys.h"
 
-struct variable *run(struct Context *context, struct byte_array *program, struct map *env, bool in_context);
-void display_code(struct Context *context, struct byte_array *code);
-void lookup(struct Context *context, struct variable *indexable, struct variable *index, bool really);
+struct variable *run(struct context *context, struct byte_array *program, struct map *env, bool in_context);
+void display_code(struct context *context, struct byte_array *code);
+void lookup(struct context *context, struct variable *indexable, struct variable *index, bool really);
 
 #ifdef DEBUG
 
@@ -40,7 +40,7 @@ static void vm_exit() {
     longjmp(trying, 1);
 }
 
-void set_error(struct Context *context, const char *format, va_list list)
+void set_error(struct context *context, const char *format, va_list list)
 {
     if (!context)
         return;
@@ -49,7 +49,7 @@ void set_error(struct Context *context, const char *format, va_list list)
     context->error = variable_new_err(context, message);
 }
 
-void *vm_exit_message(struct Context *context, const char *format, ...)
+void *vm_exit_message(struct context *context, const char *format, ...)
 {
     // make error variable
     va_list list;
@@ -61,7 +61,7 @@ void *vm_exit_message(struct Context *context, const char *format, ...)
     return NULL;
 }
 
-void vm_assert(struct Context *context, bool assertion, const char *format, ...)
+void vm_assert(struct context *context, bool assertion, const char *format, ...)
 {
     if (!assertion) {
 
@@ -75,13 +75,13 @@ void vm_assert(struct Context *context, bool assertion, const char *format, ...)
     }
 }
 
-void vm_null_check(struct Context *context, const void* p) {
+void vm_null_check(struct context *context, const void* p) {
     vm_assert(context, p, "null pointer");
 }
 
 // state ///////////////////////////////////////////////////////////////////
 
-struct program_state *program_state_new(struct Context *context, struct map *env)
+struct program_state *program_state_new(struct context *context, struct map *env)
 {
     null_check(context);
     struct program_state *state = (struct program_state*)malloc(sizeof(struct program_state));
@@ -92,7 +92,7 @@ struct program_state *program_state_new(struct Context *context, struct map *env
     return state;
 }
 
-static inline void cfnc_length(struct Context *context) {
+static inline void cfnc_length(struct context *context) {
     struct variable *args = (struct variable*)stack_pop(context->operand_stack);
     struct variable *indexable = (struct variable*)array_get(args->list, 0);
     assert_message(indexable->type==VAR_LST || indexable->type==VAR_STR, "no length for non-indexable");
@@ -100,9 +100,9 @@ static inline void cfnc_length(struct Context *context) {
     stack_push(context->operand_stack, result);
 }
 
-struct Context *vm_init()
+struct context *vm_init()
 {
-    struct Context *context = (struct Context*)malloc(sizeof(struct Context));
+    struct context *context = (struct context*)malloc(sizeof(struct context));
     null_check(context);
     context->program_stack = stack_new();
     context->operand_stack = stack_new();
@@ -118,7 +118,7 @@ struct Context *vm_init()
 
 // garbage collection //////////////////////////////////////////////////////
 
-void mark(struct Context *context, struct variable *root)
+void mark(struct context *context, struct variable *root)
 {
     null_check(context);
     if (root->map) {
@@ -145,7 +145,7 @@ void mark(struct Context *context, struct variable *root)
     }
 }
 
-void sweep(struct Context *context, struct variable *root)
+void sweep(struct context *context, struct variable *root)
 {
     null_check(context);
     struct program_state *state = (struct program_state*)stack_peek(context->program_stack, 0);
@@ -159,7 +159,7 @@ void sweep(struct Context *context, struct variable *root)
     }
 }
 
-void garbage_collect(struct Context *context)
+void garbage_collect(struct context *context)
 {
     null_check(context);
     struct program_state *state = (struct program_state*)stack_peek(context->program_stack, 0);
@@ -215,7 +215,7 @@ const struct number_string opcodes[] = {
     {VM_TRY,    "TRY"},
 };
 
-void print_operand_stack(struct Context *context)
+void print_operand_stack(struct context *context)
 {
     null_check(context);
     struct variable *operand;
@@ -223,7 +223,7 @@ void print_operand_stack(struct Context *context)
         DEBUGPRINT("\t%s\n", variable_value_str(context, operand));
 }
 
-const char* indentation(struct Context *context)
+const char* indentation(struct context *context)
 {
     null_check(context);
     static char str[100];
@@ -234,13 +234,13 @@ const char* indentation(struct Context *context)
     return (const char*)str;
 }
 
-static void display_program_counter(struct Context *context, const struct byte_array *program)
+static void display_program_counter(struct context *context, const struct byte_array *program)
 {
     null_check(context);
     DEBUGPRINT("%s%2ld:%3d ", indentation(context), program->current-program->data, *program->current);
 }
 
-void display_code(struct Context *context, struct byte_array *code)
+void display_code(struct context *context, struct byte_array *code)
 {
     null_check(context);
     bool was_running = context->runtime;
@@ -255,7 +255,7 @@ void display_code(struct Context *context, struct byte_array *code)
 
 void display_program(struct byte_array *program)
 {
-    struct Context *context = vm_init();
+    struct context *context = vm_init();
 
     INDENT
     DEBUGPRINT("%sprogram bytes:\n", indentation(context));
@@ -277,14 +277,14 @@ void display_program(struct byte_array *program)
 
 #else // not DEBUG
 
-void display_code(struct Context *context, struct byte_array *code) {}
-const char* indentation(struct Context *context) { return ""; }
+void display_code(struct context *context, struct byte_array *code) {}
+const char* indentation(struct context *context) { return ""; }
 
 #endif // DEBUG
 
 // instruction implementations /////////////////////////////////////////////
 
-struct variable *src(struct Context *context, enum Opcode op, struct byte_array *program)
+struct variable *src(struct context *context, enum Opcode op, struct byte_array *program)
 {
     int32_t size = serial_decode_int(program);
     DEBUGPRINT("%s %d\n", NUM_TO_STRING(opcodes, op), size);
@@ -297,7 +297,7 @@ struct variable *src(struct Context *context, enum Opcode op, struct byte_array 
 
 // todo: test get/set/met, add to meta
 
-void vm_call_src(struct Context *context, struct variable *func)
+void vm_call_src(struct context *context, struct variable *func)
 {
     struct map *env = NULL;
     if (func->map) {
@@ -330,7 +330,7 @@ void vm_call_src(struct Context *context, struct variable *func)
     UNDENT
 }
 
-void vm_call(struct Context *context, struct variable *func, struct variable *arg, ...)
+void vm_call(struct context *context, struct variable *func, struct variable *arg, ...)
 {
     // add variables from vararg
     if (arg) {
@@ -350,7 +350,7 @@ void vm_call(struct Context *context, struct variable *func, struct variable *ar
     vm_call_src(context, func);
 }
 
-void func_call(struct Context *context, enum Opcode op, struct byte_array *program, struct variable *indexable)
+void func_call(struct context *context, enum Opcode op, struct byte_array *program, struct variable *indexable)
 {
     struct variable *func = context->runtime ? (struct variable*)variable_pop(context): NULL;
 
@@ -375,7 +375,7 @@ void func_call(struct Context *context, enum Opcode op, struct byte_array *progr
         stack_pop(context->operand_stack);
 }
 
-static void method(struct Context *context, struct byte_array *program, bool really)
+static void method(struct context *context, struct byte_array *program, bool really)
 {
     struct variable *indexable=NULL, *index;
     if (context->runtime) {
@@ -386,7 +386,7 @@ static void method(struct Context *context, struct byte_array *program, bool rea
     func_call(context, VM_MET, program, indexable);
 }
 
-static void push_list(struct Context *context, struct byte_array *program)
+static void push_list(struct context *context, struct byte_array *program)
 {
     int32_t num_items = serial_decode_int(program);
     DEBUGPRINT("LST %d", num_items);
@@ -408,7 +408,7 @@ static void push_list(struct Context *context, struct byte_array *program)
     variable_push(context, list);
 }
 
-static void push_map(struct Context *context, struct byte_array *program)
+static void push_map(struct context *context, struct byte_array *program)
 {
     int32_t num_items = serial_decode_int(program);
     DEBUGPRINT("MAP %d", num_items);
@@ -426,7 +426,7 @@ static void push_map(struct Context *context, struct byte_array *program)
     variable_push(context, v);
 }
 
-struct variable* variable_set(struct Context *context, struct variable *dst, const struct variable* src)
+struct variable* variable_set(struct context *context, struct variable *dst, const struct variable* src)
 {
     vm_null_check(context, dst);
     vm_null_check(context, src);
@@ -454,7 +454,7 @@ struct variable* variable_set(struct Context *context, struct variable *dst, con
     return dst;
 }
 
-struct variable* variable_copy(struct Context *context, const struct variable* v)
+struct variable* variable_copy(struct context *context, const struct variable* v)
 {
     vm_null_check(context, v);
     struct variable *u = variable_new(context, (enum VarType)v->type);
@@ -465,7 +465,7 @@ struct variable* variable_copy(struct Context *context, const struct variable* v
 
 // run /////////////////////////////////////////////////////////////////////
 
-static struct variable *list_get_int(struct Context *context,
+static struct variable *list_get_int(struct context *context,
                                      const struct variable *indexable,
                                      uint32_t index)
 {
@@ -489,7 +489,7 @@ static struct variable *list_get_int(struct Context *context,
 
 // todo: get rid of struct
 
-bool custom_method(struct Context *context,
+bool custom_method(struct context *context,
                    const char *method,
                    struct variable *indexable,
                    struct variable *index,
@@ -506,7 +506,7 @@ bool custom_method(struct Context *context,
 }
 
 // get the indexed item and push on operand stack
-void lookup(struct Context *context, struct variable *indexable, struct variable *index, bool really)
+void lookup(struct context *context, struct variable *indexable, struct variable *index, bool really)
 {
     if (!really && custom_method(context, RESERVED_GET, indexable, index, NULL))
         return;
@@ -536,7 +536,7 @@ void lookup(struct Context *context, struct variable *indexable, struct variable
     variable_push(context, item);
 }
 
-static void list_get(struct Context *context, bool really)
+static void list_get(struct context *context, bool really)
 {
     DEBUGPRINT("GET\n");
     if (!context->runtime)
@@ -547,7 +547,7 @@ static void list_get(struct Context *context, bool really)
     lookup(context, indexable, index, really);
 }
 
-static int32_t jump(struct Context *context, struct byte_array *program)
+static int32_t jump(struct context *context, struct byte_array *program)
 {
     null_check(program);
     uint8_t *start = program->current;
@@ -561,7 +561,7 @@ static int32_t jump(struct Context *context, struct byte_array *program)
     return offset;// - (program->current - start);
 }
 
-bool test_operand(struct Context *context)
+bool test_operand(struct context *context)
 {
     struct variable* v = variable_pop(context);
     bool indeed = false;
@@ -575,7 +575,7 @@ bool test_operand(struct Context *context)
     return indeed;
 }
 
-static int32_t iff(struct Context *context, struct byte_array *program)
+static int32_t iff(struct context *context, struct byte_array *program)
 {
     null_check(program);
     int32_t offset = serial_decode_int(program);
@@ -585,14 +585,14 @@ static int32_t iff(struct Context *context, struct byte_array *program)
     return test_operand(context) ? 0 : (VOID_INT)offset;
 }
 
-static void push_nil(struct Context *context)
+static void push_nil(struct context *context)
 {
     struct variable* var = variable_new_nil(context);
     VM_DEBUGPRINT("NIL\n");
     variable_push(context, var);
 }
 
-static void push_int(struct Context *context, struct byte_array *program)
+static void push_int(struct context *context, struct byte_array *program)
 {
     null_check(program);
     int32_t num = serial_decode_int(program);
@@ -601,7 +601,7 @@ static void push_int(struct Context *context, struct byte_array *program)
     variable_push(context, var);
 }
 
-static void push_bool(struct Context *context, struct byte_array *program)
+static void push_bool(struct context *context, struct byte_array *program)
 {
     null_check(program);
     int32_t num = serial_decode_int(program);
@@ -610,7 +610,7 @@ static void push_bool(struct Context *context, struct byte_array *program)
     variable_push(context, var);
 }
 
-static void push_float(struct Context *context, struct byte_array *program)
+static void push_float(struct context *context, struct byte_array *program)
 {
     null_check(program);
     float num = serial_decode_float(program);
@@ -619,7 +619,7 @@ static void push_float(struct Context *context, struct byte_array *program)
     variable_push(context, var);
 }
 
-struct variable *find_var(struct Context *context, const struct byte_array *name)
+struct variable *find_var(struct context *context, const struct byte_array *name)
 {
     null_check(name);
 
@@ -636,7 +636,7 @@ struct variable *find_var(struct Context *context, const struct byte_array *name
     return v;
 }
 
-static void push_var(struct Context *context, struct byte_array *program)
+static void push_var(struct context *context, struct byte_array *program)
 {
     struct byte_array* name = serial_decode_string(program);
     VM_DEBUGPRINT("VAR %s\n", byte_array_to_string(name));
@@ -645,7 +645,7 @@ static void push_var(struct Context *context, struct byte_array *program)
     variable_push(context, v);
 }
 
-static void push_str(struct Context *context, struct byte_array *program)
+static void push_str(struct context *context, struct byte_array *program)
 {
     struct byte_array* str = serial_decode_string(program);
     VM_DEBUGPRINT("STR '%s'\n", byte_array_to_string(str));
@@ -653,7 +653,7 @@ static void push_str(struct Context *context, struct byte_array *program)
     variable_push(context, v);
 }
 
-static void push_fnc(struct Context *context, struct byte_array *program)
+static void push_fnc(struct context *context, struct byte_array *program)
 {
     uint32_t num_closures = serial_decode_int(program);
     struct map *closures = NULL;
@@ -681,7 +681,7 @@ static void push_fnc(struct Context *context, struct byte_array *program)
     }
 }
 
-void set_named_variable(struct Context *context, 
+void set_named_variable(struct context *context, 
                         struct program_state *state,
                         const struct byte_array *name,
                         const struct variable *value)
@@ -703,7 +703,7 @@ void set_named_variable(struct Context *context,
     //DEBUGPRINT(" (SET %s to %s in {%p,%p,%p})\n", byte_array_to_string(name), variable_value(to_var), state, var_map, to_var);
 }
 
-static void set(struct Context *context, struct program_state *state, struct byte_array *program)
+static void set(struct context *context, struct program_state *state, struct byte_array *program)
 {
     struct byte_array *name = serial_decode_string(program);    // destination variable name
     if (!context->runtime)
@@ -724,7 +724,7 @@ static void set(struct Context *context, struct program_state *state, struct byt
     set_named_variable(context, state, name, value); // set the variable to the value
 }
 
-static void dst(struct Context *context) // drop unused assignment right-hand-side values
+static void dst(struct context *context) // drop unused assignment right-hand-side values
 {
     VM_DEBUGPRINT("DST\n");
 
@@ -736,7 +736,7 @@ static void dst(struct Context *context) // drop unused assignment right-hand-si
         stack_pop(context->operand_stack);
 }
 
-static void list_put(struct Context *context, bool really)
+static void list_put(struct context *context, bool really)
 {
     DEBUGPRINT("PUT");
     if (!context->runtime)
@@ -769,7 +769,7 @@ static void list_put(struct Context *context, bool really)
     }
 }
 
-static struct variable *binary_op_int(struct Context *context,
+static struct variable *binary_op_int(struct context *context,
                                       enum Opcode op,
                                       const struct variable *u,
                                       const struct variable *v)
@@ -803,7 +803,7 @@ static struct variable *binary_op_int(struct Context *context,
     return variable_new_int(context, i);
 }
 
-static struct variable *binary_op_float(struct Context *context,
+static struct variable *binary_op_float(struct context *context,
                                         enum Opcode op,
                                         const struct variable *u,
                                         const struct variable *v)
@@ -831,7 +831,7 @@ static bool is_num(enum VarType vt) {
     return vt == VAR_INT || vt == VAR_FLT;
 }
 
-static struct variable *binary_op_str(struct Context *context,
+static struct variable *binary_op_str(struct context *context,
                                       enum Opcode op,
                                       const struct variable *u,
                                       const struct variable *v)
@@ -849,7 +849,7 @@ static struct variable *binary_op_str(struct Context *context,
     return w;
 }
 
-static bool variable_compare(struct Context *context,
+static bool variable_compare(struct context *context,
                              const struct variable *u,
                              const struct variable *v)
 {
@@ -893,7 +893,7 @@ static bool variable_compare(struct Context *context,
     }
 }
 
-static struct variable *binary_op_lst(struct Context *context,
+static struct variable *binary_op_lst(struct context *context,
                                       enum Opcode op,
                                       const struct variable *u,
                                       const struct variable *v)
@@ -915,7 +915,7 @@ static struct variable *binary_op_lst(struct Context *context,
     return w;
 }
 
-static struct variable *binary_op_nil(struct Context *context,
+static struct variable *binary_op_nil(struct context *context,
                                       enum Opcode op,
                                       const struct variable *u,
                                       const struct variable *v)
@@ -931,7 +931,7 @@ static struct variable *binary_op_nil(struct Context *context,
     }
 }
 
-static int32_t boolean_op(struct Context *context, struct byte_array *program, enum Opcode op)
+static int32_t boolean_op(struct context *context, struct byte_array *program, enum Opcode op)
 {
     null_check(program);
     int32_t short_circuit = serial_decode_int(program);
@@ -956,7 +956,7 @@ static int32_t boolean_op(struct Context *context, struct byte_array *program, e
     return 0;
 }
 
-static void binary_op(struct Context *context, enum Opcode op)
+static void binary_op(struct context *context, enum Opcode op)
 {
     if (!context->runtime)
         VM_DEBUGPRINT("%s\n", NUM_TO_STRING(opcodes, op));
@@ -992,7 +992,7 @@ static void binary_op(struct Context *context, enum Opcode op)
                variable_value_str(context, w));
 }
 
-static void unary_op(struct Context *context, enum Opcode op)
+static void unary_op(struct context *context, enum Opcode op)
 {
     if (!context->runtime)
         VM_DEBUGPRINT("%s\n", NUM_TO_STRING(opcodes, op));
@@ -1035,7 +1035,7 @@ static void unary_op(struct Context *context, enum Opcode op)
 }
 
 // FOR who IN what WHERE where DO how
-static void iterate(struct Context *context, 
+static void iterate(struct context *context, 
                     enum Opcode op,
                     struct program_state *state,
                     struct byte_array *program)
@@ -1087,7 +1087,7 @@ static void iterate(struct Context *context,
         stack_push(context->operand_stack, result);
 }
 
-static inline void vm_trycatch(struct Context *context, struct byte_array *program)
+static inline void vm_trycatch(struct context *context, struct byte_array *program)
 {
     struct byte_array *trial = serial_decode_string(program);
     DEBUGPRINT("TRY %d\n", trial->length);
@@ -1107,7 +1107,7 @@ static inline void vm_trycatch(struct Context *context, struct byte_array *progr
     }
 }
 
-struct variable *run(struct Context *context, struct byte_array *program, struct map *env, bool in_context)
+struct variable *run(struct context *context, struct byte_array *program, struct map *env, bool in_context)
 {
     null_check(context);
     struct program_state *state = NULL;
@@ -1218,7 +1218,7 @@ struct variable *execute(struct byte_array *program, bool in_context, find_c_var
 {
     null_check(program);
     DEBUGPRINT("execute:\n");
-    struct Context *context = vm_init();
+    struct context *context = vm_init();
     context->find = find;
     vm_assert(context, program!=0 && program->data!=0, ERROR_NULL);
     byte_array_reset(program);

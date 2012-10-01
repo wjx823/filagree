@@ -3,6 +3,6 @@
 
 #include "vm.h"
 
-void sys_ui(struct Context *context);
+void sys_ui(struct context *context);
 
 #endif // UI_H

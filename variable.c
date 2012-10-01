@@ -26,7 +26,7 @@ const char *var_type_str(enum VarType vt)
     return NUM_TO_STRING(var_types, vt);
 }
 
-struct variable* variable_new(struct Context *context, enum VarType type)
+struct variable* variable_new(struct context *context, enum VarType type)
 {
 	null_check(context);
    if (context->num_vars++ > VAR_MAX)
@@ -38,7 +38,7 @@ struct variable* variable_new(struct Context *context, enum VarType type)
     return v;
 }
 
-struct variable* variable_new_err(struct Context *context, const char* message)
+struct variable* variable_new_err(struct context *context, const char* message)
 {
 	null_check(context);
     struct variable *v = variable_new(context, VAR_ERR);
@@ -46,13 +46,13 @@ struct variable* variable_new_err(struct Context *context, const char* message)
     return v;
 }
 
-struct variable* variable_new_nil(struct Context *context)
+struct variable* variable_new_nil(struct context *context)
 {
 	null_check(context);
     return variable_new(context, VAR_NIL);
 }
 
-struct variable* variable_new_int(struct Context *context, int32_t i)
+struct variable* variable_new_int(struct context *context, int32_t i)
 {
 	null_check(context);
     struct variable *v = variable_new(context, VAR_INT);
@@ -60,7 +60,7 @@ struct variable* variable_new_int(struct Context *context, int32_t i)
     return v;
 }
 
-struct variable* variable_new_bool(struct Context *context, bool b)
+struct variable* variable_new_bool(struct context *context, bool b)
 {
 	null_check(context);
     struct variable *v = variable_new(context, VAR_BOOL);
@@ -68,7 +68,7 @@ struct variable* variable_new_bool(struct Context *context, bool b)
     return v;
 }
 
-void variable_del(struct Context *context, struct variable *v)
+void variable_del(struct context *context, struct variable *v)
 {
 	null_check(context);
     context->num_vars--;
@@ -103,7 +103,7 @@ void variable_del(struct Context *context, struct variable *v)
     free(v);
 }
 
-struct variable *variable_new_src(struct Context *context, uint32_t size)
+struct variable *variable_new_src(struct context *context, uint32_t size)
 {
 	null_check(context);
     struct variable *v = variable_new(context, VAR_SRC);
@@ -121,7 +121,7 @@ struct variable *variable_new_src(struct Context *context, uint32_t size)
     return v;
 }
 
-struct variable* variable_new_float(struct Context *context, float f)
+struct variable* variable_new_float(struct context *context, float f)
 {
 	null_check(context);
     //DEBUGPRINT("new float %f\n", f);
@@ -130,14 +130,14 @@ struct variable* variable_new_float(struct Context *context, float f)
     return v;
 }
 
-struct variable *variable_new_str(struct Context *context, struct byte_array *str) {
+struct variable *variable_new_str(struct context *context, struct byte_array *str) {
 	null_check(context);
     struct variable *v = variable_new(context, VAR_STR);
     v->str = str;
     return v;
 }
 
-struct variable *variable_new_fnc(struct Context *context, struct byte_array *body, struct map *closures)
+struct variable *variable_new_fnc(struct context *context, struct byte_array *body, struct map *closures)
 {
     struct variable *v = variable_new(context, VAR_FNC);
     v->str = body;
@@ -148,25 +148,25 @@ struct variable *variable_new_fnc(struct Context *context, struct byte_array *bo
     return v;
 }
 
-struct variable *variable_new_list(struct Context *context, struct array *list) {
+struct variable *variable_new_list(struct context *context, struct array *list) {
     struct variable *v = variable_new(context, VAR_LST);
     v->list = list ? list : array_new();
     return v;
 }
 
-struct variable *variable_new_map(struct Context *context, struct map *map) {
+struct variable *variable_new_map(struct context *context, struct map *map) {
     struct variable *v = variable_new(context, VAR_MAP);
     v->map = map;
     return v;
 }
 
-struct variable *variable_new_c(struct Context *context, callback2func *cfnc) {
+struct variable *variable_new_c(struct context *context, callback2func *cfnc) {
     struct variable *v = variable_new(context, VAR_C);
     v->cfnc = cfnc;
     return v;
 }
 
-const char *variable_value_str(struct Context *context, const struct variable* v)
+const char *variable_value_str(struct context *context, const struct variable* v)
 {
 	null_check(v);
     char* str = (char*)malloc(1000);
@@ -231,12 +231,12 @@ const char *variable_value_str(struct Context *context, const struct variable* v
 	return str;
 }
 
-struct byte_array *variable_value(struct Context *c, const struct variable *v) {
+struct byte_array *variable_value(struct context *c, const struct variable *v) {
 	const char *str = variable_value_str(c, v);
     return byte_array_from_string(str);
 }
 
-struct variable *variable_pop(struct Context *context)
+struct variable *variable_pop(struct context *context)
 {
 	null_check(context);
     struct variable *v = (struct variable*)stack_pop(context->operand_stack);
@@ -250,13 +250,13 @@ struct variable *variable_pop(struct Context *context)
     return v;
 }
 
-void variable_push(struct Context *context, struct variable *v)
+void variable_push(struct context *context, struct variable *v)
 {
 	null_check(context);
     stack_push(context->operand_stack, v);
 }
 
-struct byte_array *variable_serialize(struct Context *context,
+struct byte_array *variable_serialize(struct context *context,
 									  struct byte_array *bits,
                                       const struct variable *in)
 {
@@ -294,7 +294,7 @@ struct byte_array *variable_serialize(struct Context *context,
     return bits;
 }
 
-struct variable *variable_deserialize(struct Context *context, struct byte_array *bits)
+struct variable *variable_deserialize(struct context *context, struct byte_array *bits)
 {
 	null_check(context);
     enum VarType vt = (enum VarType)serial_decode_int(bits);
@@ -328,7 +328,7 @@ struct variable *variable_deserialize(struct Context *context, struct byte_array
     }
 }
 
-int variable_save(struct Context *context, 
+int variable_save(struct context *context, 
 				  const struct variable *v,
                   const struct variable *path)
 {
@@ -340,7 +340,7 @@ int variable_save(struct Context *context,
     return write_file(path->str, bytes);
 }
 
-struct variable *variable_load(struct Context *context, const struct variable *path)
+struct variable *variable_load(struct context *context, const struct variable *path)
 {
 	null_check(context);
     vm_null_check(context, path);
@@ -352,7 +352,7 @@ struct variable *variable_load(struct Context *context, const struct variable *p
     return v;
 }
 
-/*struct variable *variable_get(struct Context *context, const struct variable *v, uint32_t i)
+/*struct variable *variable_get(struct context *context, const struct variable *v, uint32_t i)
 {
     switch (v->type) {
         case VAR_LST: return (struct variable*)array_get(v->list, i);
@@ -361,7 +361,7 @@ struct variable *variable_load(struct Context *context, const struct variable *p
     }
 }*/
 
-uint32_t variable_length(struct Context *context, const struct variable *v)
+uint32_t variable_length(struct context *context, const struct variable *v)
 {
     switch (v->type) {
         case VAR_LST: return v->list->length;
@@ -372,7 +372,7 @@ uint32_t variable_length(struct Context *context, const struct variable *v)
     }
 }
 
-struct variable *variable_part(struct Context *context, struct variable *self, uint32_t start, int32_t length)
+struct variable *variable_part(struct context *context, struct variable *self, uint32_t start, int32_t length)
 {
     null_check(self);
     switch (self->type) {
@@ -404,7 +404,7 @@ void variable_remove(struct variable *self, uint32_t start, int32_t length)
     }
 }
 
-struct variable *variable_concatenate(struct Context *context, int n, const struct variable* v, ...)
+struct variable *variable_concatenate(struct context *context, int n, const struct variable* v, ...)
 {
     struct variable* result = variable_copy(context, v);
     
@@ -433,7 +433,7 @@ int variable_map_insert(struct variable* v, const struct byte_array *key, struct
     return map_insert(v->map, key, datum);
 }
 
-struct variable *variable_map_get(struct Context *context, struct variable* v, const struct byte_array *key)
+struct variable *variable_map_get(struct context *context, struct variable* v, const struct byte_array *key)
 {
     if (!v->map)
         return variable_new_nil(context);
@@ -441,7 +441,7 @@ struct variable *variable_map_get(struct Context *context, struct variable* v, c
 }
 
 /*
-int variable_func_env(struct Context *context, struct variable* f, const struct byte_array *key, struct variable *datum)
+int variable_func_env(struct context *context, struct variable* f, const struct byte_array *key, struct variable *datum)
 {
     null_check(f);
     null_check(key);

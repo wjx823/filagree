@@ -36,7 +36,7 @@ struct variable *sys = NULL;
 
 // system functions
 
-void sys_print(struct Context *context)
+void sys_print(struct context *context)
 {
     null_check(context);
     struct variable *args = (struct variable*)stack_pop(context->operand_stack);
@@ -47,7 +47,7 @@ void sys_print(struct Context *context)
     }
 }
 
-void sys_save(struct Context *context)
+void sys_save(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
     struct variable *v = (struct variable*)array_get(value->list, 1); // (struct variable*)stack_pop(context->operand_stack);
@@ -55,7 +55,7 @@ void sys_save(struct Context *context)
     variable_save(context, v, path);
 }
 
-void sys_load(struct Context *context)
+void sys_load(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
     struct variable *path = (struct variable*)array_get(value->list, 1);
@@ -64,7 +64,7 @@ void sys_load(struct Context *context)
         stack_push(context->operand_stack, v);
 }
 
-void sys_read(struct Context *context)
+void sys_read(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
     struct variable *path = (struct variable*)array_get(value->list, 1);
@@ -78,7 +78,7 @@ void sys_read(struct Context *context)
     }
 }
 
-void sys_run(struct Context *context)
+void sys_run(struct context *context)
 {
     stack_pop(context->operand_stack); // self
     struct variable *script = (struct variable*)stack_pop(context->operand_stack);
@@ -86,26 +86,26 @@ void sys_run(struct Context *context)
     interpret_string(str, NULL);
 }
 
-void sys_rm(struct Context *context)
+void sys_rm(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
     struct variable *path = (struct variable*)array_get(value->list, 1);
     remove(byte_array_to_string(path->str));
 }
 
-void sys_window(struct Context *context)
+void sys_window(struct context *context)
 {
     stack_pop(context->operand_stack); // self
     hal_window();
 }
 
-void sys_loop(struct Context *context)
+void sys_loop(struct context *context)
 {
     stack_pop(context->operand_stack); // self
     hal_loop();
 }
 
-void sys_args(struct Context *context)
+void sys_args(struct context *context)
 {
     stack_pop(context->operand_stack); // self
     struct program_state *above = (struct program_state*)stack_peek(context->program_stack, 1);
@@ -113,7 +113,7 @@ void sys_args(struct Context *context)
     variable_push(context, v);
 }
 
-void sys_button(struct Context *context)
+void sys_button(struct context *context)
 {
     stack_pop(context->operand_stack); // self
     int32_t x = ((struct variable*)stack_pop(context->operand_stack))->integer;
@@ -124,7 +124,7 @@ void sys_button(struct Context *context)
     hal_button(x, y, w, h, str, NULL, NULL);
 }
 
-void sys_atoi(struct Context *context)
+void sys_atoi(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
     char *str = (char*)((struct variable*)array_get(value->list, 1))->str->data;
@@ -145,7 +145,7 @@ void sys_atoi(struct Context *context)
     variable_push(context, variable_new_src(context, 2));
 }
 
-void sys_input(struct Context *context)
+void sys_input(struct context *context)
 {
     stack_pop(context->operand_stack); // self
     int32_t x = ((struct variable*)stack_pop(context->operand_stack))->integer;
@@ -172,7 +172,7 @@ struct string_func builtin_funcs[] = {
     {"atoi",    (callback2func*)&sys_atoi},
 };
 
-struct variable *sys_find(struct Context *context, const struct byte_array *name)
+struct variable *sys_find(struct context *context, const struct byte_array *name)
 {
     if (strncmp(RESERVED_SYS, (const char*)name->data, strlen(RESERVED_SYS)))
         return NULL;
@@ -208,7 +208,7 @@ struct variable *sys_find(struct Context *context, const struct byte_array *name
 #define FNC_INSERT      "insert"
 #define FNC_ADD         "add"
 
-static inline struct variable *sys_string(struct Context *context, struct variable *indexable, struct variable *index)
+static inline struct variable *sys_string(struct context *context, struct variable *indexable, struct variable *index)
 {
     return variable_new_str(context, variable_value(context, indexable));
 }
@@ -219,7 +219,7 @@ struct string_method builtin_methods[] = {
 };
 */
 
-int compar(struct Context *context, const void *a, const void *b, struct variable *comparator)
+int compar(struct context *context, const void *a, const void *b, struct variable *comparator)
 {
     struct variable *av = *(struct variable**)a;
     struct variable *bv = *(struct variable**)b;
@@ -264,7 +264,7 @@ void heapset(size_t width, void *base0, uint32_t index0, void *base1, uint32_t i
         *(p0 + width) = *(p1 + width);
 }
 
-int heapcmp(struct Context *context,
+int heapcmp(struct context *context,
             size_t width, void *base0, uint32_t index0, void *base1, uint32_t index1,
             struct variable *comparator)
 {
@@ -273,7 +273,7 @@ int heapcmp(struct Context *context,
     return compar(context, p0, p1, comparator);
 }
 
-int heapsortfg(struct Context *context, void *base, size_t nel, size_t width, struct variable *comparator)
+int heapsortfg(struct context *context, void *base, size_t nel, size_t width, struct variable *comparator)
 {
     void *t = malloc(width); // the temporary value
     unsigned int n = nel, parent = nel/2, index, child; // heap indexes
@@ -309,7 +309,7 @@ int heapsortfg(struct Context *context, void *base, size_t nel, size_t width, st
     }
 }
 
-void cfnc_sort(struct Context *context)
+void cfnc_sort(struct context *context)
 {
     struct variable *args = (struct variable*)stack_pop(context->operand_stack);
     struct variable *self = (struct variable*)array_get(args->list, 0);
@@ -325,7 +325,7 @@ void cfnc_sort(struct Context *context)
     assert_message(!success, "error sorting");
 }
 
-void cfnc_chop(struct Context *context, bool part)
+void cfnc_chop(struct context *context, bool part)
 {
     struct variable *args = (struct variable*)stack_pop(context->operand_stack);
     struct variable *self = (struct variable*)array_get(args->list, 0);
@@ -350,15 +350,15 @@ void cfnc_chop(struct Context *context, bool part)
     stack_push(context->operand_stack, result);
 }
 
-static inline void cfnc_part(struct Context *context) {
+static inline void cfnc_part(struct context *context) {
     cfnc_chop(context, true);
 }
 
-static inline void cfnc_remove(struct Context *context) {
+static inline void cfnc_remove(struct context *context) {
     cfnc_chop(context, false);
 }
 
-void cfnc_find2(struct Context *context, bool has)
+void cfnc_find2(struct context *context, bool has)
 {
     struct variable *args = (struct variable*)stack_pop(context->operand_stack);
     struct variable *self = (struct variable*)array_get(args->list, 0);
@@ -383,16 +383,16 @@ void cfnc_find2(struct Context *context, bool has)
     stack_push(context->operand_stack, result);
 }
 
-void cfnc_find(struct Context *context) {
+void cfnc_find(struct context *context) {
     cfnc_find2(context, false);
 }
 
-void cfnc_has(struct Context *context) {
+void cfnc_has(struct context *context) {
     cfnc_find2(context, true);
 }
 
 
-void cfnc_insert(struct Context *context)
+void cfnc_insert(struct context *context)
 {
     struct variable *self = (struct variable*)stack_pop(context->operand_stack);
     struct variable *start = (struct variable*)stack_pop(context->operand_stack);
@@ -407,7 +407,7 @@ void cfnc_insert(struct Context *context)
     stack_push(context->operand_stack, joined);
 }
 
-void cfnc_add(struct Context *context)
+void cfnc_add(struct context *context)
 {
     struct variable *args = (struct variable*)stack_pop(context->operand_stack);
     struct variable *self = (struct variable*)array_get(args->list, 0);
@@ -427,7 +427,7 @@ void cfnc_add(struct Context *context)
 //    a                b        c
 // <sought> <replacement> [<start>]
 // <start> <length> <replacement>
-void replace(struct Context *context)
+void replace(struct context *context)
 {
     struct variable *args = (struct variable*)stack_pop(context->operand_stack);
     struct variable *self = (struct variable*)array_get(args->list, 0);
@@ -472,7 +472,7 @@ void replace(struct Context *context)
     stack_push(context->operand_stack, result);
 }
 
-struct variable *builtin_method(struct Context *context,
+struct variable *builtin_method(struct context *context,
                                 struct variable *indexable,
                                 const struct variable *index)
 {
