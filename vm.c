@@ -738,9 +738,9 @@ static void dst(struct context *context) // drop unused assignment right-hand-si
 
 static void list_put(struct context *context, bool really)
 {
-    DEBUGPRINT("PUT");
+    DEBUGPRINT("PUT\n");
     if (!context->runtime)
-        VM_DEBUGPRINT("\n");
+        return;
     struct variable* recipient = variable_pop(context);
     struct variable* key = variable_pop(context);
     struct variable *value = variable_pop(context);
@@ -926,6 +926,7 @@ static struct variable *binary_op_nil(struct context *context,
 
     switch (op) {
         case VM_EQU:    return variable_new_bool(context, v->type == u->type);
+        case VM_NEQ:    return variable_new_bool(context, v->type != u->type);
         default:
             return vm_exit_message(context, "unknown binary nil op");
     }

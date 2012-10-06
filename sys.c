@@ -367,7 +367,8 @@ void cfnc_find2(struct context *context, bool has)
     null_check(self);
     null_check(sought);
     
-    struct variable *result;
+    struct variable *result = variable_new_nil(context);
+
     if (self->type == VAR_STR && sought->type == VAR_STR) {                     // search for substring
         assert_message(!start || start->type == VAR_INT, "non-integer index");
         int32_t beginning = start ? start->integer : 0;
@@ -376,9 +377,22 @@ void cfnc_find2(struct context *context, bool has)
             result = variable_new_bool(context, index != -1);
         else
             result = variable_new_int(context, index);
-    } else if (self->type == VAR_LST) {
-        return;
+
+    } else if (self->type == VAR_LST && sought->type == VAR_STR) {
+        if (!(result = (struct variable*)map_get(self->map, sought->str)))
+            result = variable_new_nil(context);
+
+    } else if (self->type == VAR_LST && sought->type == VAR_INT) {
+        for (int i=0; i<self->list->length; i++) {
+            struct variable *candidate = (struct variable*)array_get(self->list, i);
+            if (candidate->type == VAR_INT && candidate->integer == sought->integer) {
+                result = candidate;
+                break;
+            }
+        }
+    } else {
         // todo
+        return;
     }
     stack_push(context->operand_stack, result);
 }

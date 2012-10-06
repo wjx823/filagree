@@ -1,26 +1,59 @@
+/*
 class = function(init, super)
+
     f = function()(init, super)
+        sys.print(sys.args())
         if init and (init.type == 'function') then
             self = init(sys.args())
+        else
+            self = []
         end
-        self.super = super
         return self
     end
+
+    f.meta = [
+        'super':super,
+        'get':
+            function(self, sought)
+                g = self!meta.find(sought)
+                if g==nil and self!super then
+                    g = self!super[sought]
+                end
+                return g
+            end,
+        'set': function(self,key,value)
+            sys.print('settting')
+            self!meta[key] = value
+        end,
+    ]
+
     return f
 end
 
-# todo : auto-call get, set, add, del, etc.
-List = class( function(name) return ['name':name] end )
 
-#List.set('has', function(self, sought) return sys.find(self, sought) != nil end)
-List.has = function(self, sought) return sys.find(self, sought) != nil end
+List = class( function(name)
+                  m = name[0]
+                  return ['moi':m, 'list':[]]
+              end )
+
+List.add = function(self, datum)
+    self!list.add(datum)
+end
+
+y = List
+
+
+List.has = function(self, sought)
+    return sys.find(self!list, sought) != nil
+end
 
 list = List('x')
 
 list.add(6)
 
-sys.print(list.has(7))
-
+y = list
+#sys.print(list.has(7))
+*/
 
 /*
 List.has = function(self, sought)

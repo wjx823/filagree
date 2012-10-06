@@ -58,6 +58,7 @@ struct byte_array *read_file(const struct byte_array *filename);
         LEX_COMMA,
         LEX_PERIOD,
         LEX_COLON,
+        LEX_BANG,
         LEX_LINE_COMMENT,
         LEX_LEFTHESIS,
         LEX_RIGHTHESIS,
@@ -124,6 +125,7 @@ struct number_string lexemes[] = {
     {LEX_COMMA,                 ","},
     {LEX_PERIOD,                "."},
     {LEX_COLON,                 ":"},
+    {LEX_BANG,                  "!"},
     {LEX_LEFTHESIS,             "("},
     {LEX_RIGHTHESIS,            ")"},
     {LEX_LEFTSQUARE,            "["},
@@ -395,7 +397,7 @@ BNF:
 <string> --> LEX_STRING
 <table> --> LEX_LEFTSQUARE <element>, LEX_RIGHTSQUARE
 <element> --> <expression> ( LEX_COLON <expression> )?
-<member> --> ( LEX_LEFTSQUARE <expression> LEX_RIGHTSQUARE ) | ( ( LEX_COLON | LEX_PERIOD ) LEX_STRING )
+<member> --> ( LEX_LEFTSQUARE <expression> LEX_RIGHTSQUARE ) | ( ( LEX_PERIOD | LEX_BANG ) LEX_STRING ) | ( LEX_LEFTSTACHE <expression> LEX_RIGHTSTACHE )
 
 *///////////////////////////////////////////////////////////////////////////
 
@@ -578,7 +580,7 @@ struct token *fetch(enum Lexeme lexeme) {
         //DEBUGPRINT("fetched %s instead of %s at %d\n", lexeme_to_string(token->lexeme), lexeme_to_string(lexeme), parse_index);
         return NULL;
     }
-    //DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
+    DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
     // display_token(token, 0);
 
     parse_index++;
@@ -633,7 +635,7 @@ struct symbol *symbol_fetch(enum Nonterminal n, enum Lexeme goal, ...)
 
             symbol = symbol_new(n);
             symbol->token = token;
-            //DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
+            DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
             // display_token(token, 0);
 
             parse_index++;
@@ -814,22 +816,22 @@ struct symbol *exp5()
     return atom();
 }
 
-// <member> --> ( LEX_LEFTSQUARE <expression> LEX_RIGHTSQUARE ) | ( ( LEX_COLON | LEX_PERIOD ) LEX_STRING )
+// <member> --> ( LEX_LEFTSQUARE <expression> LEX_RIGHTSQUARE ) | ( ( LEX_PERIOD | LEX_BANG ) LEX_STRING )
 struct symbol *member()
 {
     struct symbol *m = symbol_new(SYMBOL_MEMBER);
-    m->token = fetch_lookahead(LEX_PERIOD, LEX_COLON, NULL);
     
-    if (m->token) {
+    if ((m->token = fetch_lookahead(LEX_PERIOD, LEX_BANG, NULL))) {
         if (!(m->index = variable()))
             return NULL;
         m->index->nonterminal = SYMBOL_STRING;
     }
-    else {
-        FETCH_OR_QUIT(LEX_LEFTSQUARE);
+    else if ((m->token = fetch_lookahead(LEX_LEFTSQUARE, LEX_LEFTSTACHE, NULL))) {
+        enum Lexeme right = m->token->lexeme == LEX_LEFTSQUARE ? LEX_RIGHTSQUARE : LEX_RIGHTSTACHE;
         m->index = expression();
-        FETCH_OR_QUIT(LEX_RIGHTSQUARE);
-    }
+        FETCH_OR_ERROR(right);
+    } else
+        return NULL;
     return m;
 }
 
@@ -1205,7 +1207,7 @@ void generate_member(struct byte_array *code, struct symbol *root)
     generate_code(code, root->value);
 
     enum Opcode op = root->lhs ? VM_PUT : VM_GET;
-    if (root->token && root->token->lexeme == LEX_COLON)
+    if (root->token && (root->token->lexeme == LEX_BANG || root->token->lexeme == LEX_LEFTSTACHE))
         op |= VM_RLY;
     generate_step(code, 1, op);
 }

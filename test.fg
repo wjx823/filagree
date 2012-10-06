@@ -275,7 +275,7 @@ tester.test('custom getter',
     function()
         x = ['get':
                 function(self, y)
-                    if not self:list then self:list = [] end
+                    if not self!list then self!list = [] end
                     if y == 'p' then return 2 else return 3 end
                 end
         ]
@@ -288,9 +288,9 @@ tester.test('custom setter',
         x = ['set':
                 function(self, y, z)
                     if y == 'p' then
-                        self:a = z*2
+                        self!a = z*2
                     else
-                        self:b = z*4
+                        self!b = z*4
                     end
                 end
             ]
