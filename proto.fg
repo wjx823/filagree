@@ -1,0 +1,38 @@
+sys.class = function(self, init, super)
+
+    meta = [
+        'super':super,
+        'get': function(self, sought)
+            return self{sought}
+        end,
+        'set': function(self, key, value)
+            self{key} = value
+        end
+    ]
+
+    f = function()(init, meta)
+        #sys.print(sys.args())
+        if init and (init.type == 'function') then
+            self = init(sys.args())
+        else
+            self = []
+        end
+
+        self!get = function(self, sought)
+            g = self!meta!find(sought)
+            if (g==nil) and (self!meta!super) then
+                g = self!meta!super[sought]
+            end
+            return g
+        end
+
+        self!meta = meta
+        return self
+    end
+
+    f!meta = meta
+    f!get = function(self, sought) return self!meta!get{sought} end
+    f!set = function(self, key, value) self!meta!set(key, value) end
+
+    return f
+end

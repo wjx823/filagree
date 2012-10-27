@@ -1,5 +1,6 @@
 # test.fg ###################################################################
 
+import 'sys'
 import 'unit_test'
 
 tester.test('add integers',
@@ -97,20 +98,22 @@ tester.test('serial',
     end,
     11)
 
+/*
 tester.test('map',
     function()
         x='y'
         a = [2,3,4,'x':7,x:8]
         a['z'] = 9
-        return  a.string +
+        result = a.string +
             a.type   +
             a.length +
             a.list   +
             a.keys   +
             a.values
+        sys.print(a)
     end,
     '[2,3,4,\'x\':7,\'y\':8,\'z\':9]list3[2,3,4][\'x\',\'y\',\'z\'][7,8,9]')
-
+*/
 tester.test('string',
     function()
         a = 'supercalifragilisticexpialidocious!' 
@@ -298,5 +301,26 @@ tester.test('custom setter',
         return 10*x.a + (x.b or 5)
     end,
     125)
+
+tester.test('list class',
+    function()
+        list = sys.List('x')
+        list.add(6)
+        a = list.has(6)
+        b = list.has(7)
+        return (a*10) + b
+    end,
+    10)
+
+tester.test('string class',
+    function()
+        x = sys.String('abc')
+        y = sys.String('def')
+        b = x.has('z')
+        a = y.has('f')
+        return (a*10) + b
+    end,
+    10)
+
 
 tester.done()

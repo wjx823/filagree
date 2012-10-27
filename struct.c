@@ -82,7 +82,7 @@ void *list_remove(void *data, uint32_t *end, uint32_t start, int32_t length, siz
     null_check(end);
     length = length < 0 ? *end - start : length;
     assert_message(!length || (start < *end && start+length <= *end), "index out of bounds");
-    
+
     memmove((uint8_t*)data+start*width, (uint8_t*)data+(start+length)*width, (*end-start-length)*width);
     *end -= (uint32_t)length;
     return realloc(data, *end * width);
@@ -159,7 +159,7 @@ bool byte_array_equals(const struct byte_array *a, const struct byte_array* b) {
         return false;
     if (a->length != b->length)
         return false;
-    
+
     int i;
     for (i = 0; i<a->length; i++)
         if (a->data[i] != b->data[i])
@@ -259,18 +259,18 @@ int32_t byte_array_find(struct byte_array *within, struct byte_array *sought, ui
 {
     null_check(within);
     null_check(sought);
-    
+
     uint32_t ws = within->length;
     uint32_t ss = sought->length;
-    if (start >= within->length)
+    if (start + ss >= within->length)
         return -1;
-    
+
     uint8_t *wd = within->data;
     uint8_t *sd = sought->data;
     for (int32_t i=start; i<ws-ss+1; i++)
         if (!memcmp(wd + i, sd, ss)) 
             return i; 
-    
+
     return -1;
 }
 
@@ -282,14 +282,14 @@ struct byte_array *byte_array_replace(struct byte_array *within, struct byte_arr
     assert_message(start < ws, "index out of bounds");
     if (length < 0)
         length = ws - start;
-    
+
     int32_t new_length = within->length - length + replacement->length;
     struct byte_array *replaced = byte_array_new_size(new_length);
-    
+
     memcpy(replaced->data, within->data, start);
     memcpy(replaced->data + start, replacement->data, replacement->length);
     memcpy(replaced->data + start + replacement->length, within->data + start + length, within->length - start - length);
-    
+
     return replaced;
 }
 
@@ -325,6 +325,7 @@ void stack_push(struct stack* stack, void* data)
         stack->head->next = old_head;
     }
     stack->head->data = data;
+//    DEBUGPRINT("stack_push %x to %d\n", stack, stack_depth(stack));
 }
 
 void* stack_pop(struct stack* stack)
@@ -334,7 +335,8 @@ void* stack_pop(struct stack* stack)
     void* data = stack->head->data;
     stack->head = stack->head->next;
     null_check(data);
-    //DEBUGPRINT("stack_pop %x de %x\n", data, stack);
+//    DEBUGPRINT("stack_pop %x de %x\n", data, stack);
+//    DEBUGPRINT("stack_pop  %x to %d\n", stack, stack_depth(stack));
     return data;
 }
 
@@ -363,27 +365,28 @@ static size_t def_hash_func(const struct byte_array* key)
     return hash;
 }
 
-struct map* map_new()
+struct map *map_new(enum map_key_type type)
 {
-    struct map* m;
+    struct map *m;
     if (!(m =(struct map*)malloc(sizeof(struct map)))) return NULL;
     m->size = 16;
     m->hash_func = def_hash_func;
-    
+    m->type = type;
+
     if (!(m->nodes = (struct hash_node**)calloc(m->size, sizeof(struct hash_node*)))) {
         free(m);
         return NULL;
     }
-    
+
     return m;
 }
 
-void map_del(struct map* m)
+void map_del(struct map *m)
 {
     DEBUGPRINT("map_destroy\n");
     size_t n;
     struct hash_node *node, *oldnode;
-    
+
     for(n = 0; n<m->size; ++n) {
         node = m->nodes[n];
         while (node) {
@@ -397,20 +400,28 @@ void map_del(struct map* m)
     free(m);
 }
 
-int map_insert(struct map* m, const struct byte_array* key, void *data)
+bool map_key_equals(enum map_key_type type, const void *map_key, const void *key)
+{
+    bool bytes_match = (type == MAP_KEY_BYTE_ARRAY) && (byte_array_equals(map_key, key));
+    bool pointers_match = (type == MAP_KEY_VOID_STAR) && (map_key == key);
+    return bytes_match || pointers_match;
+}
+
+int map_insert(struct map *m, const void *key, void *data)
 {
     struct hash_node *node;
-    size_t hash = m->hash_func(key) % m->size;    
-    
+    size_t hash = m->hash_func(key) % m->size;
+
     node = m->nodes[hash];
     while (node) {
-        if (byte_array_equals(node->key, key)) {
+        if (map_key_equals(m->type, node->key, key)) {
+//        if (byte_array_equals(node->key, key)) {
             node->data = data;
             return 0;
         }
         node = node->next;
     }
-    
+
     if (!(node = (struct hash_node*)malloc(sizeof(struct hash_node))))
         return -1;
     if (!(node->key = byte_array_copy(key))) {
@@ -420,11 +431,11 @@ int map_insert(struct map* m, const struct byte_array* key, void *data)
     node->data = data;
     node->next = m->nodes[hash];
     m->nodes[hash] = node;
-    
+
     return 0;
 }
 
-struct array* map_keys(const struct map* m) {
+struct array* map_keys(const struct map *m) {
     struct array *a = array_new();
     for (int i=0; i<m->size; i++)
         for (const struct hash_node* n = m->nodes[i]; n; n=n->next)
@@ -433,7 +444,7 @@ struct array* map_keys(const struct map* m) {
     return a;
 }
 
-struct array* map_values(const struct map* m) {
+struct array* map_values(const struct map *m) {
     struct array *a = array_new();
     for (int i=0; i<m->size; i++)
         for (const struct hash_node* n = m->nodes[i]; n; n=n->next)
@@ -442,14 +453,15 @@ struct array* map_values(const struct map* m) {
     return a;
 }
 
-int map_remove(struct map* m, const struct byte_array* key)
+int map_remove(struct map *m, const void *key)
 {
     struct hash_node *node, *prevnode = NULL;
     size_t hash = m->hash_func(key)%m->size;
-    
+
     node = m->nodes[hash];
     while(node) {
-        if (byte_array_equals(node->key, key)) {
+        if (map_key_equals(m->type, node->key, key)) {
+//        if (byte_array_equals(node->key, key)) {
             byte_array_del(node->key);
             if (prevnode) prevnode->next = node->next;
             else m->nodes[hash] = node->next;
@@ -458,61 +470,63 @@ int map_remove(struct map* m, const struct byte_array* key)
         }
         prevnode = node;
         node = node->next;
-    }    
+    }
     return -1;
 }
 
-bool map_has(const struct map* m, const struct byte_array* key) {
+bool map_has(const struct map *m, const void *key)
+{
     struct hash_node *node;
     size_t hash = m->hash_func(key) % m->size;
     node = m->nodes[hash];
     while (node) {
-        if (byte_array_equals(node->key, key))
+        if (map_key_equals(m->type, node->key, key))
+//        if (byte_array_equals(node->key, key))
             return true;
         node = node->next;
     }
     return false;
 }
 
-void *map_get(const struct map* m, const struct byte_array* key)
+void *map_get(const struct map *m, const void *key)
 {
     struct hash_node *node;
     size_t hash = m->hash_func(key) % m->size;
     node = m->nodes[hash];
     while (node) {
-        if (byte_array_equals(node->key, key))
+        if (map_key_equals(m->type, node->key, key))
+//        if (byte_array_equals(node->key, key))
             return node->data;
         node = node->next;
     }
     return NULL;
 }
 
-int map_resize(struct map* m, size_t size)
+int map_resize(struct map *m, size_t size)
 {
     DEBUGPRINT("map_resize\n");
     struct map newtbl;
     size_t n;
     struct hash_node *node,*next;
-    
+
     newtbl.size = size;
     newtbl.hash_func = m->hash_func;
-    
+
     if (!(newtbl.nodes = (struct hash_node**)calloc(size, sizeof(struct hash_node*))))
         return -1;
-    
-    for(n = 0; n<m->size; ++n) {
+
+    for (n = 0; n<m->size; ++n) {
         for(node = m->nodes[n]; node; node = next) {
             next = node->next;
             map_insert(&newtbl, node->key, node->data);
             map_remove(m, node->key);
-            
         }
     }
-    
+
     free(m->nodes);
     m->size = newtbl.size;
     m->nodes = newtbl.nodes;
-    
+
     return 0;
 }
 
@@ -529,7 +543,7 @@ void map_update(struct map *a, const struct map *b)
 
 struct map *map_copy(struct map *original)
 {
-    struct map *copy = map_new();
+    struct map *copy = map_new(original ? original->type : MAP_KEY_BYTE_ARRAY);
     if (!original)
         return copy;
     map_update(copy, original);

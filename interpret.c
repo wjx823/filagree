@@ -26,7 +26,7 @@ struct variable *repl()
 {
     char stdinput[FG_MAX_INPUT];
     struct variable *v = NULL;
-    struct context *context = vm_init();
+    struct context *context = context_new();
 	
     for (;;) {
         fflush(stdin);

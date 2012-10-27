@@ -12,6 +12,7 @@ enum VarType {
     VAR_FNC,
     VAR_LST,
     VAR_MAP,
+    VAR_VST,
     VAR_SRC,
     VAR_ERR,
     VAR_C,
@@ -24,7 +25,7 @@ typedef struct variable *(find_c_var)(context_p context, const struct byte_array
 struct variable {
     const struct byte_array* name;
     enum VarType type;
-    uint8_t marked;
+    uint32_t marked;
     union {
         struct byte_array* str;
         struct array *list;
@@ -38,12 +39,12 @@ struct variable {
 
 struct variable* variable_new(struct context *context, enum VarType type);
 void variable_del(struct context *context, struct variable *v);
-struct byte_array* variable_value(struct context *context, const struct variable* v);
-const char* variable_value_str(struct context *context, const struct variable* v);
+struct byte_array* variable_value(struct context *context, struct variable* v);
+const char* variable_value_str(struct context *context, struct variable* v);
 struct byte_array *variable_serialize(struct context *context, struct byte_array *bits,
                                       const struct variable *in);
 struct variable *variable_deserialize(struct context *context, struct byte_array *str);
-extern int variable_save(struct context *context, const struct variable* v, const struct variable* path);
+extern int variable_save(struct context *context, struct variable* v, const struct variable* path);
 extern struct variable *variable_load(struct context *context, const struct variable* path);
 
 struct variable* variable_new_bool(struct context *context, bool b);
@@ -57,6 +58,7 @@ struct variable *variable_new_str(struct context *context, struct byte_array *st
 struct variable *variable_new_fnc(struct context *context, struct byte_array *body, struct map *closures);
 struct variable *variable_new_list(struct context *context, struct array *list);
 struct variable *variable_new_src(struct context *context, uint32_t size);
+
 struct variable *variable_copy(struct context *context, const struct variable *v);
 struct variable *variable_pop(struct context *context);
 //struct variable *variable_get(struct context *context, const struct variable *v, uint32_t i);

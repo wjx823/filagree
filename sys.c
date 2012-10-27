@@ -21,16 +21,6 @@ struct string_func
     callback2func* func;
 };
 
-/*
- typedef struct variable *(callback2method)(context_p context, struct variable *indexable, struct variable *index);
-
-struct string_method
-{
-    const char *name;
-    callback2method *method;
-};
-*/
-
 struct variable *sys = NULL;
 
 
@@ -50,8 +40,8 @@ void sys_print(struct context *context)
 void sys_save(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
-    struct variable *v = (struct variable*)array_get(value->list, 1); // (struct variable*)stack_pop(context->operand_stack);
-    struct variable *path = (struct variable*)array_get(value->list, 2);  // (struct variable*)stack_pop(context->operand_stack);
+    struct variable *v = (struct variable*)array_get(value->list, 1);
+    struct variable *path = (struct variable*)array_get(value->list, 2);
     variable_save(context, v, path);
 }
 
@@ -79,6 +69,13 @@ void sys_read(struct context *context)
 }
 
 void sys_run(struct context *context)
+{
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *script = (struct variable*)array_get(value->list, 1);
+    execute(script->str, false, NULL);
+}
+
+void sys_interpret(struct context *context)
 {
     stack_pop(context->operand_stack); // self
     struct variable *script = (struct variable*)stack_pop(context->operand_stack);
@@ -157,27 +154,27 @@ void sys_input(struct context *context)
 }
 
 struct string_func builtin_funcs[] = {
-    //	{"yield",   (callback2c*)&sys_callback2c},
-	{"args",    (callback2func*)&sys_args},
-    {"print",   (callback2func*)&sys_print},
-    {"read",    (callback2func*)&sys_read},
-    {"save",    (callback2func*)&sys_save},
-    {"load",    (callback2func*)&sys_load},
-    {"run",     (callback2func*)&sys_run},
-    {"remove",  (callback2func*)&sys_rm},
-    {"window",  (callback2func*)&sys_window},
-    {"loop",    (callback2func*)&sys_loop},
-    {"button",  (callback2func*)&sys_button},
-    {"input",   (callback2func*)&sys_input},
-    {"atoi",    (callback2func*)&sys_atoi},
+	{"args",        (callback2func*)&sys_args},
+    {"print",       (callback2func*)&sys_print},
+    {"read",        (callback2func*)&sys_read},
+    {"save",        (callback2func*)&sys_save},
+    {"load",        (callback2func*)&sys_load},
+    {"run",         (callback2func*)&sys_run},
+    {"interpret",   (callback2func*)&sys_interpret},
+    {"remove",      (callback2func*)&sys_rm},
+    {"window",      (callback2func*)&sys_window},
+    {"loop",        (callback2func*)&sys_loop},
+    {"button",      (callback2func*)&sys_button},
+    {"input",       (callback2func*)&sys_input},
+    {"atoi",        (callback2func*)&sys_atoi},
 };
 
 struct variable *sys_find(struct context *context, const struct byte_array *name)
 {
     if (strncmp(RESERVED_SYS, (const char*)name->data, strlen(RESERVED_SYS)))
         return NULL;
-    if (!sys) {
-        struct map *sys_func_map = map_new();
+    if (!sys) { // create sys if needed
+        struct map *sys_func_map = map_new(MAP_KEY_BYTE_ARRAY);
         for (int i=0; i<ARRAY_LEN(builtin_funcs); i++) {
             struct byte_array *name = byte_array_from_string(builtin_funcs[i].name);
             struct variable *value = variable_new_c(context, builtin_funcs[i].func);
@@ -185,7 +182,6 @@ struct variable *sys_find(struct context *context, const struct byte_array *name
         }
         sys = variable_new_map(context, sys_func_map);
     }
-//    return map_get(func_map, name);
     return sys;
 }
 
@@ -227,7 +223,7 @@ int compar(struct context *context, const void *a, const void *b, struct variabl
     if (comparator) {
 
         byte_array_reset(comparator->str);
-        stack_push(context->operand_stack, comparator);
+//        stack_push(context->operand_stack, comparator);
         vm_call(context, comparator, av, bv, NULL);
 
         struct variable *result = (struct variable*)stack_pop(context->operand_stack);
@@ -275,6 +271,8 @@ int heapcmp(struct context *context,
 
 int heapsortfg(struct context *context, void *base, size_t nel, size_t width, struct variable *comparator)
 {
+    if (!nel)
+        return 0;
     void *t = malloc(width); // the temporary value
     unsigned int n = nel, parent = nel/2, index, child; // heap indexes
     for (;;) { // loop until array is sorted
@@ -391,7 +389,7 @@ void cfnc_find2(struct context *context, bool has)
             }
         }
     } else {
-        // todo
+        exit_message("don't know how to search"); // todo - extend search and make a better error messsage
         return;
     }
     stack_push(context->operand_stack, result);
@@ -435,7 +433,7 @@ void cfnc_add(struct context *context)
         inserted = variable_copy(context, self);
         array_add(inserted->list, insertion);
     }
-    stack_push(context->operand_stack, inserted);
+    //stack_push(context->operand_stack, inserted);
 }
 
 //    a                b        c
@@ -509,7 +507,7 @@ struct variable *builtin_method(struct context *context,
         return variable_new_list(context, indexable->list);
 
     if (!strcmp(idxstr, FNC_KEYS)) {
-        assert_message(it == VAR_LST || it == VAR_MAP, "keys are only for map or list");
+        assert_message(it == VAR_LST, "keys are only for list");
 
         struct variable *v = variable_new_list(context, array_new());
         if (indexable->map) {
@@ -523,7 +521,7 @@ struct variable *builtin_method(struct context *context,
     }
 
     if (!strcmp(idxstr, FNC_VALUES)) {
-        assert_message(it == VAR_LST || it == VAR_MAP, "values are only for map or list");
+        assert_message(it == VAR_LST, "values are only for list");
         if (!indexable->map)
             return variable_new_list(context, array_new());
         else

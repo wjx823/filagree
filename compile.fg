@@ -1,11 +1,9 @@
-# todo: has, and/or shortcut
-
 compiler = [
 
     'lex' : function(self, script)
 
-        lexeme = function(type, value)
-            return ['type' : type, 'value' : value]
+        lexeme = function(lexeme, value)
+            return ['lexeme' : lexeme, 'value' : value]
         end
 
         result = []
@@ -22,7 +20,7 @@ compiler = [
             end
 
             if digits.find(script[i]) != -1             # number
-                n,j = vm.atoi(script, i)
+                n,j = sys.atoi(script, i)
                 i = i + j
                 result.add(lexeme('number', n))
             else
@@ -49,55 +47,59 @@ compiler = [
         end,
 
         'exp' : function(self)
-            return self.symbol('expression', '+-/*', self.exp2(), self.exp2)
+            op1 = self.exp2()
+            if not op1 then return nil end
+            wrd = self.fetch_may(['word'])
+            if not wrd then return op1 end
+            op2 = self.exp2()
+            if not op2 then throw 'bad exp' end
+            wrd.children = [op1, op2]
+            return wrd
         end,
 
         'exp2' : function(self)
             return self.fetch_may(['variable', 'number', 'string'])
         end,
 
-        'symbol' : function(self, type, sought, before, after)
-            b = before
-            f = self.fetch_may(sought)
-            if not f then
-                return b
-            end
-            a = self.fetch_must([after()])
-            return ['type':type, 'children':[b,a]]
-        end,
-
         'fetch_may' : function(self, options)
             if self.parse_index >= self.lexemes.length then
                 return nil
             end
-            l = self.lexemes[parse_index]
-            if options.find(l.type) != -1 then
+            l = self.lexemes[self.parse_index]
+            if options.find(l.lexeme) != -1 then
+                self.parse_index = self.parse_index + 1
                 return l
             end
             return nil
         end,
-
-        'fetch_must' : function(self, options)
-            f = self.fetch_may(options)
-            if not f then
-                throw('parse error')
-            end
-            return f
-        end,
-
     ],
 
-    'generate' : function(self, symbols)
-        return 'vm.print(9)'
+    'opcode' : ['VM_INT':1, 'VM_ADD':2],
+
+    'generate_code' : function(self, root, code)
+        for child in root.children
+            code = code + self.generate_code(child, code)
+        end
+        if root.lexeme == 'word' then
+            code = code + self.opcode.VM_ADD
+        else if root.lexeme == 'number' then
+            code = code + self.opcode.VM_INT.serialize(true) # todo: meta code.add
+            code = code + root.value.serialize(true)
+        end
+        return code
+    end,
+
+    'generate' : function(self, root)
+        code = self.generate_code(root, '')
+        code = code.length.serialize(true) + code
+        return code
     end,
 
     'build' : function(self, input)
 
         lexemes = self.lex(input)
-        vm.print('lexd = ' + lexemes)
         parsed = self.parser.parse(lexemes)
         program = self.generate(parsed)
-
         return program
 
     end,
@@ -105,11 +107,11 @@ compiler = [
     'interpret_file' : function(self, filename)
 
         try
-            script = vm.read(filename)
+            script = sys.read(filename)
             bytecode = self.build(script)
-            /* vm.run(bytecode) /* bytecode() */
+            sys.run(bytecode)
         catch err
-            vm.print(err)
+            sys.print(err)
         end
 
     end

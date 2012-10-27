@@ -580,7 +580,7 @@ struct token *fetch(enum Lexeme lexeme) {
         //DEBUGPRINT("fetched %s instead of %s at %d\n", lexeme_to_string(token->lexeme), lexeme_to_string(lexeme), parse_index);
         return NULL;
     }
-    DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
+    //DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
     // display_token(token, 0);
 
     parse_index++;
@@ -635,7 +635,7 @@ struct symbol *symbol_fetch(enum Nonterminal n, enum Lexeme goal, ...)
 
             symbol = symbol_new(n);
             symbol->token = token;
-            DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
+            //DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
             // display_token(token, 0);
 
             parse_index++;
@@ -1457,7 +1457,7 @@ struct byte_array *build_string(const struct byte_array *input) {
     DEBUGPRINT("lex %d:\n", input_copy->length);
 
     lex_list = array_new();
-    imports = map_new();
+    imports = map_new(MAP_KEY_BYTE_ARRAY);
     struct array* list = lex(input_copy);
 
     struct symbol *tree = parse(list, 0);

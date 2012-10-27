@@ -54,6 +54,7 @@
 		88A65D9F147757400055DACF /* vm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = vm.c; sourceTree = "<group>"; };
 		88A65DA81477574E0055DACF /* test.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test.fg; sourceTree = "<group>"; };
 		88A65DA91477574E0055DACF /* unit_test.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = unit_test.fg; sourceTree = "<group>"; };
+		88AA20D216209EB000634794 /* proto.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = proto.fg; sourceTree = "<group>"; };
 		88C760B015428A5100A4F8E7 /* interpret.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = interpret.h; sourceTree = "<group>"; };
 		88C760B215428A5F00A4F8E7 /* interpret.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = interpret.c; sourceTree = "<group>"; };
 		88E1FA6015CBBEE9001E6488 /* compile.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = compile.fg; sourceTree = "<group>"; };
@@ -133,6 +134,7 @@
 				88A65DA91477574E0055DACF /* unit_test.fg */,
 				88E1FA6015CBBEE9001E6488 /* compile.fg */,
 				88E1FA6515CC5263001E6488 /* try.fg */,
+				88AA20D216209EB000634794 /* proto.fg */,
 				88784E0615CDC8860052A0F2 /* program.fg */,
 				880E6A3F15FB1B0B008A06F7 /* sys.fg */,
 			);

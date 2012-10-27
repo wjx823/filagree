@@ -84,23 +84,26 @@ bool stack_empty(const struct stack* stack);
 // map /////////////////////////////////////////////////////////////////////
 
 struct hash_node {
-	struct byte_array *key;
+	void *key;
 	void *data;
 	struct hash_node *next;
 };
 
+enum map_key_type {MAP_KEY_BYTE_ARRAY, MAP_KEY_VOID_STAR};
+
 struct map {
+    enum map_key_type type;
 	size_t size;
 	struct hash_node **nodes;
 	size_t (*hash_func)(const struct byte_array*);
 };
 
-struct map* map_new();
+struct map* map_new(enum map_key_type type);
 void map_del(struct map* map);
-int map_insert(struct map* map, const struct byte_array *key, void *data);
-int map_remove(struct map* map, const struct byte_array *key);
-void *map_get(const struct map* map, const struct byte_array *key);
-bool map_has(const struct map* map, const struct byte_array *key);
+int map_insert(struct map* map, const void *key, void *data);
+int map_remove(struct map* map, const void *key);
+void *map_get(const struct map* map, const void *key);
+bool map_has(const struct map* map, const void *key);
 int map_resize(struct map* map, size_t size);
 struct array* map_keys(const struct map* m);
 struct array* map_values(const struct map* m);

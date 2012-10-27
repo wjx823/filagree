@@ -15,15 +15,15 @@
 
 struct context {
     struct program_state *vm_state;
+    struct variable *vm_exception;
+    struct variable* error;
     struct stack *program_stack;
     struct stack *operand_stack;
-    struct variable *vm_exception;
-    find_c_var *find;
+    struct byte_array *program;
     bool runtime;
-    bool done;
     uint32_t num_vars;
-    struct variable* error;
     uint8_t indent;
+    find_c_var *find;
 };
 
 struct program_state {
@@ -38,6 +38,7 @@ struct program_state {
 enum Opcode {
     VM_NIL, // push nil
     VM_INT, // push an integer
+    VM_ADD, // add two values
     VM_FLT, // push a float
     VM_BUL, // push a boolean
     VM_STR, // push a string
@@ -50,7 +51,6 @@ enum Opcode {
     VM_MAP, // push a map
     VM_GET, // get an item from a list or map
     VM_PUT, // put an item in a list or map
-    VM_ADD, // add two values
     VM_SUB, // subtract two values
     VM_MUL, // multiply two values
     VM_DIV, // divide two values
@@ -88,7 +88,7 @@ enum Opcode {
 #ifdef DEBUG
 void display_program(struct byte_array* program);
 #endif
-struct context *vm_init();
+struct context *context_new();
 struct variable *execute(struct byte_array *program,
                          bool in_context,
                          find_c_var *find);
