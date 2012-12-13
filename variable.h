@@ -19,7 +19,7 @@ enum VarType {
 };    
 
 typedef struct context *context_p; // forward declaration
-typedef void(callback2func)(context_p context);
+typedef struct variable *(callback2func)(context_p context);
 typedef struct variable *(find_c_var)(context_p context, const struct byte_array *name);
 
 struct variable {
@@ -32,7 +32,7 @@ struct variable {
         int32_t integer;
         float floater;
         bool boolean;
-        void(*cfnc)(context_p); // i.e., bridge
+        struct variable*(*cfnc)(context_p);
     };
     struct map *map;
 };

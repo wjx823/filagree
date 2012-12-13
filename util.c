@@ -90,7 +90,7 @@ const char *make_message(const char *format, va_list ap)
 void exit_message2(const char *format, va_list list)
 {
     const char *message = make_message(format, list);
-    log_print("%s\n", message);
+    log_print("\n%s\n", message);
     va_end(list);
     exit(1);
 }

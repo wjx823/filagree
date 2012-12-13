@@ -322,5 +322,12 @@ tester.test('string class',
     end,
     10)
 
+tester.test('assignment expression',
+    function()
+        a = b = c = 7
+        return a + b + c
+    end,
+    21)
+
 
 tester.done()

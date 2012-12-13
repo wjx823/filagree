@@ -39,8 +39,7 @@ struct variable* variable_new(struct context *context, enum VarType type)
     return v;
 }
 
-struct variable* variable_new_nil(struct context *context)
-{
+struct variable* variable_new_nil(struct context *context) {
     return variable_new(context, VAR_NIL);
 }
 
@@ -112,7 +111,7 @@ struct variable *variable_new_src(struct context *context, uint32_t size)
         } else
             array_insert(v->list, 0, o);
     }
-//    DEBUGPRINT("src = %s\n", variable_value_str(context, v));
+//  DEBUGPRINT("src = %s\n", variable_value_str(context, v));
     return v;
 }
 
@@ -170,20 +169,20 @@ const char *variable_value_str2(struct context *context, struct variable* v, uin
     else if (v->map || vt == VAR_LST) {
         v->marked = *marker;
         (*marker)++;
-        sprintf(str, "&%d", v->marked);
+        sprintf(str, "&%d ", v->marked);
     }
 
     struct array* list = v->list;
 
     switch (vt) {
-        case VAR_NIL:    sprintf(str, "%s nil", str);                               break;
-        case VAR_INT:    sprintf(str, "%s %d", str, v->integer);                    break;
-        case VAR_BOOL:   sprintf(str, "%s %s", str, v->boolean ? "true" : "false"); break;
-        case VAR_FLT:    sprintf(str, "%s %f", str, v->floater);                    break;
-        case VAR_STR:    sprintf(str, "%s %s", str, byte_array_to_string(v->str));  break;
-        case VAR_FNC:    sprintf(str, "%s f(%dB)", str, v->str->length);            break;
-        case VAR_C:      sprintf(str, "%s c-function", str);                        break;
-        case VAR_VST:    sprintf(str, "%s visited %d", str, v->integer);            break;
+        case VAR_NIL:    sprintf(str, "%snil", str);                               break;
+        case VAR_INT:    sprintf(str, "%s%d", str, v->integer);                    break;
+        case VAR_BOOL:   sprintf(str, "%s%s", str, v->boolean ? "true" : "false"); break;
+        case VAR_FLT:    sprintf(str, "%s%f", str, v->floater);                    break;
+        case VAR_STR:    sprintf(str, "%s%s", str, byte_array_to_string(v->str));  break;
+        case VAR_FNC:    sprintf(str, "%sf(%dB)", str, v->str->length);            break;
+        case VAR_C:      sprintf(str, "%sc-function", str);                        break;
+        case VAR_VST:    sprintf(str, "%svisited %d", str, v->integer);            break;
         case VAR_MAP:                                                               break;
         case VAR_SRC:    vt = vt;
         case VAR_LST: {
@@ -241,7 +240,6 @@ void variable_unmark(struct variable *v)
     if (v->type == VAR_LST) {
         for (int i=0; i<v->list->length; i++) {
             struct variable* element = (struct variable*)array_get(v->list, i);
-//            element->marked = false;
             variable_unmark(element);
         }
     }
@@ -251,8 +249,6 @@ void variable_unmark(struct variable *v)
         for (int i=0; i<a->length; i++) {
             struct variable *aiv = (struct variable*)array_get(a,i);
             struct variable *biv = (struct variable*)array_get(b,i);
-//            aiv->marked = false;
-//            biv->marked = false;
             variable_unmark(aiv);
             variable_unmark(biv);
         }
@@ -280,7 +276,7 @@ struct variable *variable_pop(struct context *context)
 //    DEBUGPRINT("\nvariable_pop %s\n", variable_value_str(context, v));
 //    print_operand_stack(context);
     if (v->type == VAR_SRC) {
-//        DEBUGPRINT("\tsrc");
+//        DEBUGPRINT("\tsrc %d ", v->list->length);
         if (v->list->length)
             v = (struct variable*)array_get(v->list, 0);
         else
@@ -375,7 +371,7 @@ struct variable *variable_deserialize(struct context *context, struct byte_array
             
             uint32_t map_length = serial_decode_int(bits);
             if (map_length) {
-                out->map = map_new(MAP_KEY_BYTE_ARRAY);
+                out->map = map_new(NULL, NULL);
                 for (int i=0; i<map_length; i++) {
                     struct byte_array *key = serial_decode_string(bits);
                     struct variable *value = variable_deserialize(context, bits);
@@ -606,7 +602,7 @@ struct variable *variable_concatenate(struct context *context, int n, const stru
 int variable_map_insert(struct variable* v, const struct byte_array *key, struct variable *datum)
 {
     if (!v->map)
-        v->map = map_new(MAP_KEY_BYTE_ARRAY);
+        v->map = map_new(NULL, NULL);
     return map_insert(v->map, key, datum);
 }
 

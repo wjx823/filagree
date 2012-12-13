@@ -2,37 +2,73 @@ compiler = [
 
     'lex' : function(self, script)
 
-        lexeme = function(lexeme, value)
+        lexify = function(lexeme, value)
             return ['lexeme' : lexeme, 'value' : value]
         end
 
+        lexeme = function(self)
+            for word in self.vocabulary
+                slice = self.script.part(self.lex_index, word.length)
+                if word == slice then
+                    return word, self.lex_index + word.length
+        end end end
+
+        number = function(self)
+            digits = '0123456789'
+            if digits.has(self.script[self.lex_index])
+                n,j = sys.atoi(self.script, self.lex_index)
+                self.lex_index = self.lex_index + j
+                return self.lexify('number', n)
+        end end
+
+        self.alnum = function(self)
+            if self.lex_index >= self.script.length then return nil end
+            c = self.script.part(self.lex_index, 1)
+            if self.idchars.has(c) then return c end
+            return nil
+        end
+
+        identifier = function(self)
+            id = ''
+            while c = self.alnum()
+                id = id + c
+            end
+            if id.length > 0 then return id end
+            return false
+        end
+
+        fit = function(self)
+            args = sys.args()
+            args.remove(0)
+            for arg in args
+                #sys.print('arg = ' + arg)
+                if l = arg(self) then return l end
+            end
+            return false
+        end
+
+        self.script = script
         result = []
-        i = 0
+        self.lex_index = 0
 
-        white = ' \t\n'
-        digits = '0123456789'
-        vocabulary = [ '+', '-', '/*', '*/']
+        self.idchars = '_01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        self.vocabulary = [ '+', '-', '/*', '*/', '=']
+        while self.lex_index < script.length
 
-        while i < script.length
-
-            while white.find(script[i]) != -1           # white space
-                i = i + 1
+            while ' \t\n'.has(script[self.lex_index]) # white space
+                self.lex_index = self.lex_index + 1
             end
 
-            if digits.find(script[i]) != -1             # number
-                n,j = sys.atoi(script, i)
-                i = i + j
-                result.add(lexeme('number', n))
+            if found = fit(self, number, identifier, lexeme) then
+                result.add(found)
             else
-                for word in vocabulary                  # in vocab
-                    if script.find(word, i) == i then
-                        result.add(lexeme('word', word))
-                        i = i + word.length
-        end end end end
+                throw ('could not lex')
+            end
+        end
 
         return result
 
-    end,
+    end, # lex
 
     'parser' : [
 
@@ -43,7 +79,20 @@ compiler = [
         end,
 
         'statements' : function(self)
-            return self.exp()
+            a = self.assignment()
+            if not a then throw ('could not parse') end
+            return a
+        end,
+
+        'assignment' : function(self)
+            v = self.fetch_may(['variable'])
+            if not v then return nil end
+            q = self.fetch_may(['set'])
+            if not e then return nil end
+            e = self.exp()
+            if not e then throw('missing expression') end
+            q.children = [v,e]
+            return q
         end,
 
         'exp' : function(self)
@@ -72,35 +121,48 @@ compiler = [
             end
             return nil
         end,
-    ],
+    ], # parser
 
-    'opcode' : ['VM_INT':1, 'VM_ADD':2],
+    'opcode' : ['VM_INT':1, 'VM_ADD':2, 'VM_SET':3],
 
-    'generate_code' : function(self, root, code)
-        for child in root.children
-            code = code + self.generate_code(child, code)
-        end
-        if root.lexeme == 'word' then
-            code = code + self.opcode.VM_ADD
-        else if root.lexeme == 'number' then
-            code = code + self.opcode.VM_INT.serialize(true) # todo: meta code.add
-            code = code + root.value.serialize(true)
-        end
+    'byte' : function(self, n)
+        code = ' '
+        code[0] = n
         return code
     end,
 
+    'generate_code' : function(self, root)
+
+        if root.lexeme == 'number' then
+            return self.byte(self.opcode.VM_INT) + self.byte(root.value)
+        end
+
+        code = ''
+        for child in root.children
+            code = code + self.generate_code(child)
+        end
+
+        if root.value == '+' then
+            return code + self.byte(self.opcode.VM_ADD)
+        else if root.value == '=' then
+            return code + self.byte(self.opcode.VM_SET)
+        else
+            throw('could not generate')
+        end
+    end,
+
     'generate' : function(self, root)
-        code = self.generate_code(root, '')
-        code = code.length.serialize(true) + code
+        code = self.generate_code(root)
+        code = self.byte(code.length) + code
         return code
     end,
 
     'build' : function(self, input)
 
-        lexemes = self.lex(input)
-        parsed = self.parser.parse(lexemes)
-        program = self.generate(parsed)
-        return program
+        mexemes = self.lex(input)
+#        parsed = self.parser.parse(lexemes)
+#        program = self.generate(parsed)
+#        return program
 
     end,
 
@@ -109,7 +171,7 @@ compiler = [
         try
             script = sys.read(filename)
             bytecode = self.build(script)
-            sys.run(bytecode)
+//            sys.run(bytecode)
         catch err
             sys.print(err)
         end
