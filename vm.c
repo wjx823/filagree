@@ -960,6 +960,8 @@ static struct variable *binary_op_nil(struct context *context,
     switch (op) {
         case VM_EQU:    return variable_new_bool(context, v->type == u->type);
         case VM_NEQ:    return variable_new_bool(context, v->type != u->type);
+        case VM_ADD:
+        case VM_SUB:    return variable_copy(context, v);
         default:
             return vm_exit_message(context, "unknown binary nil op");
     }

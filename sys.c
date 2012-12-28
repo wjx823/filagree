@@ -381,7 +381,7 @@ struct variable *cfnc_find2(struct context *context, bool has)
             struct variable *v = (struct variable*)array_get(self->list, i);
             if ((sought->type == VAR_INT && v->type == VAR_INT && v->integer == sought->integer) ||
                 (sought->type == VAR_STR && v->type == VAR_STR && byte_array_equals(sought->str, v->str)))
-                result = v;
+                result = has ? variable_new_bool(context, true) : v;
         }
     }
     if (!result && self->map && sought->type == VAR_STR)

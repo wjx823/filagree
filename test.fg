@@ -302,7 +302,6 @@ tester.test('custom setter',
     end,
     125)
 
-/*
 tester.test('list class',
     function()
         list = sys.List('x')
@@ -322,7 +321,6 @@ tester.test('string class',
         return (a*10) + b
     end,
     10)
-*/
 
 tester.test('assignment expression',
     function()
