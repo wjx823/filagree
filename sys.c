@@ -205,7 +205,7 @@ struct variable *sys_find(struct context *context, const struct byte_array *name
 #define FNC_PART        "part"
 #define FNC_REMOVE      "remove"
 #define FNC_INSERT      "insert"
-#define FNC_ADD         "add"
+//#define FNC_ADD         "add"
 
 
 int compar(struct context *context, const void *a, const void *b, struct variable *comparator)
@@ -365,7 +365,7 @@ struct variable *cfnc_find2(struct context *context, bool has)
     null_check(self);
     null_check(sought);
 
-    struct variable *result = variable_new_nil(context);
+    struct variable *result = NULL;
 
     if (self->type == VAR_STR && sought->type == VAR_STR) {                     // search for substring
         assert_message(!start || start->type == VAR_INT, "non-integer index");
@@ -376,23 +376,17 @@ struct variable *cfnc_find2(struct context *context, bool has)
         else
             result = variable_new_int(context, index);
 
-    } else if (self->type == VAR_LST && sought->type == VAR_STR) {
-        if (!(result = (struct variable*)map_get(self->map, sought->str)))
-            result = variable_new_nil(context);
-
-    } else if (self->type == VAR_LST && sought->type == VAR_INT) {
+    } else if (self->type == VAR_LST) {
         for (int i=0; i<self->list->length; i++) {
-            struct variable *candidate = (struct variable*)array_get(self->list, i);
-            if (candidate->type == VAR_INT && candidate->integer == sought->integer) {
-                result = candidate;
-                break;
-            }
+            struct variable *v = (struct variable*)array_get(self->list, i);
+            if ((sought->type == VAR_INT && v->type == VAR_INT && v->integer == sought->integer) ||
+                (sought->type == VAR_STR && v->type == VAR_STR && byte_array_equals(sought->str, v->str)))
+                result = v;
         }
-    } else {
-        exit_message("don't know how to search"); // todo - extend search and make a better error messsage
-        return NULL;
     }
-    return result;
+    if (!result && self->map && sought->type == VAR_STR)
+        result = (struct variable*)map_get(self->map, sought->str);
+    return result ? result : variable_new_nil(context);
 }
 
 struct variable *cfnc_find(struct context *context) {
@@ -405,19 +399,41 @@ struct variable *cfnc_has(struct context *context) {
 
 struct variable *cfnc_insert(struct context *context)
 {
-    struct variable *self = (struct variable*)stack_pop(context->operand_stack);
-    struct variable *start = (struct variable*)stack_pop(context->operand_stack);
-    struct variable *insertion = (struct variable*)stack_pop(context->operand_stack);
-    assert_message(start->type == VAR_INT, "non-integer index");
-    assert_message(self->type == VAR_LST || (self->type == VAR_STR && insertion->type == VAR_STR), "insertion doesn't match destination");
+    struct variable *args = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *self = (struct variable*)array_get(args->list, 0);
+    struct variable *insertion = (struct variable*)array_get(args->list, 1);
+    struct variable *start = args->list->length > 2 ? (struct variable*)array_get(args->list, 2) : NULL;
+    null_check(self);
+    null_check(insertion);
+    assert_message(!start || start->type == VAR_INT, "non-integer index");
 
-    int32_t position = start->integer;
+    int32_t position = start ? start->integer : 0;
     struct variable *first = variable_part(context, variable_copy(context, self), 0, position);
     struct variable *second = variable_part(context, variable_copy(context, self), position, -1);
-    struct variable *joined = variable_concatenate(context, 3, first, self, second);
+
+    switch (self->type) {
+        case VAR_LST: {
+            struct array *list = array_new_size(1);
+            array_set(list, 0, insertion);
+            insertion = variable_new_list(context, list);
+        } break;
+        case VAR_STR:
+            assert_message(insertion->type == VAR_STR, "insertion doesn't match destination");
+            break;
+        default:
+            exit_message("bad insertion destination");
+            break;
+    }
+
+    struct variable *joined = variable_concatenate(context, 3, first, insertion, second);
+    if (self->type == VAR_LST)
+        self->list = joined->list;
+    else
+        self->str = joined->str;
     return joined;
 }
 
+/*
 struct variable *cfnc_add(struct context *context)
 {
     struct variable *args = (struct variable*)stack_pop(context->operand_stack);
@@ -429,11 +445,12 @@ struct variable *cfnc_add(struct context *context)
     if (self->type == inserted->type)
         inserted = variable_concatenate(context, 3, self, insertion);
     else {
-        inserted = variable_copy(context, self);
-        array_add(inserted->list, insertion);
+//        inserted = variable_copy(context, self);
+        array_add(self->list, insertion);
     }
     return NULL;
 }
+*/
 
 //    a                b        c
 // <sought> <replacement> [<start>]
@@ -490,8 +507,15 @@ struct variable *builtin_method(struct context *context,
     const char *idxstr = byte_array_to_string(index->str);
 
     if (!strcmp(idxstr, FNC_LENGTH)) {
-        assert_message(indexable->type==VAR_LST || indexable->type==VAR_STR, "no length for non-indexable");
-        return variable_new_int(context, indexable->list->length);
+        int n;
+        switch (indexable->type) {
+            case VAR_LST: n = indexable->list->length;  break;
+            case VAR_STR: n = indexable->str->length;   break;
+            default:
+                exit_message("no length for non-indexable");
+                return NULL;
+        }
+        return variable_new_int(context, n);
     }
     if (!strcmp(idxstr, FNC_TYPE)) {
         const char *typestr = var_type_str(it);
@@ -538,6 +562,7 @@ struct variable *builtin_method(struct context *context,
         return d;
     }
 
+    // todo: don't create a new variable every time
     if (!strcmp(idxstr, FNC_SORT)) {
         assert_message(indexable->type == VAR_LST, "sorting non-list");
         return variable_new_c(context, &cfnc_sort);
@@ -561,8 +586,8 @@ struct variable *builtin_method(struct context *context,
     if (!strcmp(idxstr, FNC_INSERT))
         return variable_new_c(context, &cfnc_insert);
 
-    if (!strcmp(idxstr, FNC_ADD))
-        return variable_new_c(context, &cfnc_add);
+//    if (!strcmp(idxstr, FNC_ADD))
+//        return variable_new_c(context, &cfnc_add);
 
     if (!strcmp(idxstr, FNC_REPLACE))
         return variable_new_c(context, &cfnc_replace);

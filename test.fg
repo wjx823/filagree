@@ -140,7 +140,7 @@ tester.test('file',
          sys.remove('test_file')
          return x == y
      end,
-     1)
+     true)
 
 tester.test('many returns',
     function()
@@ -302,10 +302,11 @@ tester.test('custom setter',
     end,
     125)
 
+/*
 tester.test('list class',
     function()
         list = sys.List('x')
-        list.add(6)
+        list.insert(6)
         a = list.has(6)
         b = list.has(7)
         return (a*10) + b
@@ -321,13 +322,14 @@ tester.test('string class',
         return (a*10) + b
     end,
     10)
+*/
 
 tester.test('assignment expression',
     function()
-        a = b = c = 7
+        a,b = c,d,e,f,g = 7,8,9
         return a + b + c
     end,
-    21)
+    22)
 
 
 tester.done()

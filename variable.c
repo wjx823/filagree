@@ -272,6 +272,7 @@ struct byte_array *variable_value(struct context *c, struct variable *v) {
 
 struct variable *variable_pop(struct context *context)
 {
+    assert_message(!stack_empty(context->operand_stack), "nothing to pop");
     struct variable *v = (struct variable*)stack_pop(context->operand_stack);
 //    DEBUGPRINT("\nvariable_pop %s\n", variable_value_str(context, v));
 //    print_operand_stack(context);
@@ -554,6 +555,8 @@ struct variable *variable_part(struct context *context, struct variable *self, u
             return variable_new_str(context, str);
         }
         case VAR_LST: {
+            if (length < 0)
+                length = self->list->length + length + 1;
             struct array *list = array_part(self->list, start, length);
             return variable_new_list(context, list);
         }
@@ -586,8 +589,8 @@ struct variable *variable_concatenate(struct context *context, int n, const stru
         struct variable* parameter = va_arg(argp, struct variable* );
         if (!parameter)
             continue;
-        else if (!result)
-            result = variable_copy(context, parameter);
+//        else if (!result)
+//            result = variable_copy(context, parameter);
         else switch (result->type) {
             case VAR_STR: byte_array_append(result->str, parameter->str); break;
             case VAR_LST: array_append(result->list, parameter->list);    break;

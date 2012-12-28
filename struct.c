@@ -162,7 +162,7 @@ bool byte_array_equals(const struct byte_array *a, const struct byte_array* b) {
 
     int i;
     for (i = 0; i<a->length; i++)
-        if (a->data[i] != b->data[i])
+        if (a->data[i] != b->data[i]) // todo: memcmp////////////////////
             return false;
     return true;
 }
@@ -379,6 +379,7 @@ static size_t def_hash_func(const struct byte_array* key)
 
 struct map* map_new(void *context, map_compare *mc)
 {
+    //DEBUGPRINT(" (map_new) ");
     struct map *m;
     if (!(m =(struct map*)malloc(sizeof(struct map)))) return NULL;
     m->size = 16;

@@ -710,7 +710,7 @@ struct symbol *fdecl()
     s->index->exp = LHS;
     FETCH_OR_ERROR(LEX_RIGHTHESIS)
 
-    if (fetch_lookahead(LEX_LEFTHESIS)) {
+    if (fetch_lookahead(LEX_LEFTHESIS, NULL)) {
         s->other = repeated(SYMBOL_VARIABLE, &variable);
         FETCH_OR_ERROR(LEX_RIGHTHESIS)
     }

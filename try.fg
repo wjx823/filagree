@@ -1,1 +1,11 @@
-a,b = d,e,f,g = 7,8,9
+import 'unit_test'
+
+tester.test('file',
+     function()
+        x = 1
+        y = 1
+        return x == y
+     end,
+     false)
+
+tester.done()

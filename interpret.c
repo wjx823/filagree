@@ -22,76 +22,71 @@ void yield(struct context *context) {
 	DEBUGPRINT("%s\n", byte_array_to_string(result));
 }
 
-struct variable *repl()
+void repl()
 {
     char stdinput[FG_MAX_INPUT];
-    struct variable *v = NULL;
     struct context *context = context_new();
-	
+
     for (;;) {
         fflush(stdin);
         stdinput[0] = 0;
         if (!fgets(stdinput, FG_MAX_INPUT, stdin)) {
             if (feof(stdin))
-                return 0;
-            if (ferror(stdin))
-                //return errno;
-                return variable_new_err(context, "unknown error reading stdin");
+                return;
+            if (ferror(stdin)) {
+                printf("unknown error reading stdin\n");
+                return;
+            }
         }
-        if ((v = interpret_string(stdinput, context->find)))
-            return v;
+        interpret_string(stdinput, context->find);
     }
 }
 
-struct variable *interpret_file(const struct byte_array *filename, find_c_var *find)
+void interpret_file(const struct byte_array *filename, find_c_var *find)
 {
     struct byte_array *program = build_file(filename);
-    return execute(program, false, find);
+    execute(program, false, find);
 }
 
-struct variable *execute_file(const struct byte_array* filename, find_c_var *find)
+void execute_file(const struct byte_array* filename, find_c_var *find)
 {
     struct byte_array *program = read_file(filename);
-    return execute(program, false, find);
+    execute(program, false, find);
 }
 
-struct variable *run_file(const char* str, find_c_var *find, struct map *env)
+void run_file(const char* str, find_c_var *find, struct map *env)
 {
     struct byte_array *filename = byte_array_from_string(str);
     struct byte_array *dotfgbc = byte_array_from_string(EXTENSION_BC);
     int fgbc = byte_array_find(filename, dotfgbc, 0);
-    if (fgbc > 0)
-        return execute_file(filename, find);
+    if (fgbc > 0) {
+        execute_file(filename, find);
+        return;
+    }
     struct byte_array *dotfg = byte_array_from_string(EXTENSION_SRC);
     int fg = byte_array_find(filename, dotfg, 0);
     if (fg > 0)
-        return interpret_file(filename, find);
-    return (struct variable*)exit_message("invalid file name");
+        interpret_file(filename, find);
+    else
+        printf("invalid file name\n");
 }
 
-struct variable *interpret_string(const char *str, find_c_var *find)
+void interpret_string(const char *str, find_c_var *find)
 {
-    struct variable *e;
     struct byte_array *input = byte_array_from_string(str);
     struct byte_array *program = build_string(input);
-    if (program && (e = execute(program, true, find)) && (e->type == VAR_ERR))
-        printf("%s\n", byte_array_to_string(e->str));
-    return NULL;
+    execute(program, true, find);
 }
 
 #ifdef CLI
 int main (int argc, char** argv)
 {
-    struct variable *v = NULL;
     switch (argc) {
-        case 1:     v = repl();                         break;
-        case 2:     v = run_file(argv[1], NULL, NULL);  break;
-        case 3:     compile_file(argv[1]);              break;
-        default:    exit_message(ERROR_USAGE);          break;
+        case 1:     repl();                         break;
+        case 2:     run_file(argv[1], NULL, NULL);  break;
+        case 3:     compile_file(argv[1]);          break;
+        default:    exit_message(ERROR_USAGE);      break;
     }
-    if (v && v->type==VAR_ERR)
-        log_print("%s\n", variable_value_str(NULL, v));
-    return v && v->type == VAR_ERR;
 }
 #endif // EXECUTABLE
 

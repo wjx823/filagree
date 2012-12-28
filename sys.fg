@@ -6,12 +6,12 @@ sys.List = sys.class( function(init_args)
                           return ['list':[]]
                       end )
 
-sys.List.add = function(self, datum)
-    self!list.add(datum)
+sys.List.insert = function(self, datum)
+    self!list.insert(datum)
 end
 
 sys.List.has = function(self, havin)
-    return self!list!find(havin) != nil
+    return self!list!has(havin)
 end
 
 
@@ -23,5 +23,5 @@ sys.String = sys.class( function(init_args)
               end )
 
 sys.String.has = function(self, havin)
-    return self!str!find(havin) != -1
+    return self!str!has(havin)
 end

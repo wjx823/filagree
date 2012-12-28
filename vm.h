@@ -14,7 +14,6 @@
 #define RESERVED_GET "get"
 
 struct context {
-    struct program_state *vm_state;
     struct variable *vm_exception;
     struct variable* error;
     struct stack *program_stack;
@@ -91,9 +90,9 @@ enum Opcode {
 void display_program(struct byte_array* program);
 #endif
 struct context *context_new();
-struct variable *execute(struct byte_array *program,
-                         bool in_context,
-                         find_c_var *find);
+void execute(struct byte_array *program,
+             bool in_context,
+             find_c_var *find);
 void garbage_collect(struct context *context);
 void vm_call(struct context *context, struct variable *func, struct variable *arg,...);
 void *vm_exit_message(struct context *context, const char *format, ...);

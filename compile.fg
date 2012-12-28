@@ -1,16 +1,17 @@
 compiler = [
 
-    'lex' : function(self, script)
+    'lexify' : function(self, lexeme, value)
+        return ['lexeme' : lexeme, 'value' : value]
+    end,
 
-        lexify = function(lexeme, value)
-            return ['lexeme' : lexeme, 'value' : value]
-        end
+    'lex' : function(self, script)
 
         lexeme = function(self)
             for word in self.vocabulary
                 slice = self.script.part(self.lex_index, word.length)
                 if word == slice then
-                    return word, self.lex_index + word.length
+                    self.lex_index = self.lex_index + word.length
+                    return self.lexify('word', word)
         end end end
 
         number = function(self)
@@ -32,8 +33,11 @@ compiler = [
             id = ''
             while c = self.alnum()
                 id = id + c
+                self.lex_index = self.lex_index + 1
             end
-            if id.length > 0 then return id end
+            if id.length > 0 then
+                return self.lexify('id', id)
+            end
             return false
         end
 
@@ -60,7 +64,9 @@ compiler = [
             end
 
             if found = fit(self, number, identifier, lexeme) then
+                sys.print(result + ' add ' + found)
                 result.add(found)
+                sys.print('result = ' + result)
             else
                 throw ('could not lex')
             end
@@ -85,10 +91,10 @@ compiler = [
         end,
 
         'assignment' : function(self)
-            v = self.fetch_may(['variable'])
+            v = self.fetch_may(['id'])
             if not v then return nil end
             q = self.fetch_may(['set'])
-            if not e then return nil end
+            if not q then return nil end
             e = self.exp()
             if not e then throw('missing expression') end
             q.children = [v,e]
@@ -107,7 +113,7 @@ compiler = [
         end,
 
         'exp2' : function(self)
-            return self.fetch_may(['variable', 'number', 'string'])
+            return self.fetch_may(['id', 'number', 'string'])
         end,
 
         'fetch_may' : function(self, options)
@@ -115,12 +121,13 @@ compiler = [
                 return nil
             end
             l = self.lexemes[self.parse_index]
-            if options.find(l.lexeme) != -1 then
+            if options.has(l.lexeme) then
                 self.parse_index = self.parse_index + 1
                 return l
             end
             return nil
         end,
+
     ], # parser
 
     'opcode' : ['VM_INT':1, 'VM_ADD':2, 'VM_SET':3],
@@ -158,9 +165,8 @@ compiler = [
     end,
 
     'build' : function(self, input)
-
-        mexemes = self.lex(input)
-#        parsed = self.parser.parse(lexemes)
+        lexemes = self.lex(input)
+        parsed = self.parser.parse(lexemes)
 #        program = self.generate(parsed)
 #        return program
 
@@ -171,7 +177,6 @@ compiler = [
         try
             script = sys.read(filename)
             bytecode = self.build(script)
-//            sys.run(bytecode)
         catch err
             sys.print(err)
         end
