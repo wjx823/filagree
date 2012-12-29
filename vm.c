@@ -53,7 +53,7 @@ void *vm_exit_message(struct context *context, const char *format, ...)
     va_start(list, format);
     set_error(context, format, list);
     va_end(list);
-    
+
     vm_exit();
     return NULL;
 }
@@ -61,13 +61,13 @@ void *vm_exit_message(struct context *context, const char *format, ...)
 void vm_assert(struct context *context, bool assertion, const char *format, ...)
 {
     if (!assertion) {
-        
+
         // make error variable
         va_list list;
         va_start(list, format);
         set_error(context, format, list);
         va_end(list);
-        
+
         vm_exit();
     }
 }
@@ -107,7 +107,7 @@ struct context *context_new()
     context->runtime = true;
     context->num_vars = 0;
     context->indent = 0;
-    
+
     return context;
 }
 
@@ -121,7 +121,7 @@ void mark(struct context *context, struct variable *root)
         for (int i=0; values && i<values->length; i++)
             mark(context, (struct variable*)array_get(values, i));
     }
-    
+
     root->marked = true;
     switch (root->type) {
         case VAR_INT:
@@ -240,31 +240,31 @@ void display_code(struct context *context, struct byte_array *code)
     null_check(context);
     bool was_running = context->runtime;
     context->runtime = false;
-    
+
     INDENT
     run(context, code, false, NULL);
     UNDENT
-    
+
     context->runtime = was_running;
 }
 
 void display_program(struct byte_array *program)
 {
     struct context *context = context_new();
-    
+
     INDENT
     DEBUGPRINT("%sprogram bytes:\n", indentation(context));
-    
+
     INDENT
     for (int i=0; i<program->length; i++)
         DEBUGPRINT("%s%2d:%3d\n", indentation(context), i, program->data[i]);
     UNDENT
-    
+
     DEBUGPRINT("%sprogram instructions:\n", indentation(context));
     byte_array_reset(program);
     struct byte_array* code = serial_decode_string(program);
     display_code(context, code);
-    
+
     UNDENT
     UNDENT
 }
@@ -296,13 +296,13 @@ void vm_call_src(struct context *context, struct variable *func)
         if (v)
             env = v->map;
     }
-    
+
     struct program_state *state = (struct program_state*)stack_peek(context->program_stack, 0);
     struct variable *s = (struct variable*)stack_peek(context->operand_stack, 0);
     state->args = array_copy(s->list);
-    
+
     INDENT
-    
+
     // call the function
     switch (func->type) {
         case VAR_FNC:
@@ -318,13 +318,16 @@ void vm_call_src(struct context *context, struct variable *func)
             }
             stack_push(context->operand_stack, v); // push the result
         } break;
+        case VAR_NIL:
+            vm_exit_message(context, "can't find function");
+            break;
         default:
             vm_exit_message(context, "not a function");
             break;
     }
-    
+
     state->args = NULL;
-    
+
     UNDENT
 }
 
@@ -344,26 +347,26 @@ void vm_call(struct context *context, struct variable *func, struct variable *ar
         va_end(argp);
         variable_push(context, s);
     }
-    
+
     vm_call_src(context, func);
 }
 
 void func_call(struct context *context, enum Opcode op, struct byte_array *program, struct variable *indexable)
 {
     struct variable *func = context->runtime ? (struct variable*)variable_pop(context): NULL;
-    
+
     struct variable *s = src(context, op, program);
     if (!context->runtime)
         return;
-    
+
     if (indexable)
         array_insert(s->list, 0, indexable);
-    
+
     vm_call_src(context, func);
-    
+
     struct variable *result = (struct variable*)stack_peek(context->operand_stack, 0);
     bool resulted = (result && result->type == VAR_SRC);
-    
+
     if (!resulted) { // need a result for an expression, so pretend it returned nil
         struct variable *v = variable_new_src(context, 0);
         array_add(v->list, variable_new_nil(context));
@@ -389,7 +392,7 @@ static void push_list(struct context *context, struct byte_array *program)
     if (!context->runtime)
         VM_DEBUGPRINT("\n");
     struct array *items = array_new();
-    
+
     struct map *map = NULL;
     while (num_items--) {
         struct variable* v = variable_pop(context);
@@ -467,7 +470,7 @@ static struct variable *list_get_int(struct context *context,
                                      uint32_t index)
 {
     null_check(indexable);
-    
+
     enum VarType it = (enum VarType)indexable->type;
     switch (it) {
         case VAR_LST:
@@ -504,14 +507,14 @@ bool custom_method(struct context *context,
 void lookup(struct context *context, struct variable *indexable, struct variable *index, bool really)
 {
     //    DEBUGPRINT(" -- lookup %s -- ", variable_value_str(context, index));
-    
+
     if (!really && custom_method(context, RESERVED_GET, indexable, index, NULL)) {
         //        DEBUGPRINT("custom -- ")
         return;
     }
-    
+
     struct variable *item=0;
-    
+
     switch (index->type) {
         case VAR_INT:
             item = list_get_int(context, indexable, index->integer);
@@ -554,7 +557,7 @@ static int32_t jump(struct context *context, struct byte_array *program)
     DEBUGPRINT("JMP %d\n", offset);
     if (!context->runtime)
         return 0;
-    
+
     if (offset < 0) // skip over current VM_JMP instruction when going backward
         offset -= (program->current - start) + 1;
     return offset;// - (program->current - start);
@@ -621,12 +624,13 @@ static void push_float(struct context *context, struct byte_array *program)
 struct variable *find_var(struct context *context, const struct byte_array *name)
 {
     null_check(name);
-    
+
     const struct program_state *state = (const struct program_state*)stack_peek(context->program_stack, 0);
     struct map *var_map = state->named_variables;
     struct variable *v = (struct variable*)map_get(var_map, name);
-    //DEBUGPRINT("find_var %s in {%p, %p, %p, %p}: %p\n", byte_array_to_string(name), context, context->program_stack, state, var_map, v);
-    
+    if (!strcmp("y", byte_array_to_string(name)))
+        DEBUGPRINT(" find_var %s in {p:%p, s:%p, m:%p}: %p\n", byte_array_to_string(name), context->program_stack, state, var_map, v);
+
     if (!v && context->find)
         v = context->find(context, name);
     if (!v)
@@ -657,7 +661,7 @@ static void push_fnc(struct context *context, struct byte_array *program)
 {
     uint32_t num_closures = serial_decode_int(program);
     struct map *closures = NULL;
-    
+
     for (int i=0; i<num_closures; i++) {
         struct byte_array *name = serial_decode_string(program);
         if (context->runtime) {
@@ -669,12 +673,12 @@ static void push_fnc(struct context *context, struct byte_array *program)
             map_insert(closures, name, c);
         }
     }
-    
+
     struct byte_array *body = serial_decode_string(program);
-    
+
     DEBUGPRINT("FNC %u,%u\n", num_closures, body->length);
     //display_code(context, body);
-    
+
     if (context->runtime) {
         struct variable *f = variable_new_fnc(context, body, closures);
         variable_push(context, f);
@@ -686,22 +690,17 @@ void set_named_variable(struct context *context,
                         const struct byte_array *name,
                         const struct variable *value)
 {
-    //DEBUGPRINT("set_named_variable: %p\n", state);
+    if (!strcmp("y", byte_array_to_string(name)))
+        DEBUGPRINT(" set_named_variable: %p\n", state);
     if (!state)
         state = (struct program_state*)stack_peek(context->program_stack, 0);
     struct map *var_map = state->named_variables;
-    struct variable *to_var = find_var(context, name);
-    
-    if (!to_var) { // new variable
-        to_var = variable_copy(context, value);
-        to_var->name = byte_array_copy(name);
-    } else
-        variable_set(context, to_var, value);
-    
+    struct variable *to_var = variable_copy(context, value);
     map_insert(var_map, name, to_var);
-    
+
     //DEBUGPRINT("SET %s to %s\n", byte_array_to_string(name), variable_value_str(context, value));
-    //DEBUGPRINT(" SET %s in {%p, %p, %p, %p}\n", byte_array_to_string(name), context, context->program_stack, state, var_map);
+    if (!strcmp("y", byte_array_to_string(name)))
+        DEBUGPRINT(" SET %s at %p in {p:%p, s:%p, m:%p}\n", byte_array_to_string(name), to_var, context->program_stack, state, var_map);
 }
 
 static void set(struct context *context,
@@ -712,7 +711,7 @@ static void set(struct context *context,
     struct byte_array *name = serial_decode_string(program);    // destination variable name
     if (!context->runtime)
         VM_DEBUGPRINT("%s %s\n", op==VM_SET?"SET":"STX", byte_array_to_string(name));
-    
+
     struct variable *value = stack_peek(context->operand_stack, 0);
     if (value->type == VAR_SRC) {
         struct array *values = value->list;
@@ -739,12 +738,12 @@ static void dst(struct context *context, bool really) // drop unused assignment 
     DEBUGPRINT("DST ");
     if (!context->runtime)
         VM_DEBUGPRINT(" (not runtime)\n");
-    
+
     if (stack_empty(context->operand_stack)) {
         DEBUGPRINT(" %x mt\n", context->operand_stack);
         return;
     }
-    
+
     struct variable *v = (struct variable*)stack_peek(context->operand_stack, 0);
     if (v->type == VAR_SRC && !really)
         stack_pop(context->operand_stack);
@@ -765,10 +764,10 @@ static void list_put(struct context *context, enum Opcode op, bool really)
         value = variable_pop(context);
     else
         value = (struct variable*)stack_peek(context->operand_stack, 0);
-    
+
     if (!really && custom_method(context, RESERVED_SET, recipient, key, value))
         return;
-    
+
     switch (key->type) {
         case VAR_INT:
             switch (recipient->type) {
@@ -817,7 +816,7 @@ static struct variable *binary_op_int(struct context *context,
         case VM_XOR:    i = m ^ n;    break;
         case VM_RSF:    i = m >> n;   break;
         case VM_LSF:    i = m << n;   break;
-            
+
         default:
             return (struct variable*)vm_exit_message(context, "bad math int operator");
     }
@@ -860,7 +859,7 @@ static struct variable *binary_op_str(struct context *context,
     struct variable *w = NULL;
     struct byte_array *ustr = u->type == VAR_STR ? u->str : variable_value(context, u);
     struct byte_array *vstr = v->type == VAR_STR ? v->str : variable_value(context, v);
-    
+
     switch (op) {
         case VM_ADD:
             w = variable_new_str(context, byte_array_concatenate(2, vstr, ustr));
@@ -880,10 +879,10 @@ static bool variable_compare(struct context *context, const struct variable *u, 
         return false;
     enum VarType ut = (enum VarType)u->type;
     enum VarType vt = (enum VarType)v->type;
-    
+
     if (ut != vt)
         return false;
-    
+
     switch (ut) {
         case VAR_LST:
             if (u->list->length != v->list->length)
@@ -902,7 +901,7 @@ static bool variable_compare(struct context *context, const struct variable *u, 
         default:
             return (bool)vm_exit_message(context, "bad comparison");
     }
-    
+
     return variable_compare_maps(context, u->map, v->map);
 }
 
@@ -915,7 +914,7 @@ static bool variable_compare_maps(struct context *context, const struct map *uma
     struct array *keys = map_keys(umap);
     if (!vmap)
         return !keys->length;
-    
+
     for (int i=0; i<keys->length; i++) {
         struct byte_array *key = (struct byte_array*)array_get(keys, i);
         struct variable *uvalue = (struct variable*)map_get(umap, key);
@@ -933,7 +932,7 @@ static struct variable *binary_op_lst(struct context *context,
 {
     vm_assert(context, u->type==VAR_LST && v->type==VAR_LST, "list op with non-lists");
     struct variable *w = NULL;
-    
+
     switch (op) {
         case VM_ADD:
             w = variable_copy(context, v);
@@ -944,7 +943,7 @@ static struct variable *binary_op_lst(struct context *context,
         default:
             return (struct variable*)vm_exit_message(context, "unknown string operation");
     }
-    
+
     return w;
 }
 
@@ -956,7 +955,7 @@ static struct variable *binary_op_nil(struct context *context,
     vm_assert(context, u->type==VAR_NIL || v->type==VAR_NIL, "nil op with non-nils");
     if (v->type == VAR_NIL && u->type != VAR_NIL)
         return binary_op_nil(context, op, v, u); // 1st var should be nil
-    
+
     switch (op) {
         case VM_EQU:    return variable_new_bool(context, v->type == u->type);
         case VM_NEQ:    return variable_new_bool(context, v->type != u->type);
@@ -971,7 +970,7 @@ static int32_t boolean_op(struct context *context, struct byte_array *program, e
 {
     null_check(program);
     int32_t short_circuit = serial_decode_int(program);
-    
+
     DEBUGPRINT("%s %d\n", NUM_TO_STRING(opcodes, op), short_circuit);
     if (!context->runtime)
         return 0;
@@ -996,13 +995,13 @@ static void binary_op(struct context *context, enum Opcode op)
 {
     if (!context->runtime)
         VM_DEBUGPRINT("%s\n", NUM_TO_STRING(opcodes, op));
-    
+
     struct variable *u = variable_pop(context);
     struct variable *v = variable_pop(context);
     enum VarType ut = (enum VarType)u->type;
     enum VarType vt = (enum VarType)v->type;
     struct variable *w;
-    
+
     if (ut == VAR_NIL || vt == VAR_NIL) {
         w = binary_op_nil(context, op, u, v);
     } else if ((op == VM_EQU) || (op == VM_NEQ)) {
@@ -1011,7 +1010,7 @@ static void binary_op(struct context *context, enum Opcode op)
     } else {
         bool floater  = (ut == VAR_FLT && is_num(vt)) || (vt == VAR_FLT && is_num(ut));
         bool inter = (ut==VAR_INT || ut==VAR_BOOL) && (vt==VAR_INT || vt==VAR_BOOL);
-        
+
         if (floater)                                w = binary_op_float(context, op, u, v);
         else if (inter)                             w = binary_op_int(context, op, v, u);
         else if (vt == VAR_STR || ut == VAR_STR)    w = binary_op_str(context, op, u, v);
@@ -1019,9 +1018,9 @@ static void binary_op(struct context *context, enum Opcode op)
         else
             vm_exit_message(context, "unknown binary op");
     }
-    
+
     variable_push(context, w);
-    
+
     DEBUGPRINT("%s(%s,%s) = %s\n",
                NUM_TO_STRING(opcodes, op),
                variable_value_str(context, v),
@@ -1033,10 +1032,10 @@ static void unary_op(struct context *context, enum Opcode op)
 {
     if (!context->runtime)
         VM_DEBUGPRINT("%s\n", NUM_TO_STRING(opcodes, op));
-    
+
     struct variable *v = (struct variable*)variable_pop(context);
     struct variable *result = NULL;
-    
+
     switch (v->type) {
         case VAR_NIL:
         {
@@ -1062,9 +1061,9 @@ static void unary_op(struct context *context, enum Opcode op)
                 vm_exit_message(context, "bad math type");
             break;
     }
-    
+
     variable_push(context, result);
-    
+
     DEBUGPRINT("%s(%s) = %s\n",
                NUM_TO_STRING(opcodes, op),
                variable_value_str(context, v),
@@ -1080,7 +1079,7 @@ static bool iterate(struct context *context,
     struct byte_array *who = serial_decode_string(program);
     struct byte_array *where = serial_decode_string(program);
     struct byte_array *how = serial_decode_string(program);
-    
+
 #ifdef DEBUG
     DEBUGPRINT("%s %s\n",
                NUM_TO_STRING(opcodes, op),
@@ -1095,33 +1094,33 @@ static bool iterate(struct context *context,
         return false;
     }
 #endif
-    
+
     bool comprehending = (op == VM_COM);
     struct variable *result = comprehending ? variable_new_list(context, NULL) : NULL;
-    
+
     struct variable *what = variable_pop(context);
     uint32_t len = variable_length(context, what);
     for (int i=0; i<len; i++) {
-        
+
         struct variable *that = list_get_int(context, what, i);
         set_named_variable(context, state, who, that);
-        
+
         byte_array_reset(where);
         byte_array_reset(how);
         if (where && where->length)
             run(context, where, NULL, true);
         if (!where || !where->length || test_operand(context)) {
-            
+
             if (run(context, how, NULL, true)) // true if run hit VM_RET
                 return true;
-            
+
             if (comprehending) {
                 struct variable *item = (struct variable*)stack_pop(context->operand_stack);
                 array_add(result->list, item);
             }
         }
     }
-    
+
     if (comprehending)
         stack_push(context->operand_stack, result);
     return false;
@@ -1138,7 +1137,7 @@ static inline bool vm_trycatch(struct context *context, struct byte_array *progr
     display_code(context, catcher);
     if (!context->runtime)
         return false;
-    
+
     run(context, trial, NULL, true);
     if (context->vm_exception) {
         set_named_variable(context, NULL, name, context->vm_exception);
@@ -1179,9 +1178,10 @@ bool run(struct context *context,
             state = (struct program_state*)stack_peek(context->program_stack, 0);
             env = state->named_variables; // use the caller's variable set in the new state
         }
-        state = program_state_new(context, env);
+        else
+            state = program_state_new(context, env);
     }
-    
+
     while (program->current < program->data + program->length) {
         inst = (enum Opcode)*program->current;
         bool really = inst & VM_RLY;
@@ -1191,7 +1191,7 @@ bool run(struct context *context,
 #endif
         program->current++; // increment past the instruction
         int32_t pc_offset = 0;
-        
+
         switch (inst) {
             case VM_COM:
             case VM_ITR:    if (iterate(context, inst, state, program)) goto done;  break;
@@ -1246,11 +1246,12 @@ bool run(struct context *context,
         }
         program->current += pc_offset;
     }
-    
+
     if (!context->runtime)
         return false;
 done:
-    stack_pop(context->program_stack);
+    if (!in_context)
+        stack_pop(context->program_stack);
     return inst == VM_RET;
 }
 
@@ -1260,7 +1261,7 @@ void execute(struct byte_array *program, bool in_context, find_c_var *find)
     null_check(program);
     program = byte_array_copy(program);
     byte_array_reset(program);
-    
+
     struct context *context = context_new();
     context->find = find;
 #ifdef DEBUG
@@ -1269,6 +1270,6 @@ void execute(struct byte_array *program, bool in_context, find_c_var *find)
     struct byte_array* code = serial_decode_string(program);
     if (!setjmp(trying))
         run(context, code, NULL, in_context);
-    
+
     assert_message(stack_empty(context->operand_stack), "operand stack not empty");
 }

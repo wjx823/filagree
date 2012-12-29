@@ -23,7 +23,6 @@ typedef struct variable *(callback2func)(context_p context);
 typedef struct variable *(find_c_var)(context_p context, const struct byte_array *name);
 
 struct variable {
-    const struct byte_array* name;
     enum VarType type;
     uint32_t marked;
     union {

@@ -64,8 +64,8 @@ compiler = [
             end
 
             if found = fit(self, number, identifier, lexeme) then
-                sys.print(result + ' add ' + found)
-                result.add(found)
+                sys.print(result + ' insrt ' + found)
+                result.insert(found)
                 sys.print('result = ' + result)
             else
                 throw ('could not lex')

@@ -449,6 +449,7 @@ int map_insert(struct map *m, const void *key, void *data)
 }
 
 struct array* map_keys(const struct map *m) {
+    null_check(m);
     struct array *a = array_new();
     for (int i=0; i<m->size; i++)
         for (const struct hash_node* n = m->nodes[i]; n; n=n->next)

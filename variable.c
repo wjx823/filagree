@@ -247,9 +247,7 @@ void variable_unmark(struct variable *v)
         const struct array *a = map_keys(v->map);
         const struct array *b = map_values(v->map);
         for (int i=0; i<a->length; i++) {
-            struct variable *aiv = (struct variable*)array_get(a,i);
             struct variable *biv = (struct variable*)array_get(b,i);
-            variable_unmark(aiv);
             variable_unmark(biv);
         }
     }
