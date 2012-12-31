@@ -11,7 +11,7 @@ compiler = [
                 slice = self.script.part(self.lex_index, word.length)
                 if word == slice then
                     self.lex_index = self.lex_index + word.length
-                    return self.lexify('word', word)
+                    return self.lexify(word)
         end end end
 
         number = function(self)
@@ -64,9 +64,7 @@ compiler = [
             end
 
             if found = fit(self, number, identifier, lexeme) then
-                sys.print(result + ' insrt ' + found)
                 result.insert(found)
-                sys.print('result = ' + result)
             else
                 throw ('could not lex')
             end
@@ -93,7 +91,7 @@ compiler = [
         'assignment' : function(self)
             v = self.fetch_may(['id'])
             if not v then return nil end
-            q = self.fetch_may(['set'])
+            q = self.fetch_may(['='])
             if not q then return nil end
             e = self.exp()
             if not e then throw('missing expression') end
@@ -104,7 +102,7 @@ compiler = [
         'exp' : function(self)
             op1 = self.exp2()
             if not op1 then return nil end
-            wrd = self.fetch_may(['word'])
+            wrd = self.fetch_may(['+'])
             if not wrd then return op1 end
             op2 = self.exp2()
             if not op2 then throw 'bad exp' end
@@ -167,8 +165,8 @@ compiler = [
     'build' : function(self, input)
         lexemes = self.lex(input)
         parsed = self.parser.parse(lexemes)
-#        program = self.generate(parsed)
-#        return program
+        program = self.generate(parsed)
+        return program
 
     end,
 

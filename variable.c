@@ -547,14 +547,18 @@ uint32_t variable_length(struct context *context, const struct variable *v)
 struct variable *variable_part(struct context *context, struct variable *self, uint32_t start, int32_t length)
 {
     null_check(self);
+
+    if (length < 0) // count back from end of list/string
+        length = self->list->length + length + 1 - start;
+    if (length < 0) // end < start
+        length = 0;
+
     switch (self->type) {
         case VAR_STR: {
             struct byte_array *str = byte_array_part(self->str, start, length);
             return variable_new_str(context, str);
         }
         case VAR_LST: {
-            if (length < 0)
-                length = self->list->length + length + 1;
             struct array *list = array_part(self->list, start, length);
             return variable_new_list(context, list);
         }

@@ -407,25 +407,29 @@ struct variable *cfnc_insert(struct context *context)
     null_check(insertion);
     assert_message(!start || start->type == VAR_INT, "non-integer index");
 
-    int32_t position = start ? start->integer : 0;
-    struct variable *first = variable_part(context, variable_copy(context, self), 0, position);
-    struct variable *second = variable_part(context, variable_copy(context, self), position, -1);
-
+    int32_t position;
     switch (self->type) {
         case VAR_LST: {
             struct array *list = array_new_size(1);
             array_set(list, 0, insertion);
             insertion = variable_new_list(context, list);
+            position = self->list->length;
         } break;
         case VAR_STR:
             assert_message(insertion->type == VAR_STR, "insertion doesn't match destination");
+            position = self->str->length;
             break;
         default:
             exit_message("bad insertion destination");
             break;
     }
+    if (start)
+        position = start->integer;
 
+    struct variable *first = variable_part(context, variable_copy(context, self), 0, position);
+    struct variable *second = variable_part(context, variable_copy(context, self), position, -1);
     struct variable *joined = variable_concatenate(context, 3, first, insertion, second);
+
     if (self->type == VAR_LST)
         self->list = joined->list;
     else
@@ -585,9 +589,6 @@ struct variable *builtin_method(struct context *context,
 
     if (!strcmp(idxstr, FNC_INSERT))
         return variable_new_c(context, &cfnc_insert);
-
-//    if (!strcmp(idxstr, FNC_ADD))
-//        return variable_new_c(context, &cfnc_add);
 
     if (!strcmp(idxstr, FNC_REPLACE))
         return variable_new_c(context, &cfnc_replace);

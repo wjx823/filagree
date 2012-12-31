@@ -703,6 +703,26 @@ void set_named_variable(struct context *context,
         DEBUGPRINT(" SET %s at %p in {p:%p, s:%p, m:%p}\n", byte_array_to_string(name), to_var, context->program_stack, state, var_map);
 }
 
+static struct variable *get_value(struct context *context, enum Opcode op)
+{
+    bool interim = op == VM_STX || op == VM_PTX;
+    struct variable *value = stack_peek(context->operand_stack, 0);
+
+    if (value->type == VAR_SRC) {
+        struct array *values = value->list;
+        if (values->length > values->current)
+            value = (struct variable*)array_get(values, values->current++);
+        else
+            value = variable_new_nil(context);
+        if (interim)
+            values->current = 0;
+    }
+    else if (!interim)
+        variable_pop(context);
+
+    return value;
+}
+
 static void set(struct context *context,
                 enum Opcode op,
                 struct program_state *state,
@@ -712,24 +732,13 @@ static void set(struct context *context,
     if (!context->runtime)
         VM_DEBUGPRINT("%s %s\n", op==VM_SET?"SET":"STX", byte_array_to_string(name));
 
-    struct variable *value = stack_peek(context->operand_stack, 0);
-    if (value->type == VAR_SRC) {
-        struct array *values = value->list;
-        if (values->length > values->current)
-            value = (struct variable*)array_get(values, values->current++);
-        else
-            value = variable_new_nil(context);
-        if (op == VM_STX)
-            values->current = 0;
-    }
-    else if (op != VM_STX)
-        variable_pop(context);
+    struct variable *value = get_value(context, op);
+    
     DEBUGPRINT("%s %s to %s\n",
                op==VM_SET ? "SET" : "STX",
                byte_array_to_string(name),
                variable_value_str(context, value));
-    if (op == VM_STX && context->runtime)
-        DEBUGPRINT("");
+
     set_named_variable(context, state, name, value); // set the variable to the value
 }
 
@@ -759,11 +768,7 @@ static void list_put(struct context *context, enum Opcode op, bool really)
         return;
     struct variable* recipient = variable_pop(context);
     struct variable* key = variable_pop(context);
-    struct variable *value;
-    if (op == VM_PUT)
-        value = variable_pop(context);
-    else
-        value = (struct variable*)stack_peek(context->operand_stack, 0);
+    struct variable *value = get_value(context, op);
 
     if (!really && custom_method(context, RESERVED_SET, recipient, key, value))
         return;
