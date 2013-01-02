@@ -39,10 +39,10 @@ enum Opcode {
     VM_INT, // push an integer
     VM_ADD, // add two values
     VM_SET, // set a variable
+    VM_VAR, // push a variable
     VM_FLT, // push a float
     VM_BUL, // push a boolean
     VM_STR, // push a string
-    VM_VAR, // push a variable
     VM_FNC, // push a function
     VM_DST, // done with assignment
     VM_SRC, // push a set of values

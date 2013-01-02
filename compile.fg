@@ -89,14 +89,13 @@ compiler = [
         end,
 
         'assignment' : function(self)
-            v = self.fetch_may(['id'])
-            if not v then return nil end
-            q = self.fetch_may(['='])
-            if not q then return nil end
-            e = self.exp()
-            if not e then throw('missing expression') end
-            q.children = [v,e]
-            return q
+            lhs = self.fetch_may(['id'])
+            if not lhs then return nil end
+            e = self.fetch_may(['='])
+            if not e then return nil end
+            rhs = self.exp()
+            if not rhs then throw('missing expression') end
+            return ['lexeme':'=', 'lhs':lhs, 'children':[rhs]]
         end,
 
         'exp' : function(self)
@@ -128,38 +127,30 @@ compiler = [
 
     ], # parser
 
-    'opcode' : ['VM_INT':1, 'VM_ADD':2, 'VM_SET':3],
+    'opcode' : ['VM_INT':1, 'VM_ADD':2, 'VM_SET':3, 'VM_VAR':4],
 
-    'byte' : function(self, n)
-        code = ' '
-        code[0] = n
-        return code
-    end,
-
-    'generate_code' : function(self, root)
-
-        if root.lexeme == 'number' then
-            return self.byte(self.opcode.VM_INT) + self.byte(root.value)
-        end
-
-        code = ''
-        for child in root.children
-            code = code + self.generate_code(child)
-        end
-
-        if root.value == '+' then
-            return code + self.byte(self.opcode.VM_ADD)
-        else if root.value == '=' then
-            return code + self.byte(self.opcode.VM_SET)
-        else
-            throw('could not generate')
-        end
+    'bytes' : function(self, n)
+        return n.serialize(false)
     end,
 
     'generate' : function(self, root)
-        code = self.generate_code(root)
-        code = self.byte(code.length) + code
-        return code
+
+        code = ''
+        for child in root.children
+            code = code + self.generate(child)
+        end
+
+        if root.lexeme == 'number' then
+            return self.bytes(self.opcode.VM_INT) + self.bytes(root.value)
+        else if root.lexeme == 'id' then
+            return self.bytes(root.value)
+        else if root.lexeme == '+' then
+            return code + self.bytes(self.opcode.VM_ADD)
+        else if root.lexeme == '=' then
+            return code + self.bytes(self.opcode.VM_SET) + self.generate(root.lhs)
+        else
+            throw('could not generate')
+        end
     end,
 
     'build' : function(self, input)
@@ -167,7 +158,6 @@ compiler = [
         parsed = self.parser.parse(lexemes)
         program = self.generate(parsed)
         return program
-
     end,
 
     'interpret_file' : function(self, filename)
@@ -175,6 +165,7 @@ compiler = [
         try
             script = sys.read(filename)
             bytecode = self.build(script)
+            sys.run(bytecode)
         catch err
             sys.print(err)
         end

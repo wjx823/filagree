@@ -262,8 +262,7 @@ void display_program(struct byte_array *program)
 
     DEBUGPRINT("%sprogram instructions:\n", indentation(context));
     byte_array_reset(program);
-    struct byte_array* code = serial_decode_string(program);
-    display_code(context, code);
+    display_code(context, program);
 
     UNDENT
     UNDENT
@@ -1262,6 +1261,10 @@ done:
 
 void execute(struct byte_array *program, bool in_context, find_c_var *find)
 {
+#ifdef DEBUG
+    display_program(program);
+#endif
+
     DEBUGPRINT("execute:\n");
     null_check(program);
     program = byte_array_copy(program);
@@ -1272,9 +1275,8 @@ void execute(struct byte_array *program, bool in_context, find_c_var *find)
 #ifdef DEBUG
     context->indent = 1;
 #endif
-    struct byte_array* code = serial_decode_string(program);
     if (!setjmp(trying))
-        run(context, code, NULL, in_context);
+        run(context, program, NULL, in_context);
 
     assert_message(stack_empty(context->operand_stack), "operand stack not empty");
 }

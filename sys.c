@@ -437,24 +437,25 @@ struct variable *cfnc_insert(struct context *context)
     return joined;
 }
 
-/*
-struct variable *cfnc_add(struct context *context)
+struct variable *cfnc_serialize(struct context *context)
 {
     struct variable *args = (struct variable*)stack_pop(context->operand_stack);
-    struct variable *self = (struct variable*)array_get(args->list, 0);
-    struct variable *insertion = (struct variable*)array_get(args->list, 1);
-    assert_message(self->type == VAR_LST || (self->type == VAR_STR && insertion->type == VAR_STR), "insertion doesn't match destination");
+    struct variable *indexable = (struct variable*)array_get(args->list, 0);
+    struct variable *typer = args->list->length > 1 ? (struct variable*)array_get(args->list, 1) : NULL;
+    bool withType = !typer || typer->boolean; // default to true
 
-    struct variable *inserted;
-    if (self->type == inserted->type)
-        inserted = variable_concatenate(context, 3, self, insertion);
-    else {
-//        inserted = variable_copy(context, self);
-        array_add(self->list, insertion);
-    }
-    return NULL;
+    struct byte_array *bits = variable_serialize(context, NULL, indexable, withType);
+    return variable_new_str(context, bits);
 }
-*/
+
+struct variable *cfnc_deserialize(struct context *context)
+{
+    struct variable *args = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *indexable = (struct variable*)array_get(args->list, 0);
+    struct byte_array *bits = indexable->str;
+    byte_array_reset(bits);
+    return variable_deserialize(context, bits);
+}
 
 //    a                b        c
 // <sought> <replacement> [<start>]
@@ -554,17 +555,11 @@ struct variable *builtin_method(struct context *context,
             return variable_new_list(context, (struct array*)map_values(indexable->map));
     }
 
-    if (!strcmp(idxstr, FNC_SERIALIZE)) {
-        struct byte_array *bits = variable_serialize(context, 0, indexable);
-        return variable_new_str(context, bits);
-    }
+    if (!strcmp(idxstr, FNC_SERIALIZE))
+        return variable_new_c(context, &cfnc_serialize);
 
-    if (!strcmp(idxstr, FNC_DESERIALIZE)) {
-        struct byte_array *bits = indexable->str;
-        byte_array_reset(bits);
-        struct variable *d = variable_deserialize(context, bits);
-        return d;
-    }
+    if (!strcmp(idxstr, FNC_DESERIALIZE))
+        return variable_new_c(context, &cfnc_deserialize);
 
     // todo: don't create a new variable every time
     if (!strcmp(idxstr, FNC_SORT)) {

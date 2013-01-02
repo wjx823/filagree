@@ -1491,12 +1491,7 @@ struct byte_array *generate_program(struct symbol *root)
     DEBUGPRINT("generate:\n");
     struct byte_array *code = byte_array_new();
     generate_code(code, root);
-    struct byte_array *program = serial_encode_int(0, 0, code->length);
-    byte_array_append(program, code);
-#ifdef DEBUG
-    display_program(program);
-#endif
-    return program;
+    return code;
 }
 
 // build ///////////////////////////////////////////////////////////////////
@@ -1508,10 +1503,9 @@ struct byte_array *build_string(const struct byte_array *input) {
 
     lex_list = array_new();
     imports = map_new(NULL, NULL);
+
     struct array* list = lex(input_copy);
-
     struct symbol *tree = parse(list, 0);
-
     return generate_program(tree);
 }
 

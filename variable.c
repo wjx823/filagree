@@ -316,13 +316,15 @@ void variable_cycle_check(struct variable *v,
 
 struct byte_array *variable_serialize(struct context *context,
 									  struct byte_array *bits,
-                                      const struct variable *in)
+                                      const struct variable *in,
+                                      bool withType)
 {
 	null_check(context);
-    DEBUGPRINT("\tserialize:%s\n", variable_value_str(context, (struct variable*)in));
+    //DEBUGPRINT("\tserialize:%s\n", variable_value_str(context, (struct variable*)in));
     if (!bits)
         bits = byte_array_new();
-    serial_encode_int(bits, 0, in->type);
+    if (withType)
+        serial_encode_int(bits, 0, in->type);
     switch (in->type) {
         case VAR_INT:    serial_encode_int(bits, 0, in->integer);    break;
         case VAR_FLT:    serial_encode_float(bits, 0, in->floater);    break;
@@ -331,14 +333,14 @@ struct byte_array *variable_serialize(struct context *context,
         case VAR_LST: {
             serial_encode_int(bits, 0, in->list->length);
             for (int i=0; i<in->list->length; i++)
-                variable_serialize(context, bits, (const struct variable*)array_get(in->list, i));
+                variable_serialize(context, bits, (const struct variable*)array_get(in->list, i), true);
             if (in->map) {
                 const struct array *keys = map_keys(in->map);
                 const struct array *values = map_values(in->map);
                 serial_encode_int(bits, 0, keys->length);
                 for (int i=0; i<keys->length; i++) {
                     serial_encode_string(bits, 0, (const struct byte_array*)array_get(keys, i));
-                    variable_serialize(context, bits, (const struct variable*)array_get(values, i));
+                    variable_serialize(context, bits, (const struct variable*)array_get(values, i), true);
                 }
             } else
                 serial_encode_int(bits, 0, 0);
@@ -508,7 +510,7 @@ int variable_save(struct context *context,
     vm_null_check(context, path);
 
     struct byte_array *bytes = byte_array_new();
-    variable_serialize(context, bytes, v);
+    variable_serialize(context, bytes, v, true);
     return write_file(path->str, bytes);
 }
 

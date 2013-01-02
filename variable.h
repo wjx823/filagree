@@ -41,7 +41,8 @@ void variable_del(struct context *context, struct variable *v);
 struct byte_array* variable_value(struct context *context, struct variable* v);
 const char* variable_value_str(struct context *context, struct variable* v);
 struct byte_array *variable_serialize(struct context *context, struct byte_array *bits,
-                                      const struct variable *in);
+                                      const struct variable *in,
+                                      bool withType);
 struct variable *variable_deserialize(struct context *context, struct byte_array *str);
 extern int variable_save(struct context *context, struct variable* v, const struct variable* path);
 extern struct variable *variable_load(struct context *context, const struct variable* path);

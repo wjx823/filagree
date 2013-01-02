@@ -92,8 +92,8 @@ tester.test('serial',
     function()
         a = [2,3,4]
         a.x = 7
-        b = a.serialize
-        c = b.deserialize
+        b = a.serialize()
+        c = b.deserialize()
         return c.x + c[2]
     end,
     11)
