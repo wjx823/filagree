@@ -329,7 +329,8 @@ lexmore:
                             line++;
                     i += right_comment_len;
                 } else if (lexeme == LEX_LINE_COMMENT) { // start line comment with #
-                    while (input[i++] != '\n');
+                    while (input[i] != '\n' && input[i] != EOF)
+                        i++;
                     line++;
                 } else if (lexeme == LEX_IMPORT)
                     i = import(input, i);
@@ -813,22 +814,9 @@ struct symbol *assignment()
     s->index = repeated(SYMBOL_DESTINATION, &destination);
     s->index->exp = LHS;
     FETCH_OR_QUIT(LEX_SET);
-    if (!(s->value = repeated(SYMBOL_SOURCE, expression)))
-        return NULL;
-    for (int i=0; i<s->value->list->length; i++) { // iterate through sources
-        struct symbol *v = (struct symbol*)array_get(s->value->list, i);
-        if (v->nonterminal == SYMBOL_ASSIGNMENT) { // if any source is an assignment
-            v->index->exp = BHS; // then skip the interim VM_SRC and VM_DST steps
-            struct array *ds = v->index->list;
-            if (ds->length) {
-//            for (int j=0; j<ds->length; j++) {
-                struct symbol *u = (struct symbol *)array_get(ds, ds->length-1);
-                u->exp = BHS;
-            }
-            s->value->exp = BHS;
-        }
-    }
-    return s;
+    if ((s->value = repeated(SYMBOL_SOURCE, &expression)))
+        return s;
+    return NULL;
 }
 
 // <exp5> --> ( LEX_LEFTTHESIS <expression> LEX_RIGHTTHESIS ) | <atom>
@@ -916,7 +904,25 @@ struct symbol *exp1()
 // <expression> --> <assignment> | <exp1>
 struct symbol *expression()
 {
-    return one_of(&assignment, &exp1, NULL);
+    //    return one_of(&assignment, &exp1, NULL);
+    struct symbol *s = one_of(&assignment, &exp1, NULL);
+    if (s && s->nonterminal == SYMBOL_ASSIGNMENT)
+        s->exp = BHS;
+
+/*    for (int i=0; i<s->value->list->length; i++) { // iterate through sources
+        struct symbol *v = (struct symbol*)array_get(s->value->list, i);
+        if (v->nonterminal == SYMBOL_ASSIGNMENT) {
+            v->index->exp = BHS; // then skip the interim VM_SRC and VM_DST steps
+            struct array *ds = v->index->list;
+            if (ds->length) {
+                //            for (int j=0; j<ds->length; j++) {
+                struct symbol *u = (struct symbol *)array_get(ds, ds->length-1);
+                u->exp = BHS;
+            }
+            s->value->exp = BHS;
+        }
+    }*/
+    return s;
 }
 
 // <destination> --> <variable> | ( <expression> <member>+ )
@@ -1122,7 +1128,7 @@ void generate_items_then_op(struct byte_array *code, enum Opcode opcode, const s
 {
     generate_items(code, root);
     generate_step(code, 1, opcode);
-    serial_encode_int(code, 0, root ? root->list->length : 0);
+    serial_encode_int(code, root ? root->list->length : 0);
 }
 
 void generate_statements(struct byte_array *code, struct symbol *root) {
@@ -1142,7 +1148,7 @@ static void generate_jump(struct byte_array *code, int32_t offset) {
     if (!offset)
         return;
     generate_step(code, 1, VM_JMP);
-    serial_encode_int(code, 0, offset);
+    serial_encode_int(code, offset);
 }
 
 void generate_list(struct byte_array *code, struct symbol *root) {
@@ -1152,17 +1158,17 @@ void generate_list(struct byte_array *code, struct symbol *root) {
 void generate_float(struct byte_array *code, struct symbol *root)
 {
     generate_step(code, 1, VM_FLT);
-    serial_encode_float(code, 0, root->floater);
+    serial_encode_float(code, root->floater);
 }
 
 void generate_integer(struct byte_array *code, struct symbol *root) {
     generate_step(code, 1, VM_INT);
-    serial_encode_int(code, 0, root->token->number);
+    serial_encode_int(code, root->token->number);
 }
 
 void generate_string(struct byte_array *code, struct symbol *root) {
     generate_step(code, 1, VM_STR);
-    serial_encode_string(code, 0, root->token->string);
+    serial_encode_string(code, root->token->string);
 }
 
 void generate_source(struct byte_array *code, struct symbol *root)
@@ -1174,7 +1180,7 @@ void generate_source(struct byte_array *code, struct symbol *root)
         return; // for the case of a=b=c=d
     generate_step(code, 1, op);
     if (op == VM_SRC)
-        serial_encode_int(code, 0, root->list->length);
+        serial_encode_int(code, root->list->length);
 }
 
 void generate_assignment(struct byte_array *code, struct symbol *root)
@@ -1202,7 +1208,7 @@ void generate_variable(struct byte_array *code, struct symbol *root)
         default:    exit_message("bad exp type");
     }
     generate_step(code, 1, op);
-    serial_encode_string(code, 0, root->token->string);
+    serial_encode_string(code, root->token->string);
 }
 
 void generate_boolean(struct byte_array *code, struct symbol *root) {
@@ -1213,7 +1219,7 @@ void generate_boolean(struct byte_array *code, struct symbol *root) {
         default:    exit_message("bad boolean value");    return;
     }
     generate_step(code, 1, VM_BUL);
-    serial_encode_int(code, 0, value);
+    serial_encode_int(code, value);
 }
 
 void generate_fdecl(struct byte_array *code, struct symbol *root)
@@ -1222,19 +1228,19 @@ void generate_fdecl(struct byte_array *code, struct symbol *root)
 
     if (root->other) {
         struct array *closure = root->other->list;
-        serial_encode_int(code, 0, closure->length);
+        serial_encode_int(code, closure->length);
         for (int i=0; i<closure->length; i++) {
             struct symbol *name = (struct symbol*)array_get(closure, i);
-            serial_encode_string(code, 0, name->token->string);
+            serial_encode_string(code, name->token->string);
         }
     }
     else
-        serial_encode_int(code, 0, 0);
+        serial_encode_int(code, 0);
 
     struct byte_array *f = byte_array_new();
     generate_code(f, root->index); // params
     generate_code(f, root->value); // statements
-    serial_encode_string(code, 0, f);
+    serial_encode_string(code, f);
 }
 
 void generate_pair(struct byte_array *code, struct symbol *root)
@@ -1274,7 +1280,7 @@ void generate_fcall(struct byte_array *code, struct symbol *root)
         generate_code(code, root->value);           // function
         generate_step(code, 1, VM_CAL);
     }
-    serial_encode_int(code, 0, root->list->length);
+    serial_encode_int(code, root->list->length);
     if (root->exp == LHS)
         generate_step(code, 1, VM_DST);
 }
@@ -1293,7 +1299,7 @@ void generate_math(struct byte_array *code, struct symbol *root)
         generate_code(code, op0);
         op = lexeme == LEX_AND ? VM_AND : VM_ORR;
         generate_step(code, 1, op);
-        serial_encode_int(code, 0, second->length);
+        serial_encode_int(code, second->length);
         byte_array_append(code, second);
         return;
     }
@@ -1334,7 +1340,7 @@ void generate_loop(struct byte_array *code, struct symbol *root)
 
         generate_code(ifa, root->index);
         generate_step(ifa, 1, VM_IFF);
-        serial_encode_int(ifa, 0, b->length + jmp_len);
+        serial_encode_int(ifa, b->length + jmp_len);
 
         loop_length = ifa->length + b->length;
         generate_jump(jmp, -loop_length);
@@ -1385,7 +1391,7 @@ void generate_ifthenelse(struct byte_array *code, struct symbol *root)
 
         struct byte_array *if_code = (struct byte_array*)array_get(ifs, j);
         generate_step(if_code, 1, VM_IFF);
-        serial_encode_int(if_code, 0, then_code->length);
+        serial_encode_int(if_code, then_code->length);
 
         combined = byte_array_concatenate(3, if_code, then_code, combined);
     }
@@ -1398,19 +1404,19 @@ void generate_iterator(struct byte_array *code, struct symbol *root, enum Opcode
     struct symbol *ator = root->index;
     generate_code(code, ator->value);                   // IN b
     generate_step(code, 1, op);                         // iterator or comprehension
-    serial_encode_string(code, 0, ator->token->string); // FOR a
+    serial_encode_string(code, ator->token->string); // FOR a
 
     if (ator->index) {                                  // WHERE c
         struct byte_array *where = byte_array_new();
         generate_code(where, ator->index);
-        serial_encode_string(code, 0, where);
+        serial_encode_string(code, where);
     }
     else
         generate_nil(code, NULL);
 
     struct byte_array *what = byte_array_new();
     generate_code(what, root->value);
-    serial_encode_string(code, 0, what);    // DO d
+    serial_encode_string(code, what);    // DO d
 }
 
 // <iterloop> --> <iterator> <statements> LEX_END
@@ -1429,11 +1435,11 @@ void generate_trycatch(struct byte_array *code, struct symbol *root)
     struct byte_array *trial = generate_code(NULL, root->index);
 
     generate_step(code, 1, VM_TRY);
-    serial_encode_string(code, 0, trial);
+    serial_encode_string(code, trial);
 
-    serial_encode_string(code, 0, root->token->string);
+    serial_encode_string(code, root->token->string);
     struct byte_array *catcher = generate_code(NULL, root->value);
-    serial_encode_string(code, 0, catcher);
+    serial_encode_string(code, catcher);
 }
 
 void generate_throw(struct byte_array *code, struct symbol *root)

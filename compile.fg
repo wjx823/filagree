@@ -45,7 +45,6 @@ compiler = [
             args = sys.args()
             args.remove(0)
             for arg in args
-                #sys.print('arg = ' + arg)
                 if l = arg(self) then return l end
             end
             return false
@@ -83,28 +82,21 @@ compiler = [
         end,
 
         'statements' : function(self)
-            a = self.assignment()
-            if not a then throw ('could not parse') end
-            return a
+            if a = self.assignment() then return a end
+            throw ('could not parse')
         end,
 
         'assignment' : function(self)
-            lhs = self.fetch_may(['id'])
-            if not lhs then return nil end
-            e = self.fetch_may(['='])
-            if not e then return nil end
-            rhs = self.exp()
-            if not rhs then throw('missing expression') end
+            if not (lhs = self.fetch_may(['id'])) then return nil end
+            if not (e = self.fetch_may(['=']) then return nil end
+            if not (rhs = self.exp() then throw('missing expression') end
             return ['lexeme':'=', 'lhs':lhs, 'children':[rhs]]
         end,
 
         'exp' : function(self)
-            op1 = self.exp2()
-            if not op1 then return nil end
-            wrd = self.fetch_may(['+'])
-            if not wrd then return op1 end
-            op2 = self.exp2()
-            if not op2 then throw 'bad exp' end
+            if not (op1 = self.exp2()) then return nil end
+            if not (wrd = self.fetch_may(['+'])) then return op1 end
+            if not (op2 = self.exp2()) then throw 'bad exp' end
             wrd.children = [op1, op2]
             return wrd
         end,
@@ -161,7 +153,6 @@ compiler = [
     end,
 
     'interpret_file' : function(self, filename)
-
         try
             script = sys.read(filename)
             bytecode = self.build(script)
@@ -169,7 +160,6 @@ compiler = [
         catch err
             sys.print(err)
         end
-
     end
 ]
 

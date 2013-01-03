@@ -43,15 +43,12 @@ typedef bool (serial_element)(const struct key_value_pair*,
 bool serial_element_debug(const struct key_value_pair* kvp);
 
 struct byte_array* serial_encode_int(struct byte_array* buf,
-									  int32_t key,
 									  int32_t value);
 
 struct byte_array *serial_encode_float(struct byte_array *buf,
-									   int32_t key,
 									   float value);
 
 struct byte_array* serial_encode_string(struct byte_array* buf,
-										int32_t key,
 										const struct byte_array* string);
 void serial_decode(struct byte_array* buf,
 				   serial_element* se,

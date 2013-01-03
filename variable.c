@@ -270,8 +270,8 @@ struct byte_array *variable_value(struct context *c, struct variable *v) {
 
 struct variable *variable_pop(struct context *context)
 {
-    assert_message(!stack_empty(context->operand_stack), "nothing to pop");
     struct variable *v = (struct variable*)stack_pop(context->operand_stack);
+    null_check(v);
 //    DEBUGPRINT("\nvariable_pop %s\n", variable_value_str(context, v));
 //    print_operand_stack(context);
     if (v->type == VAR_SRC) {
@@ -324,26 +324,26 @@ struct byte_array *variable_serialize(struct context *context,
     if (!bits)
         bits = byte_array_new();
     if (withType)
-        serial_encode_int(bits, 0, in->type);
+        serial_encode_int(bits, in->type);
     switch (in->type) {
-        case VAR_INT:    serial_encode_int(bits, 0, in->integer);    break;
-        case VAR_FLT:    serial_encode_float(bits, 0, in->floater);    break;
+        case VAR_INT:    serial_encode_int(bits, in->integer);    break;
+        case VAR_FLT:    serial_encode_float(bits, in->floater);    break;
         case VAR_STR:
-        case VAR_FNC:    serial_encode_string(bits, 0, in->str);        break;
+        case VAR_FNC:    serial_encode_string(bits, in->str);        break;
         case VAR_LST: {
-            serial_encode_int(bits, 0, in->list->length);
+            serial_encode_int(bits, in->list->length);
             for (int i=0; i<in->list->length; i++)
                 variable_serialize(context, bits, (const struct variable*)array_get(in->list, i), true);
             if (in->map) {
                 const struct array *keys = map_keys(in->map);
                 const struct array *values = map_values(in->map);
-                serial_encode_int(bits, 0, keys->length);
+                serial_encode_int(bits, keys->length);
                 for (int i=0; i<keys->length; i++) {
-                    serial_encode_string(bits, 0, (const struct byte_array*)array_get(keys, i));
+                    serial_encode_string(bits, (const struct byte_array*)array_get(keys, i));
                     variable_serialize(context, bits, (const struct variable*)array_get(values, i), true);
                 }
             } else
-                serial_encode_int(bits, 0, 0);
+                serial_encode_int(bits, 0);
         } break;
         default:        vm_exit_message(context, "bad var type");                break;
     }

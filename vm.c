@@ -706,6 +706,7 @@ static struct variable *get_value(struct context *context, enum Opcode op)
 {
     bool interim = op == VM_STX || op == VM_PTX;
     struct variable *value = stack_peek(context->operand_stack, 0);
+    null_check(value);
 
     if (value->type == VAR_SRC) {
         struct array *values = value->list;

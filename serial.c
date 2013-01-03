@@ -45,11 +45,9 @@ struct byte_array *encode_int(struct byte_array *buf, int32_t value)
     return buf;
 }
 
-struct byte_array* serial_encode_int(struct byte_array* buf, int32_t key, int32_t value) {
+struct byte_array* serial_encode_int(struct byte_array* buf, int32_t value) {
     if (!buf)
         buf = byte_array_new();
-    if (key)
-        encode_int(buf, key<<2 | SERIAL_INT);
     encode_int(buf, value);
     return buf;
 }
@@ -141,11 +139,9 @@ struct byte_array *encode_float(struct byte_array *buf, float f)
     return buf;
 }
 
-struct byte_array* serial_encode_float(struct byte_array* buf, int32_t key, float value) {
+struct byte_array* serial_encode_float(struct byte_array* buf, float value) {
     if (!buf)
         buf = byte_array_new();
-    if (key)
-        encode_int(buf, key<<2 | SERIAL_FLOAT);
     encode_float(buf, value);
     return buf;
 }
@@ -158,15 +154,13 @@ uint8_t serial_encode_string_size(int32_t key, const struct byte_array* string) 
            string->length;
 }
 
-struct byte_array* serial_encode_string(struct byte_array* buf, int32_t key, const struct byte_array* bytes)
+struct byte_array* serial_encode_string(struct byte_array* buf, const struct byte_array* bytes)
 {
     if (!bytes)
         return buf;
     if (!buf)
         buf = byte_array_new();
 
-    if (key)
-        encode_int(buf, key<<2 | SERIAL_STRING);
     encode_int(buf, bytes->length);
     byte_array_resize(buf, buf->length + bytes->length);
     memcpy(buf->current, bytes->data, bytes->length);
@@ -175,12 +169,14 @@ struct byte_array* serial_encode_string(struct byte_array* buf, int32_t key, con
     return buf;
 }
 
+/*
 struct byte_array* serial_encode_array(struct byte_array* buf, int32_t key, int32_t count) {
     if (!buf) buf = byte_array_new();
     encode_int(buf, key<<2 | SERIAL_ARRAY);
     encode_int(buf, count);
     return buf;
 }
+*/
 
 #ifdef DEBUG
 

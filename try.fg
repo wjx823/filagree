@@ -1,3 +1,5 @@
-a = []
-b= [a]
-a.insert(b)
+a = 7
+b = 8
+c = a + b
+
+e = not (d = 0)
