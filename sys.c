@@ -561,7 +561,6 @@ struct variable *builtin_method(struct context *context,
     if (!strcmp(idxstr, FNC_DESERIALIZE))
         return variable_new_c(context, &cfnc_deserialize);
 
-    // todo: don't create a new variable every time
     if (!strcmp(idxstr, FNC_SORT)) {
         assert_message(indexable->type == VAR_LST, "sorting non-list");
         return variable_new_c(context, &cfnc_sort);

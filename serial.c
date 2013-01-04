@@ -73,7 +73,6 @@ float serial_decode_float(struct byte_array* buf)
         uf++;
         buf->current++;
     }
-    //DEBUGPRINT("serial_decode_float %f\n", f);
     return f;
 }
 
@@ -92,7 +91,6 @@ struct byte_array* serial_decode_string(struct byte_array* buf)
 
 void serial_decode(struct byte_array* buf, serial_element se, const void* extra)
 {
-//    DEBUGPRINT("serial_decode %d %x<%x?\n", buf->size, buf->current, buf->data + buf->size);
     while (buf->current < buf->data + buf->length)
     {
         // get key and wire type
@@ -101,7 +99,6 @@ void serial_decode(struct byte_array* buf, serial_element se, const void* extra)
             .key = keyWire >> 2,
             .wire_type = (enum serial_type)(keyWire & 0x03)
         };
-//        DEBUGPRINT("serial_decode %d:%d\n", pair.key, pair.wire_type);
 
         // get data
         switch(pair.wire_type) {
@@ -168,15 +165,6 @@ struct byte_array* serial_encode_string(struct byte_array* buf, const struct byt
     buf->current = buf->data + buf->length;
     return buf;
 }
-
-/*
-struct byte_array* serial_encode_array(struct byte_array* buf, int32_t key, int32_t count) {
-    if (!buf) buf = byte_array_new();
-    encode_int(buf, key<<2 | SERIAL_ARRAY);
-    encode_int(buf, count);
-    return buf;
-}
-*/
 
 #ifdef DEBUG
 

@@ -505,10 +505,7 @@ bool custom_method(struct context *context,
 // get the indexed item and push on operand stack
 void lookup(struct context *context, struct variable *indexable, struct variable *index, bool really)
 {
-    //    DEBUGPRINT(" -- lookup %s -- ", variable_value_str(context, index));
-
     if (!really && custom_method(context, RESERVED_GET, indexable, index, NULL)) {
-        //        DEBUGPRINT("custom -- ")
         return;
     }
 

@@ -904,24 +904,9 @@ struct symbol *exp1()
 // <expression> --> <assignment> | <exp1>
 struct symbol *expression()
 {
-    //    return one_of(&assignment, &exp1, NULL);
     struct symbol *s = one_of(&assignment, &exp1, NULL);
     if (s && s->nonterminal == SYMBOL_ASSIGNMENT)
         s->exp = BHS;
-
-/*    for (int i=0; i<s->value->list->length; i++) { // iterate through sources
-        struct symbol *v = (struct symbol*)array_get(s->value->list, i);
-        if (v->nonterminal == SYMBOL_ASSIGNMENT) {
-            v->index->exp = BHS; // then skip the interim VM_SRC and VM_DST steps
-            struct array *ds = v->index->list;
-            if (ds->length) {
-                //            for (int j=0; j<ds->length; j++) {
-                struct symbol *u = (struct symbol *)array_get(ds, ds->length-1);
-                u->exp = BHS;
-            }
-            s->value->exp = BHS;
-        }
-    }*/
     return s;
 }
 
@@ -1271,12 +1256,12 @@ void generate_member(struct byte_array *code, struct symbol *root)
 void generate_fcall(struct byte_array *code, struct symbol *root)
 {
     if (root->value->nonterminal == SYMBOL_MEMBER) {
-        generate_items(code, root);          // arguments
+        generate_items(code, root);                 // arguments
         generate_code(code, root->value->index);    // member
         generate_code(code, root->value->value);    // function
         generate_step(code, 1, VM_MET);
     } else {
-        generate_items(code, root);          // arguments
+        generate_items(code, root);                 // arguments
         generate_code(code, root->value);           // function
         generate_step(code, 1, VM_CAL);
     }

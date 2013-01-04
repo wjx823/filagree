@@ -98,7 +98,6 @@ tester.test('serial',
     end,
     11)
 
-/*
 tester.test('map',
     function()
         x='y'
@@ -111,9 +110,10 @@ tester.test('map',
             a.keys   +
             a.values
         sys.print(a)
+        return result
     end,
-    '[2,3,4,\'x\':7,\'y\':8,\'z\':9]list3[2,3,4][\'x\',\'y\',\'z\'][7,8,9]')
-*/
+    '&1 [2,3,4,\'x\':7,\'y\':8,\'z\':9]list3&1 [2,3,4]&1 [\'x\',\'y\',\'z\']&1 [7,8,9]')
+
 tester.test('string',
     function()
         a = 'supercalifragilisticexpialidocious!' 
@@ -325,9 +325,12 @@ tester.test('string class',
 tester.test('assignment expression',
     function()
         a,b = c,d,e,f,g = 7,8,9
-        return a + b + c
+        if (h = not (i = 0)) then
+            return a + b + c + h + i
+        end
+        return 9
     end,
-    22)
+    23)
 
 
 tester.done()

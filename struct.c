@@ -152,19 +152,15 @@ void byte_array_resize(struct byte_array* ba, uint32_t size) {
     ba->length = size;
 }
 
-bool byte_array_equals(const struct byte_array *a, const struct byte_array* b) {
+bool byte_array_equals(const struct byte_array *a, const struct byte_array* b)
+{
     if (a==b)
         return true;
     if (!a != !b) // one is null and the other is not
         return false;
     if (a->length != b->length)
         return false;
-
-    int i;
-    for (i = 0; i<a->length; i++)
-        if (a->data[i] != b->data[i]) // todo: memcmp////////////////////
-            return false;
-    return true;
+    return !memcmp(a->data, b->data, a->length * sizeof(uint8_t));
 }
 
 struct byte_array *byte_array_copy(const struct byte_array* original) {

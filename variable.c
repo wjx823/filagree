@@ -387,121 +387,6 @@ struct variable *variable_deserialize(struct context *context, struct byte_array
     }
 }
 
-/*
-struct byte_array *variable_serialize2(struct context *context,
-                                       struct byte_array *bits,
-                                       struct variable *in,
-                                       struct variable *visited)
-{
-    assert_message(visited->type == VAR_INT, "wrong visited type");
-    if (in->marked)
-        return bits;
-
-    int type;
-    int32_t index = (int32_t)map_get(visited->map, in);
-    if (index && !in->marked) {
-        type = VAR_VST;
-        in->marked = true;
-    } else {
-        type = in->type;
-        map_insert(visited->map, in, (void*)(++visited->integer));
-    }
-
-    //DEBUGPRINT("\tserialize:%s\n", variable_value(in));
-    if (!bits)
-        bits = byte_array_new();
-    serial_encode_int(bits, 0, type);
-    serial_encode_int(bits, 0, index);
-    switch (type) {
-        case VAR_STR:
-        case VAR_FNC:   serial_encode_string(bits, 0, in->str);     break;
-        case VAR_VST:                                               break;
-        case VAR_INT:   serial_encode_int(bits, 0, in->integer);    break;
-        case VAR_FLT:   serial_encode_float(bits, 0, in->floater);  break;
-        case VAR_LST: {
-            serial_encode_int(bits, 0, in->list->length);
-            for (int i=0; i<in->list->length; i++)
-                variable_serialize2(context, bits, (struct variable*)array_get(in->list, i), visited);
-        } break;
-        default:
-            vm_exit_message(context, "bad var type");
-            break;
-    }
-
-    if (in->map) {
-        assert_message(in->map->type==MAP_KEY_BYTE_ARRAY, "can only serialize map of byte-array keys");
-        const struct array *keys = map_keys(in->map);
-        const struct array *values = map_values(in->map);
-        serial_encode_int(bits, 0, keys->length);
-        for (int i=0; i<keys->length; i++) {
-            serial_encode_string(bits, 0, (const struct byte_array*)array_get(keys, i));
-            variable_serialize2(context, bits, (struct variable*)array_get(values, i), visited);
-        }
-    } else
-        serial_encode_int(bits, 0, 0);
-
-    //DEBUGPRINT("in: %s\n", variable_value(in));
-    //byte_array_print("serialized: ", bits);
-    return bits;
-}
-
-struct variable *variable_deserialize2(struct context *context, struct byte_array *bits, struct map *visited)
-{
-    struct variable *out = NULL;
-    enum VarType vt = (enum VarType)serial_decode_int(bits);
-    int index = serial_decode_int(bits);
-    switch (vt) {
-        case VAR_VST:   return (struct variable*)map_get(visited, (void*)index);
-        case VAR_NIL:   out = variable_new_nil(context);
-        case VAR_INT:   out = variable_new_int(context, serial_decode_int(bits));
-        case VAR_FLT:   out = variable_new_float(context, serial_decode_float(bits));
-        case VAR_FNC:   out = variable_new_fnc(context, serial_decode_string(bits), NULL);
-        case VAR_STR:   out = variable_new_str(context, serial_decode_string(bits));
-        case VAR_LST: {
-            uint32_t size = serial_decode_int(bits);
-            struct array *list = array_new_size(size);
-            while (size--)
-                array_add(list, variable_deserialize(context, bits));
-            out = variable_new_list(context, list);
-        }
-        default:
-            vm_exit_message(context, "bad var type");
-            return NULL;
-    }
-
-    uint32_t map_length = serial_decode_int(bits);
-    if (map_length) {
-        out->map = map_new(MAP_KEY_BYTE_ARRAY);
-        for (int i=0; i<map_length; i++) {
-            struct byte_array *key = serial_decode_string(bits);
-            struct variable *value = variable_deserialize(context, bits);
-            map_insert(out->map, key, value);
-        }
-    }
-    if (index)
-        map_insert(visited, (void*)index, out);
-    return out;
-}
-
-
-// todo: rewrite in filagree
-struct byte_array *variable_serialize(struct context *context,
-                                      struct byte_array *bits,
-                                      struct variable *in)
-{
-    struct variable *visited = variable_new_int(context, 0);
-    visited->map = map_new(MAP_KEY_VOID_STAR);
-    variable_cycle_check(in, visited);
-    return variable_serialize2(context, bits, in, visited);
-}
-
-struct variable *variable_deserialize(struct context *context, struct byte_array *bits)
-{
-    struct map *visited = map_new(MAP_KEY_VOID_STAR);
-    return variable_deserialize2(context, bits, visited);
-}
-*/
-
 int variable_save(struct context *context,
                   struct variable *v,
                   const struct variable *path)
@@ -524,15 +409,6 @@ struct variable *variable_load(struct context *context, const struct variable *p
     struct variable *v = variable_deserialize(context, file_bytes);
     return v;
 }
-
-/*struct variable *variable_get(struct context *context, const struct variable *v, uint32_t i)
-{
-    switch (v->type) {
-        case VAR_LST: return (struct variable*)array_get(v->list, i);
-        case VAR_STR: return variable_new_str(context, byte_array_part(v->str, i, 1));
-        default:      return vm_exit_message(context, "non-indexable get");
-    }
-}*/
 
 uint32_t variable_length(struct context *context, const struct variable *v)
 {
@@ -593,8 +469,6 @@ struct variable *variable_concatenate(struct context *context, int n, const stru
         struct variable* parameter = va_arg(argp, struct variable* );
         if (!parameter)
             continue;
-//        else if (!result)
-//            result = variable_copy(context, parameter);
         else switch (result->type) {
             case VAR_STR: byte_array_append(result->str, parameter->str); break;
             case VAR_LST: array_append(result->list, parameter->list);    break;
@@ -619,19 +493,3 @@ struct variable *variable_map_get(struct context *context, struct variable* v, c
         return variable_new_nil(context);
     return (struct variable*)map_get(v->map, key);
 }
-
-/*
-int variable_func_env(struct context *context, struct variable* f, const struct byte_array *key, struct variable *datum)
-{
-    null_check(f);
-    null_check(key);
-    null_check(datum);
-    assert_message(f->type == VAR_FNC, "non-func for env");
-    struct byte_array *renv = byte_array_from_string(RESERVED_ENV);
-    struct variable *env = (struct variable*)variable_map_get(context, f, renv);
-    if (env->type == VAR_NIL)
-        env = variable_new_map(context, NULL);
-    int result = variable_map_insert(env, key, datum) || variable_map_insert(f, renv, env);
-    return result;
-}
-*/
