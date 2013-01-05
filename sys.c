@@ -8,7 +8,6 @@
 #include "sys.h"
 #include "variable.h"
 #include "vm.h"
-#include "ui.h"
 #include "util.h"
 
 #define RESERVED_SYS  "sys"
@@ -112,12 +111,13 @@ struct variable *sys_args(struct context *context)
 
 struct variable *sys_button(struct context *context)
 {
-    stack_pop(context->operand_stack); // self
-    int32_t x = ((struct variable*)stack_pop(context->operand_stack))->integer;
-    int32_t y = ((struct variable*)stack_pop(context->operand_stack))->integer;
-    int32_t w = ((struct variable*)stack_pop(context->operand_stack))->integer;
-    int32_t h = ((struct variable*)stack_pop(context->operand_stack))->integer;
-    const char *str = byte_array_to_string(((struct variable*)stack_pop(context->operand_stack))->str);
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    int32_t x = ((struct variable*)array_get(value->list, 1))->integer;
+    int32_t y = ((struct variable*)array_get(value->list, 2))->integer;
+    int32_t w = ((struct variable*)array_get(value->list, 3))->integer;
+    int32_t h = ((struct variable*)array_get(value->list, 4))->integer;
+    char *str = (char*)((struct variable*)array_get(value->list, 5))->str->data;
+
     hal_button(x, y, w, h, str, NULL, NULL);
     return NULL;
 }
@@ -145,12 +145,13 @@ struct variable *sys_atoi(struct context *context)
 
 struct variable *sys_input(struct context *context)
 {
-    stack_pop(context->operand_stack); // self
-    int32_t x = ((struct variable*)stack_pop(context->operand_stack))->integer;
-    int32_t y = ((struct variable*)stack_pop(context->operand_stack))->integer;
-    int32_t w = ((struct variable*)stack_pop(context->operand_stack))->integer;
-    int32_t h = ((struct variable*)stack_pop(context->operand_stack))->integer;
-    const char *str = byte_array_to_string(((struct variable*)stack_pop(context->operand_stack))->str);
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    int32_t x = ((struct variable*)array_get(value->list, 1))->integer;
+    int32_t y = ((struct variable*)array_get(value->list, 2))->integer;
+    int32_t w = ((struct variable*)array_get(value->list, 3))->integer;
+    int32_t h = ((struct variable*)array_get(value->list, 4))->integer;
+    char *str = (char*)((struct variable*)array_get(value->list, 5))->str->data;
+
     hal_input(x, y, w, h, str, false);
     return NULL;
 }

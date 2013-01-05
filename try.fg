@@ -1,5 +1,2 @@
-a = 7
-b = 8
-c = a + b
+import 'ui'
 
-e = not (d = 0)
