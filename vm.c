@@ -1257,7 +1257,7 @@ done:
     return inst == VM_RET;
 }
 
-void execute(struct byte_array *program, bool in_context, find_c_var *find)
+void execute(struct byte_array *program, find_c_var *find)
 {
 #ifdef DEBUG
     display_program(program);
@@ -1274,7 +1274,7 @@ void execute(struct byte_array *program, bool in_context, find_c_var *find)
     context->indent = 1;
 #endif
     if (!setjmp(trying))
-        run(context, program, NULL, in_context);
+        run(context, program, NULL, false);
 
     assert_message(stack_empty(context->operand_stack), "operand stack not empty");
 }

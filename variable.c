@@ -17,7 +17,6 @@ const struct number_string var_types[] = {
     {VAR_MAP,   "map"},
     {VAR_LST,   "list"},
     {VAR_FNC,   "function"},
-    {VAR_VST,   "visited"},
     {VAR_ERR,   "error"},
     {VAR_C,     "c-function"},
 };
@@ -70,8 +69,6 @@ void variable_del(struct context *context, struct variable *v)
     switch (v->type) {
         case VAR_INT:
         case VAR_FLT:
-        case VAR_VST:
-            break;
         case VAR_STR:
         case VAR_FNC:
             byte_array_del(v->str);
@@ -182,8 +179,7 @@ const char *variable_value_str2(struct context *context, struct variable* v, uin
         case VAR_STR:    sprintf(str, "%s%s", str, byte_array_to_string(v->str));  break;
         case VAR_FNC:    sprintf(str, "%sf(%dB)", str, v->str->length);            break;
         case VAR_C:      sprintf(str, "%sc-function", str);                        break;
-        case VAR_VST:    sprintf(str, "%svisited %d", str, v->integer);            break;
-        case VAR_MAP:                                                               break;
+        case VAR_MAP:                                                              break;
         case VAR_SRC:    vt = vt;
         case VAR_LST: {
             strcat(str, "[");
@@ -385,29 +381,6 @@ struct variable *variable_deserialize(struct context *context, struct byte_array
             vm_exit_message(context, "bad var type");
             return NULL;
     }
-}
-
-int variable_save(struct context *context,
-                  struct variable *v,
-                  const struct variable *path)
-{
-    vm_null_check(context, v);
-    vm_null_check(context, path);
-
-    struct byte_array *bytes = byte_array_new();
-    variable_serialize(context, bytes, v, true);
-    return write_file(path->str, bytes);
-}
-
-struct variable *variable_load(struct context *context, const struct variable *path)
-{
-    vm_null_check(context, path);
-
-    struct byte_array *file_bytes = read_file(path->str);
-    if (!file_bytes)
-        return NULL;
-    struct variable *v = variable_deserialize(context, file_bytes);
-    return v;
 }
 
 uint32_t variable_length(struct context *context, const struct variable *v)

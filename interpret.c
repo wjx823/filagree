@@ -10,18 +10,6 @@
 #define FG_MAX_INPUT     256
 #define ERROR_USAGE    "usage: filagree [file]"
 
-void yield(struct context *context) {
-    struct variable *args = stack_pop(context->operand_stack);
-	struct variable *f = array_get(args->list, 1);
-	struct byte_array *result = f->str;
-	byte_array_append(result, byte_array_from_string(": "));
-    for (int i=1; i<args->list->length; i++) {
-        struct variable *v = array_get(args->list, i);
-		byte_array_append(result, variable_value(context, v));
-	}
-	DEBUGPRINT("%s\n", byte_array_to_string(result));
-}
-
 void repl()
 {
     char stdinput[FG_MAX_INPUT];
@@ -45,13 +33,13 @@ void repl()
 void interpret_file(const struct byte_array *filename, find_c_var *find)
 {
     struct byte_array *program = build_file(filename);
-    execute(program, false, find);
+    execute(program, find);
 }
 
 void execute_file(const struct byte_array* filename, find_c_var *find)
 {
     struct byte_array *program = read_file(filename);
-    execute(program, false, find);
+    execute(program, find);
 }
 
 void run_file(const char* str, find_c_var *find, struct map *env)
@@ -75,7 +63,7 @@ void interpret_string(const char *str, find_c_var *find)
 {
     struct byte_array *input = byte_array_from_string(str);
     struct byte_array *program = build_string(input);
-    execute(program, true, find);
+    execute(program, find);
 }
 
 #ifdef CLI

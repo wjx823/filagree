@@ -1,2 +1,2 @@
-import 'ui'
-
+p = 'one two three'
+q = p.find('two')

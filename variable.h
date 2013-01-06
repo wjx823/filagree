@@ -12,7 +12,6 @@ enum VarType {
     VAR_FNC,
     VAR_LST,
     VAR_MAP,
-    VAR_VST,
     VAR_SRC,
     VAR_ERR,
     VAR_C,
@@ -44,8 +43,6 @@ struct byte_array *variable_serialize(struct context *context, struct byte_array
                                       const struct variable *in,
                                       bool withType);
 struct variable *variable_deserialize(struct context *context, struct byte_array *str);
-extern int variable_save(struct context *context, struct variable* v, const struct variable* path);
-extern struct variable *variable_load(struct context *context, const struct variable* path);
 
 struct variable* variable_new_bool(struct context *context, bool b);
 struct variable *variable_new_err(struct context *context, const char* message);

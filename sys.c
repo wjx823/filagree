@@ -35,20 +35,16 @@ struct variable *sys_print(struct context *context)
     return NULL;
 }
 
-struct variable *sys_save(struct context *context)
+struct variable *sys_write(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
     struct variable *v = (struct variable*)array_get(value->list, 1);
     struct variable *path = (struct variable*)array_get(value->list, 2);
-    variable_save(context, v, path);
-    return NULL;
-}
 
-struct variable *sys_load(struct context *context)
-{
-    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
-    struct variable *path = (struct variable*)array_get(value->list, 1);
-    return variable_load(context, path);
+    struct byte_array *bytes = byte_array_new();
+    variable_serialize(context, bytes, v, true);
+    int w = write_file(path->str, bytes);
+    return variable_new_int(context, w);
 }
 
 struct variable *sys_read(struct context *context)
@@ -67,7 +63,7 @@ struct variable *sys_run(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
     struct variable *script = (struct variable*)array_get(value->list, 1);
-    execute(script->str, false, NULL);
+    execute(script->str, NULL);
     return NULL;
 }
 
@@ -159,9 +155,9 @@ struct variable *sys_input(struct context *context)
 struct string_func builtin_funcs[] = {
 	{"args",        &sys_args},
     {"print",       &sys_print},
+    {"atoi",        &sys_atoi},
     {"read",        &sys_read},
-    {"save",        &sys_save},
-    {"load",        &sys_load},
+    {"write",       &sys_write},
     {"run",         &sys_run},
     {"interpret",   &sys_interpret},
     {"remove",      &sys_rm},
@@ -169,7 +165,6 @@ struct string_func builtin_funcs[] = {
     {"loop",        &sys_loop},
     {"button",      &sys_button},
     {"input",       &sys_input},
-    {"atoi",        &sys_atoi},
 };
 
 struct variable *sys_find(struct context *context, const struct byte_array *name)

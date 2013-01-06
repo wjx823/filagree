@@ -91,7 +91,6 @@ void display_program(struct byte_array* program);
 #endif
 struct context *context_new();
 void execute(struct byte_array *program,
-             bool in_context,
              find_c_var *find);
 void garbage_collect(struct context *context);
 void vm_call(struct context *context, struct variable *func, struct variable *arg,...);
