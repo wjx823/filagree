@@ -89,7 +89,7 @@ enum Opcode {
 #ifdef DEBUG
 void display_program(struct byte_array* program);
 #endif
-struct context *context_new();
+struct context *context_new(bool state);
 void execute(struct byte_array *program,
              find_c_var *find);
 void garbage_collect(struct context *context);

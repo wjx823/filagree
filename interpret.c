@@ -10,15 +10,21 @@
 #define FG_MAX_INPUT     256
 #define ERROR_USAGE    "usage: filagree [file]"
 
+bool run(struct context *context,
+         struct byte_array *program,
+         struct map *env,
+         bool in_context);
+
 void repl()
 {
-    char stdinput[FG_MAX_INPUT];
-    struct context *context = context_new();
+    char str[FG_MAX_INPUT];
+    struct context *context = context_new(true);
 
     for (;;) {
         fflush(stdin);
-        stdinput[0] = 0;
-        if (!fgets(stdinput, FG_MAX_INPUT, stdin)) {
+        str[0] = 0;
+        printf("f> ");
+        if (!fgets(str, FG_MAX_INPUT, stdin)) {
             if (feof(stdin))
                 return;
             if (ferror(stdin)) {
@@ -26,7 +32,11 @@ void repl()
                 return;
             }
         }
-        interpret_string(stdinput, context->find);
+
+        struct byte_array *input = byte_array_from_string(str);
+        struct byte_array *program = build_string(input);
+        if (!setjmp(trying))
+            run(context, program, NULL, true);
     }
 }
 

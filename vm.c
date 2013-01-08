@@ -97,11 +97,13 @@ static inline void cfnc_length(struct context *context) {
     stack_push(context->operand_stack, result);
 }
 
-struct context *context_new()
+struct context *context_new(bool state)
 {
     struct context *context = (struct context*)malloc(sizeof(struct context));
     null_check(context);
     context->program_stack = stack_new();
+    if (state)
+        stack_push(context->program_stack, program_state_new(context, NULL));
     context->operand_stack = stack_new();
     context->vm_exception = NULL;
     context->runtime = true;
@@ -250,7 +252,7 @@ void display_code(struct context *context, struct byte_array *code)
 
 void display_program(struct byte_array *program)
 {
-    struct context *context = context_new();
+    struct context *context = context_new(false);
 
     INDENT
     DEBUGPRINT("%sprogram bytes:\n", indentation(context));
@@ -624,8 +626,7 @@ struct variable *find_var(struct context *context, const struct byte_array *name
     const struct program_state *state = (const struct program_state*)stack_peek(context->program_stack, 0);
     struct map *var_map = state->named_variables;
     struct variable *v = (struct variable*)map_get(var_map, name);
-    if (!strcmp("y", byte_array_to_string(name)))
-        DEBUGPRINT(" find_var %s in {p:%p, s:%p, m:%p}: %p\n", byte_array_to_string(name), context->program_stack, state, var_map, v);
+    // DEBUGPRINT(" find_var %s in {p:%p, s:%p, m:%p}: %p\n", byte_array_to_string(name), context->program_stack, state, var_map, v);
 
     if (!v && context->find)
         v = context->find(context, name);
@@ -686,8 +687,7 @@ void set_named_variable(struct context *context,
                         const struct byte_array *name,
                         const struct variable *value)
 {
-    if (!strcmp("y", byte_array_to_string(name)))
-        DEBUGPRINT(" set_named_variable: %p\n", state);
+    // DEBUGPRINT(" set_named_variable: %p\n", state);
     if (!state)
         state = (struct program_state*)stack_peek(context->program_stack, 0);
     struct map *var_map = state->named_variables;
@@ -695,8 +695,7 @@ void set_named_variable(struct context *context,
     map_insert(var_map, name, to_var);
 
     //DEBUGPRINT("SET %s to %s\n", byte_array_to_string(name), variable_value_str(context, value));
-    if (!strcmp("y", byte_array_to_string(name)))
-        DEBUGPRINT(" SET %s at %p in {p:%p, s:%p, m:%p}\n", byte_array_to_string(name), to_var, context->program_stack, state, var_map);
+    // DEBUGPRINT(" SET %s at %p in {p:%p, s:%p, m:%p}\n", byte_array_to_string(name), to_var, context->program_stack, state, var_map);
 }
 
 static struct variable *get_value(struct context *context, enum Opcode op)
@@ -1177,7 +1176,8 @@ bool run(struct context *context,
     enum Opcode inst = VM_NIL;
     if (context->runtime) {
         if (in_context) {
-            state = (struct program_state*)stack_peek(context->program_stack, 0);
+            if (!state)
+                state = (struct program_state*)stack_peek(context->program_stack, 0);
             env = state->named_variables; // use the caller's variable set in the new state
         }
         else
@@ -1268,7 +1268,7 @@ void execute(struct byte_array *program, find_c_var *find)
     program = byte_array_copy(program);
     byte_array_reset(program);
 
-    struct context *context = context_new();
+    struct context *context = context_new(false);
     context->find = find;
 #ifdef DEBUG
     context->indent = 1;

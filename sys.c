@@ -35,6 +35,27 @@ struct variable *sys_print(struct context *context)
     return NULL;
 }
 
+struct variable *sys_save(struct context *context)
+{
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *v = (struct variable*)array_get(value->list, 1);
+    struct variable *path = (struct variable*)array_get(value->list, 2);
+    struct byte_array *bytes = byte_array_new();
+    variable_serialize(context, bytes, v, true);
+    int w = write_file(path->str, bytes);
+    return variable_new_int(context, w);
+}
+
+struct variable *sys_load(struct context *context)
+{
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *path = (struct variable*)array_get(value->list, 1);
+    struct byte_array *file_bytes = read_file(path->str);
+    if (!file_bytes)
+        return NULL;
+    return variable_deserialize(context, file_bytes);
+}
+
 struct variable *sys_write(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
@@ -158,6 +179,8 @@ struct string_func builtin_funcs[] = {
     {"atoi",        &sys_atoi},
     {"read",        &sys_read},
     {"write",       &sys_write},
+    {"save",        &sys_save},
+    {"load",        &sys_load},
     {"run",         &sys_run},
     {"interpret",   &sys_interpret},
     {"remove",      &sys_rm},

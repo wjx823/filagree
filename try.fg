@@ -1,2 +1,9 @@
-p = 'one two three'
-q = p.find('two')
+    x = ['set': function(self, y, z)        # 'set' is also reserved, for making a custom setter
+            if y == 'p' then
+                self!a = z*2    # '!' here instead of '.' means set, without the custom setter
+            else
+                self!b = z*4
+            end
+        end ]
+    x.p = 6 
+    y = 10*x.a + (x.b or 5)    # x.p = 125

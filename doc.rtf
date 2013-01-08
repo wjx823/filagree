@@ -5,7 +5,7 @@
 {\list\listtemplateid2\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid101\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid2}
 {\list\listtemplateid3\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid201\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid3}}
 {\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}{\listoverride\listid2\listoverridecount0\ls2}{\listoverride\listid3\listoverridecount0\ls3}}
-\margl1440\margr1440\vieww28600\viewh16220\viewkind0
+\margl1440\margr1440\vieww28600\viewh16520\viewkind0
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
 
 \f0\b\fs24 \cf0 Introduction
@@ -50,8 +50,14 @@ There is one structure, a list, which may contain values indexed by number (arra
 \
 Actually, any variable may contain mapped values:\
 \
-    a = 7                             # oh and here's a single-line comment\
-    a.too = 'buckle my shoe'                /* this comment can go over multiple lines */\
+    a = 7\
+    a.too = 'buckle my shoe'\
+\
+Comments are either:\
+\
+    x = 1 # single line, or\
+    y = 2 /* multiple\
+	    line */\
 \
 Functions are first-order variables:\
 \
@@ -83,7 +89,7 @@ There are two control-flow statements: if-then and while. Anything besides false
     ate\
 \
     n = 3\
-    while n do\
+    while n\
         sys.print(n)\
         n = n-1\
     end\
@@ -96,7 +102,7 @@ There are also iterators and comprehensions:\
 \
     x = [3,1,4,1,5,9]\
     y = [n+1 for n in x where n > 3]    # y = [5,6,10]\
-    for z in y where z < 9 do\
+    for z in y where z < 9\
         sys.print(z)\
     end\
 \
@@ -105,7 +111,9 @@ There are also iterators and comprehensions:\
 \
 Exceptions, and try/catch:\
 \
-    if n == nil then throw 'I am an exception'        # you can throw any type of value: string, int, list, etc.\
+    if 9 == nil then\
+	throw 'I am an exception'        # you can throw any type of value: string, int, list, etc.\
+    end\
     try\
         m = n % 2\
         if m == 1 then\
@@ -133,15 +141,16 @@ and file access:\
 and sort; you provide the compare function for custom structures:\
 \
     p = [3,1,4,1,5,9,6,2]\
-    p.sort()                    # 1,1,2,3,4,5,6,9\
+    p.sort()                                                             # 1,1,2,3,4,5,6,9\
     q = [['a':3, 'b':4], ['a':2, 'b':5]]\
-    q.sort(function(x,y) return y.a - x.a end)     # [['a':2, 'b':5], ['a':3, 'b':4]]\
+    q.sort(function(x,y) return x.a - y.a end)\
+    sys.print(q)                                                      # [['a':2, 'b':5], ['a':3, 'b':4]]\
 \
 and find / replace:\
 \
     p = 'one two three'\
-    q = p.find('two')        # q = 4\
-    r = p.part(4,3)        # r = 'two'\
+    q = p.find('two')                # q = 4\
+    r = p.part(4,3)                   # r = 'two'\
     s = p.replace('two', '2')    # s = 'one 2 three'\
 \
 and function arguments:\
@@ -154,7 +163,7 @@ and function arguments:\
 \
 and atoi:\
 \
-    n,i = sys.atoi('because 345', 8)    # n = 345, i = 11\
+    n,i = sys.atoi('because 765', 8)    # n = 756, i = 3\
 \
 \
 
@@ -199,7 +208,8 @@ Custom get and set:\
                 self!b = z*4\
             end\
         end ]\
-    x.p = 6 return 10*x.a + (x.b or 5)    # x.p = 125\
+    x.p = 6\
+    y = 10*x.a + (x.b or 5)    # y = 125\
 \
 C integration:\
 \
