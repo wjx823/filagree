@@ -14,12 +14,19 @@
 
 static Serial usbTxRx(USBTX, USBRX);
 
+#endif // MBED
+
+#ifndef strnlen
+
 size_t strnlen(char *s, size_t maxlen)
 {
 	size_t i;
 	for (i= 0; i<maxlen && *s; i++, s++);
 	return i;
 }
+
+#endif // ndef strnlen
+#ifndef strnstr
 
 char *strnstr(const char *s, const char *find, size_t slen)
 {
@@ -41,7 +48,7 @@ char *strnstr(const char *s, const char *find, size_t slen)
 	return ((char *)s);
 }
 
-#endif // MBED
+#endif // ndef strnstr
 
 
 #define MESSAGE_MAX 100
