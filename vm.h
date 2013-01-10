@@ -73,7 +73,6 @@ enum Opcode {
     VM_IFF, // if then
     VM_JMP, // jump the program counter
     VM_CAL, // call a function for result
-    VM_FCL, // call a function
     VM_MET, // call an object method
     VM_RET, // return from a function,
     VM_ITR, // iteration loop

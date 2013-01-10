@@ -1,8 +1,6 @@
 #ifndef VARIABLE_H
 #define VARIABLE_H
 
-//#include "vm.h"
-
 enum VarType {
     VAR_NIL,
     VAR_INT,
@@ -17,13 +15,21 @@ enum VarType {
     VAR_C,
 };    
 
+enum Visited {
+    VISITED_NOT,
+    VISITED_ONCE,
+    VISITED_MORE,
+    VISITED_X
+};
+
 typedef struct context *context_p; // forward declaration
 typedef struct variable *(callback2func)(context_p context);
 typedef struct variable *(find_c_var)(context_p context, const struct byte_array *name);
 
 struct variable {
     enum VarType type;
-    uint32_t marked;
+    enum Visited visited;
+    uint32_t mark;
     union {
         struct byte_array* str;
         struct array *list;
@@ -58,16 +64,14 @@ struct variable *variable_new_src(struct context *context, uint32_t size);
 
 struct variable *variable_copy(struct context *context, const struct variable *v);
 struct variable *variable_pop(struct context *context);
-//struct variable *variable_get(struct context *context, const struct variable *v, uint32_t i);
 uint32_t variable_length(struct context *context, const struct variable *v);
 void variable_push(struct context *context, struct variable *v);
 struct variable *variable_concatenate(struct context *context, int n, const struct variable* v, ...);
 void variable_remove(struct variable *self, uint32_t start, int32_t length);
 struct variable *variable_part(struct context *context, struct variable *self, uint32_t start, int32_t length);
-
 int variable_map_insert(struct variable* v, const struct byte_array *key, struct variable *data);
 struct variable *variable_map_get(struct context *context, struct variable* v, const struct byte_array *key);
-//int variable_func_env(struct context *context, struct variable* v, const struct byte_array *key, struct variable *data);
+void variable_mark(struct variable *v);
 
 const char *var_type_str(enum VarType vt);
 

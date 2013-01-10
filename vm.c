@@ -115,33 +115,6 @@ struct context *context_new(bool state)
 
 // garbage collection //////////////////////////////////////////////////////
 
-void mark(struct context *context, struct variable *root)
-{
-    null_check(context);
-    if (root->map) {
-        const struct array *values = map_values(root->map);
-        for (int i=0; values && i<values->length; i++)
-            mark(context, (struct variable*)array_get(values, i));
-    }
-
-    root->marked = true;
-    switch (root->type) {
-        case VAR_INT:
-        case VAR_FLT:
-        case VAR_STR:
-        case VAR_FNC:
-            //        case VAR_MAP:
-            break;
-        case VAR_LST:
-            for (int i=0; i<root->list->length; i++)
-                mark(context, (struct variable*)array_get(root->list, i));
-            break;
-        default:
-            vm_exit_message(context, "bad var type");
-            break;
-    }
-}
-
 void sweep(struct context *context, struct variable *root)
 {
     null_check(context);
@@ -149,10 +122,8 @@ void sweep(struct context *context, struct variable *root)
     struct array *vars = state->all_variables;
     for (int i=0; i<vars->length; i++) {
         struct variable *v = (struct variable*)array_get(vars, i);
-        if (!v->marked)
+        if (v->visited != VISITED_NOT)
             variable_del(context, v);
-        else
-            v->marked = false;
     }
 }
 
@@ -163,7 +134,7 @@ void garbage_collect(struct context *context)
     struct array *vars = state->all_variables;
     for (int i=0; i<vars->length; i++) {
         struct variable *v = (struct variable*)array_get(vars, i);
-        mark(context, v);
+        variable_mark(v);
         sweep(context, v);
     }
 }
@@ -204,7 +175,6 @@ const struct number_string opcodes[] = {
     {VM_IFF,    "IFF"},
     {VM_JMP,    "JMP"},
     {VM_CAL,    "CAL"},
-    {VM_FCL,    "FCL"},
     {VM_MET,    "MET"},
     {VM_RET,    "RET"},
     {VM_ITR,    "ITR"},
@@ -361,7 +331,7 @@ void func_call(struct context *context, enum Opcode op, struct byte_array *progr
         return;
 
     if (indexable)
-        array_insert(s->list, 0, indexable);
+        array_insert(s->list, 0, indexable); // self
 
     vm_call_src(context, func);
 
@@ -750,7 +720,7 @@ static void dst(struct context *context, bool really) // drop unused assignment 
     }
 
     struct variable *v = (struct variable*)stack_peek(context->operand_stack, 0);
-    if (v->type == VAR_SRC && !really)
+    if (v->type == VAR_SRC) // unused result
         stack_pop(context->operand_stack);
     else
         DEBUGPRINT(" (%s/%d)", var_type_str(v->type), really);
@@ -1227,7 +1197,6 @@ bool run(struct context *context,
             case VM_SET:    set(context, inst, state, program);             break;
             case VM_JMP:    pc_offset = jump(context, program);             break;
             case VM_IFF:    pc_offset = iff(context, program);              break;
-            case VM_FCL:
             case VM_CAL:    func_call(context, inst, program, NULL);        break;
             case VM_LST:    push_list(context, program);                    break;
             case VM_MAP:    push_map(context, program);                     break;

@@ -112,7 +112,7 @@ tester.test('map',
         sys.print(a)
         return result
     end,
-    '&1 [2,3,4,\'x\':7,\'y\':8,\'z\':9]list3&1 [2,3,4]&1 [\'x\',\'y\',\'z\']&1 [7,8,9]')
+    '[2,3,4,\'x\':7,\'y\':8,\'z\':9]list3[2,3,4][\'x\',\'y\',\'z\'][7,8,9]')
 
 tester.test('string',
     function()

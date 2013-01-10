@@ -34,7 +34,8 @@ struct variable* variable_new(struct context *context, enum VarType type)
     struct variable* v = (struct variable*)malloc(sizeof(struct variable));
     v->type = type;
     v->map = NULL;
-    v->marked = false;
+    v->mark = 0;
+    v->visited = VISITED_NOT;
     return v;
 }
 
@@ -154,22 +155,21 @@ struct variable *variable_new_c(struct context *context, callback2func *cfnc) {
     return v;
 }
 
-const char *variable_value_str2(struct context *context, struct variable* v, uint32_t *marker)
+const char *variable_value_str2(struct context *context, struct variable* v)
 {
     null_check(v);
     enum VarType vt = (enum VarType)v->type;
     char* str = (char*)malloc(1000);
-    if (v->marked) {
-        sprintf(str, "*%d", v->marked);
+    struct array* list = v->list;
+
+    if (v->visited ==VISITED_MORE) { // first visit of reused variable
+        sprintf(str, "&%d", v->mark);
+        v->visited = VISITED_X;
+    }
+    else if (v->visited == VISITED_X) { // subsequent visit
+        sprintf(str, "*%d", v->mark);
         return str;
     }
-    else if (v->map || vt == VAR_LST) {
-        v->marked = *marker;
-        (*marker)++;
-        sprintf(str, "&%d ", v->marked);
-    }
-
-    struct array* list = v->list;
 
     switch (vt) {
         case VAR_NIL:    sprintf(str, "%snil", str);                               break;
@@ -189,7 +189,7 @@ const char *variable_value_str2(struct context *context, struct variable* v, uin
                 vm_null_check(context, element);
                 const char *q = (element->type == VAR_STR || element->type == VAR_FNC) ? "'" : "";
                 const char *c = i ? "," : "";
-                const char *estr = variable_value_str2(context, element, marker);
+                const char *estr = variable_value_str2(context, element);
                 sprintf(str, "%s%s%s%s%s", str, c, q, estr, q);
             }
         } break;
@@ -217,7 +217,7 @@ const char *variable_value_str2(struct context *context, struct variable* v, uin
             strcat(str, "'");
             strcat(str, ":");
             struct variable *biv = (struct variable*)array_get(b,i);
-            const char *bistr = variable_value_str2(context, biv, marker);
+            const char *bistr = variable_value_str2(context, biv);
             strcat(str, bistr);
         }
         strcat(str, vt==VAR_LST ? "]" : ">");
@@ -228,11 +228,43 @@ const char *variable_value_str2(struct context *context, struct variable* v, uin
     return str;
 }
 
+static void variable_mark2(struct variable *v, uint32_t *marker)
+{
+    if (v->visited == VISITED_MORE)
+        return;
+    if (v->visited == VISITED_ONCE) {
+        v->visited = VISITED_MORE;
+        return;
+    }
+
+    // first visit
+    v->mark = ++(*marker);
+    v->visited = VISITED_ONCE;
+
+    if (v->map) {
+        const struct array *values = map_values(v->map);
+        for (int i=0; values && i<values->length; i++)
+            variable_mark2((struct variable*)array_get(values, i), marker);
+    }
+
+    if (v->type == VAR_LST) {
+        for (int i=0; i<v->list->length; i++)
+            variable_mark2((struct variable*)array_get(v->list, i), marker);
+    }
+}
+
+void variable_mark(struct variable *v)
+{
+    uint32_t marker = 0;
+    variable_mark2(v, &marker);
+}
+
 void variable_unmark(struct variable *v)
 {
-    if (!v->marked)
+    if (v->visited == VISITED_NOT)
         return;
-    v->marked = false;
+    v->mark = 0;
+    v->visited = VISITED_NOT;
     if (v->type == VAR_LST) {
         for (int i=0; i<v->list->length; i++) {
             struct variable* element = (struct variable*)array_get(v->list, i);
@@ -252,9 +284,9 @@ void variable_unmark(struct variable *v)
 
 const char *variable_value_str(struct context *context, struct variable* v)
 {
-    uint32_t marker = 1;
     variable_unmark(v);
-    const char *str = variable_value_str2(context, v, &marker);
+    variable_mark(v);
+    const char *str = variable_value_str2(context, v);
     variable_unmark(v);
     return str;
 }
@@ -283,31 +315,6 @@ struct variable *variable_pop(struct context *context)
 void variable_push(struct context *context, struct variable *v)
 {
     stack_push(context->operand_stack, v);
-}
-
-// builds a map of variables, marking which ones are referenced in other variables
-void variable_cycle_check(struct variable *v,
-                          struct variable *visited)
-{
-    assert_message(visited->type == VAR_INT, "wrong visited type");
-
-    int32_t index = (VOID_INT)map_get(visited->map, v);
-    if (index) {  // another variable points to this one
-        v->marked = true;
-        return;
-    }
-    map_insert(visited->map, v, (void*)(VOID_INT)(visited->integer++));
-
-    if (v->type == VAR_LST)
-        for (int i=0; i<v->list->length; i++)
-            variable_cycle_check((struct variable*)array_get(v->list, i), visited);
-
-    if (v->map) {
-        const struct array *values = map_values(v->map);
-        for (int i=0; i<values->length; i++)
-            variable_cycle_check((struct variable*)array_get(values, i), visited);
-    }
-
 }
 
 struct byte_array *variable_serialize(struct context *context,
