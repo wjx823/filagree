@@ -173,6 +173,23 @@ struct variable *sys_input(struct context *context)
     return NULL;
 }
 
+struct variable *sys_sound_bytes(struct context *context)
+{
+    struct variable *arguments = (struct variable*)stack_pop(context->operand_stack);
+    const struct byte_array *bytes = ((struct variable*)array_get(arguments->list, 1))->str;
+    hal_sound_bytes(bytes->data, bytes->length);
+    return NULL;
+}
+
+struct variable *sys_sound_url(struct context *context)
+{
+    struct variable *arguments = (struct variable*)stack_pop(context->operand_stack);
+    const struct byte_array *url = ((struct variable*)array_get(arguments->list, 1))->str;
+    hal_sound_url((const char*)url->data);
+    return NULL;
+}
+
+
 struct string_func builtin_funcs[] = {
 	{"args",        &sys_args},
     {"print",       &sys_print},
@@ -188,6 +205,8 @@ struct string_func builtin_funcs[] = {
     {"loop",        &sys_loop},
     {"button",      &sys_button},
     {"input",       &sys_input},
+    {"sound_bytes", &sys_sound_bytes},
+    {"sound_url",   &sys_sound_url},
 };
 
 struct variable *sys_find(struct context *context, const struct byte_array *name)

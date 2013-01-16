@@ -122,10 +122,19 @@ void hal_image()
     [content addSubview:iv];
 }
 
-void hal_sound()
+void hal_sound_url(const char *address)
 {
-    NSURL *url = [NSURL URLWithString:@"http://www.wavlist.com/soundfx/011/duck-quack3.wav"];
+    //NSURL *url = [NSURL URLWithString:@"http://www.wavlist.com/soundfx/011/duck-quack3.wav"];
+    NSString *str = [NSString stringWithCString:address encoding:NSUTF8StringEncoding];
+    NSURL *url = [NSURL URLWithString:str];
     NSSound *sound = [[NSSound alloc] initWithContentsOfURL:url byReference:FALSE];
+    [sound play];
+}
+
+void hal_sound_bytes(const uint8_t *bytes, uint32_t length)
+{
+    NSData *data = [NSData dataWithBytes:bytes length:length];
+    NSSound *sound = [[NSSound alloc] initWithData:data];
     [sound play];
 }
 
