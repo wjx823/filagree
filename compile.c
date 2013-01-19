@@ -1185,7 +1185,7 @@ void generate_assignment(struct byte_array *code, struct symbol *root)
 
 void generate_variable(struct byte_array *code, struct symbol *root)
 {
-    enum Opcode op;
+    enum Opcode op = -1;
     switch (root->exp) {
         case LHS:   op = VM_SET; break;
         case RHS:   op = VM_VAR; break;
@@ -1240,7 +1240,7 @@ void generate_member(struct byte_array *code, struct symbol *root)
     generate_code(code, root->index);
     generate_code(code, root->value);
 
-    enum Opcode op;
+    enum Opcode op = -1;
     switch (root->exp) {
         case LHS: op = VM_PUT;   break;
         case RHS: op = VM_GET;   break;

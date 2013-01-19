@@ -154,6 +154,7 @@ struct variable *sys_atoi(struct context *context)
 
     while (isdigit(str[offset+i]))
         n = n*10 + str[offset + i++] - '0';
+    n *= negative ? -1 : 1;
 
     variable_push(context, variable_new_int(context, n));
     variable_push(context, variable_new_int(context, i));
@@ -461,8 +462,7 @@ struct variable *cfnc_insert(struct context *context)
             exit_message("bad insertion destination");
             break;
     }
-    if (start)
-        position = start->integer;
+    position = start ? start->integer : 0;
 
     struct variable *first = variable_part(context, variable_copy(context, self), 0, position);
     struct variable *second = variable_part(context, variable_copy(context, self), position, -1);
