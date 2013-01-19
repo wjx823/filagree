@@ -78,7 +78,7 @@ void array_set(struct array *a, uint32_t index, void* datum) {
 
 void *list_remove(void *data, uint32_t *end, uint32_t start, int32_t length, size_t width)
 {
-    null_check(data);
+    assert_message(data || !length, "list can't remove");
     null_check(end);
     length = length < 0 ? *end - start : length;
     assert_message(!length || (start < *end && start+length <= *end), "index out of bounds");
