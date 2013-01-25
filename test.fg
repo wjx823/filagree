@@ -332,5 +332,24 @@ tester.test('assignment expression',
     end,
     23)
 
+play_square = function()
+
+    freq = 440
+	seconds = 1
+	sample_rate = 44100
+	buf_size = seconds * sample_rate
+
+	samples = sys.bytes(buf_size * 2)
+
+    for i in (buf_size / 2)
+		up = (i * 2 * freq / sample_rate ) %2
+        s = up * 127
+		samples[(i*2)] = s
+		samples[(i*2)+1] = s
+    end
+    
+    sys.synth(samples)
+
+end
 
 tester.done()

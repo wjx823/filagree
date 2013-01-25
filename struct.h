@@ -56,7 +56,7 @@ void byte_array_reset(struct byte_array* ba);
 void byte_array_resize(struct byte_array* ba, uint32_t size);
 bool byte_array_equals(const struct byte_array *a, const struct byte_array* b);
 struct byte_array *byte_array_concatenate(int n, const struct byte_array* ba, ...);
-void byte_array_print(const char* text, const struct byte_array* ba);
+void byte_array_print(char* into, size_t size, const struct byte_array* ba);
 int32_t byte_array_find(struct byte_array *within, struct byte_array *sought, uint32_t start);
 struct byte_array *byte_array_part(struct byte_array *within, uint32_t start, uint32_t length);
 void byte_array_remove(struct byte_array *within, uint32_t start, int32_t length);

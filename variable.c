@@ -7,6 +7,7 @@
 
 #define ERROR_VAR_TYPE  "type error"
 #define VAR_MAX         100
+#define VV_SIZE         1000
 
 const struct number_string var_types[] = {
     {VAR_NIL,   "nil"},
@@ -113,6 +114,13 @@ struct variable *variable_new_src(struct context *context, uint32_t size)
     return v;
 }
 
+struct variable *variable_new_bytes(struct context *context, struct byte_array *bytes, uint32_t size)
+{
+    struct variable *v = variable_new(context, VAR_BYT);
+    v->str = bytes ? bytes : byte_array_new_size(size);
+    return v;
+}
+
 struct variable* variable_new_float(struct context *context, float f)
 {
     //DEBUGPRINT("new float %f\n", f);
@@ -159,7 +167,7 @@ const char *variable_value_str2(struct context *context, struct variable* v)
 {
     null_check(v);
     enum VarType vt = (enum VarType)v->type;
-    char* str = (char*)malloc(1000);
+    char* str = (char*)malloc(VV_SIZE);
     struct array* list = v->list;
 
     if (v->visited ==VISITED_MORE) { // first visit of reused variable
@@ -180,7 +188,7 @@ const char *variable_value_str2(struct context *context, struct variable* v)
         case VAR_FNC:    sprintf(str, "%sf(%dB)", str, v->str->length);            break;
         case VAR_C:      sprintf(str, "%sc-function", str);                        break;
         case VAR_MAP:                                                              break;
-        case VAR_SRC:    vt = vt;
+        case VAR_SRC:
         case VAR_LST: {
             strcat(str, "[");
             vm_null_check(context, list);
@@ -195,6 +203,9 @@ const char *variable_value_str2(struct context *context, struct variable* v)
         } break;
         case VAR_ERR:
             strcpy(str, byte_array_to_string(v->str));
+            break;
+        case VAR_BYT:
+            byte_array_print(str, VV_SIZE, v->str);
             break;
         default:
             vm_exit_message(context, ERROR_VAR_TYPE);
@@ -350,9 +361,7 @@ struct byte_array *variable_serialize(struct context *context,
         } break;
         default:        vm_exit_message(context, "bad var type");                break;
     }
-    
-    //DEBUGPRINT("in: %s\n", variable_value(in));
-    //byte_array_print("serialized: ", bits);
+
     return bits;
 }
 
@@ -395,6 +404,7 @@ uint32_t variable_length(struct context *context, const struct variable *v)
     switch (v->type) {
         case VAR_LST: return v->list->length;
         case VAR_STR: return v->str->length;
+        case VAR_INT: return v->integer;
         case VAR_NIL: return 0;
         default:
             vm_exit_message(context, "non-indexable length");

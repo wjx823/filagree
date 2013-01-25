@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
+
 #include "hal.h"
 #include "interpret.h"
 #include "serial.h"
@@ -126,6 +128,19 @@ struct variable *sys_args(struct context *context)
     return variable_new_list(context, above->args);
 }
 
+struct variable *sys_bytes(struct context *context)
+{
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    struct variable *arg;
+    int32_t n = 0;
+    if (value->list->length > 1) {
+        arg = (struct variable*)array_get(value->list, 1);
+        assert_message(arg->type == VAR_INT, "bad bytes size type");
+        n = arg->integer;
+    }
+    return variable_new_bytes(context, NULL, n);
+}
+
 struct variable *sys_button(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
@@ -174,22 +189,29 @@ struct variable *sys_input(struct context *context)
     return NULL;
 }
 
-struct variable *sys_sound_bytes(struct context *context)
+struct variable *sys_synth(struct context *context)
 {
     struct variable *arguments = (struct variable*)stack_pop(context->operand_stack);
     const struct byte_array *bytes = ((struct variable*)array_get(arguments->list, 1))->str;
-    hal_sound_bytes(bytes->data, bytes->length);
+    hal_synth(bytes->data, bytes->length);
     return NULL;
 }
 
-struct variable *sys_sound_url(struct context *context)
+struct variable *sys_sound(struct context *context)
 {
     struct variable *arguments = (struct variable*)stack_pop(context->operand_stack);
     const struct byte_array *url = ((struct variable*)array_get(arguments->list, 1))->str;
-    hal_sound_url((const char*)url->data);
+    hal_sound((const char*)url->data);
     return NULL;
 }
 
+struct variable *sys_sin(struct context *context) // radians
+{
+    struct variable *arguments = (struct variable*)stack_pop(context->operand_stack);
+    const int32_t n = ((struct variable*)array_get(arguments->list, 1))->integer;
+    double s = sin(n);
+    return variable_new_float(context, s);
+}
 
 struct string_func builtin_funcs[] = {
 	{"args",        &sys_args},
@@ -206,8 +228,10 @@ struct string_func builtin_funcs[] = {
     {"loop",        &sys_loop},
     {"button",      &sys_button},
     {"input",       &sys_input},
-    {"sound_bytes", &sys_sound_bytes},
-    {"sound_url",   &sys_sound_url},
+    {"synth",       &sys_synth},
+    {"sound",       &sys_sound},
+    {"bytes",       &sys_bytes},
+    {"sin",         &sys_sin},
 };
 
 struct variable *sys_find(struct context *context, const struct byte_array *name)
@@ -244,7 +268,6 @@ struct variable *sys_find(struct context *context, const struct byte_array *name
 #define FNC_PART        "part"
 #define FNC_REMOVE      "remove"
 #define FNC_INSERT      "insert"
-//#define FNC_ADD         "add"
 
 
 int compar(struct context *context, const void *a, const void *b, struct variable *comparator)

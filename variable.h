@@ -12,6 +12,7 @@ enum VarType {
     VAR_MAP,
     VAR_SRC,
     VAR_ERR,
+    VAR_BYT,
     VAR_C,
 };    
 
@@ -61,6 +62,7 @@ struct variable *variable_new_str(struct context *context, struct byte_array *st
 struct variable *variable_new_fnc(struct context *context, struct byte_array *body, struct map *closures);
 struct variable *variable_new_list(struct context *context, struct array *list);
 struct variable *variable_new_src(struct context *context, uint32_t size);
+struct variable *variable_new_bytes(struct context *context, struct byte_array *bytes, uint32_t size);
 
 struct variable *variable_copy(struct context *context, const struct variable *v);
 struct variable *variable_pop(struct context *context);

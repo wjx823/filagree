@@ -50,7 +50,7 @@ void hal_window()
 
 - (id)initWithFrame:(NSRect)frameRect
 {
-    NSOpenGLPixelFormatAttribute attr[] = 
+    NSOpenGLPixelFormatAttribute attr[] =
 	{
         NSOpenGLPFADoubleBuffer,
 		NSOpenGLPFAAccelerated,
@@ -70,7 +70,6 @@ void hal_window()
 	glClearColor(0, 0, .25, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
-    
 	
     glShadeModel(GL_SMOOTH);
 	glClearDepth(1.0f);
@@ -122,7 +121,7 @@ void hal_image()
     [content addSubview:iv];
 }
 
-void hal_sound_url(const char *address)
+void hal_sound(const char *address)
 {
     //NSURL *url = [NSURL URLWithString:@"http://www.wavlist.com/soundfx/011/duck-quack3.wav"];
     NSString *str = [NSString stringWithCString:address encoding:NSUTF8StringEncoding];
@@ -131,18 +130,11 @@ void hal_sound_url(const char *address)
     [sound play];
 }
 
-void hal_sound_bytes(const uint8_t *bytes, uint32_t length)
-{
-    NSData *data = [NSData dataWithBytes:bytes length:length];
-    NSSound *sound = [[NSSound alloc] initWithData:data];
-    [sound play];
-}
-
 struct Sound {
-    int seconds;
-	size_t buf_size;
     short *samples;
+	size_t buf_size;
     unsigned sample_rate;
+    int seconds;
 };
 
 #define CASE_RETURN(err) case (err): return "##err"
@@ -189,37 +181,6 @@ ALuint init_al() {
     return buf;
 }
 
-/* Fill buffer with Sine-Wave */
-struct Sound gen_sound() {
-    float freq = 440.f;
-	int seconds = 1;
-	unsigned sample_rate = 22050;
-	size_t buf_size = seconds * sample_rate;
-
-	short *samples = malloc(sizeof(short) * buf_size);
-	for(int i=0; i<buf_size; ++i)
-		samples[i] = 32760 * sin( (2.f*M_PI*freq)/sample_rate * i );
-
-    struct Sound sound = {seconds, buf_size, samples, sample_rate};
-    return sound;
-}
-
-void play(ALuint buf, struct Sound *sound) {
-    /* Download buffer to OpenAL */
-	alBufferData(buf, AL_FORMAT_MONO16, sound->samples, sound->buf_size, sound->sample_rate);
-	al_check_error();
-
-	/* Set-up sound source and play buffer */
-	ALuint src = 0;
-	alGenSources(1, &src);
-	alSourcei(src, AL_BUFFER, buf);
-	alSourcePlay(src);
-
-	/* While sound is playing, sleep */
-	al_check_error();
-	sleep(sound->seconds);
-}
-
 /* Dealloc OpenAL */
 void exit_al() {
 	ALCdevice *dev = NULL;
@@ -232,11 +193,41 @@ void exit_al() {
 	alcCloseDevice(dev);
 }
 
-void hal_synth()
+void hal_sleep(uint32_t miliseconds)
 {
+    struct timespec req={0};
+    time_t sec = (int)(miliseconds/1000);
+    miliseconds = miliseconds - (sec * 1000);
+    req.tv_sec = sec;
+    req.tv_nsec = miliseconds * 1000000L;
+    while (nanosleep(&req,&req) == -1)
+        continue;
+}
+
+#define SYNTH_SAMPLE_RATE 44100 // CD quality
+
+void hal_synth(const uint8_t *bytes, uint32_t length)
+{
+    short *samples = (short*)bytes;
+    uint32_t size = length / sizeof(short);
+    float duration = size * 1.0f / SYNTH_SAMPLE_RATE;
+
     ALuint buf = init_al();
-	struct Sound sound = gen_sound();
-    play(buf, &sound);
+    /* Download buffer to OpenAL */
+	alBufferData(buf, AL_FORMAT_MONO16, samples, size, SYNTH_SAMPLE_RATE);
+	al_check_error();
+    
+	/* Set-up sound source and play buffer */
+	ALuint src = 0;
+	alGenSources(1, &src);
+	alSourcei(src, AL_BUFFER, buf);
+	alSourcePlay(src);
+    
+	/* While sound is playing, sleep */
+	al_check_error();
+
+    hal_sleep(duration*1000);
+
 	exit_al();
 }
 
@@ -257,14 +248,14 @@ ALvoid hal_audio_loop(ALvoid)
     ALboolean   bPlaying = AL_FALSE;
     ALboolean   bPlay = AL_FALSE;
 
-    // NOTE : This code does NOT setup the Wave Device's Audio Mixer to select a recording input or recording level.
+    // does not setup the Wave Device's Audio Mixer to select a recording input or recording level.
 
 	ALCdevice *dev = NULL;
 	ALCcontext *ctx = NULL;
-    
+
 	const char *defname = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
     printf("Default ouput device: %s\n", defname);
-    
+
 	dev = alcOpenDevice(defname);
 	ctx = alcCreateContext(dev, NULL);
 	alcMakeContextCurrent(ctx);
@@ -398,7 +389,7 @@ ALvoid hal_audio_loop(ALvoid)
 void hal_label(int x, int y, int w, int h, const char *str) {
     NSView *content = [window contentView];
     NSRect rect = NSMakeRect(x, y, w, h);
-    NSTextField *textField;    
+    NSTextField *textField;
     textField = [[NSTextField alloc] initWithFrame:rect];
     NSString *string = [NSString stringWithUTF8String:str];
     [textField setStringValue:string];
@@ -454,14 +445,14 @@ void hal_input(int x, int y, int w, int h, const char *str, BOOL multiline) {
 - (id)     tableView:(NSTableView *) aTableView
 objectValueForTableColumn:(NSTableColumn *) aTableColumn
                  row:(int) rowIndex
-{  
-    return [self objectAtIndex:rowIndex];  
+{
+    return [self objectAtIndex:rowIndex];
 }
 
 // just returns the number of items we have.
 - (int)numberOfRowsInTableView:(NSTableView *)aTableView
 {
-    return [self count];  
+    return [self count];
 }
 
 @end

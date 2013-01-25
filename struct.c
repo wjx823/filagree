@@ -257,12 +257,12 @@ struct byte_array *byte_array_add_byte(struct byte_array *a, uint8_t b) {
     return a;
 }
 
-void byte_array_print(const char* text, const struct byte_array* ba) {
-    int offset = ba->current-ba->data;
-    if (text)
-        printf("%s @%d\n", text, offset);
-    for (int i=0; i<ba->length; i++)
-        printf("\t%s%d\n", i==offset?">":" ", ba->data[i]);
+void byte_array_print(char* into, size_t size, const struct byte_array* ba) {
+    if (size < 2)
+        return;
+    sprintf(into, "0x");
+    for (int i=0; i<ba->length && i < size-1; i++)
+        sprintf(into+(i+1)*2, "%02X", ba->data[i]);
 }
 
 int32_t byte_array_find(struct byte_array *within, struct byte_array *sought, uint32_t start)

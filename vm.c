@@ -410,6 +410,7 @@ struct variable* variable_set(struct context *context, struct variable *dst, con
         case VAR_FLT:   dst->floater = src->floater;            break;
         case VAR_C:     dst->cfnc = src->cfnc;                  break;
         case VAR_FNC:
+        case VAR_BYT:
         case VAR_STR:   dst->str = byte_array_copy(src->str);   break;
         case VAR_MAP:   dst->map = src->map;                    break;
         case VAR_SRC:
@@ -418,8 +419,6 @@ struct variable* variable_set(struct context *context, struct variable *dst, con
             vm_exit_message(context, "bad var type");
             break;
     }
-    if (src->type == VAR_STR)
-        dst->str = byte_array_copy(src->str);
     dst->map = src->map;
     dst->type = src->type;
     return dst;
@@ -444,6 +443,7 @@ static struct variable *list_get_int(struct context *context,
 
     enum VarType it = (enum VarType)indexable->type;
     switch (it) {
+        case VAR_INT: return variable_new_int(context, index);
         case VAR_LST:
             return (struct variable*)array_get(indexable->list, index);
         case VAR_STR: {
@@ -746,6 +746,7 @@ static void list_put(struct context *context, enum Opcode op, bool really)
                     array_set(recipient->list, key->integer, value);
                     break;
                 case VAR_STR:
+                case VAR_BYT:
                     byte_array_set(recipient->str, key->integer, value->integer);
                     break;
                 default:
