@@ -1,6 +1,8 @@
 # ui.fg ###################################################################
 
-sys.ui = function(self, type, w, h, item, parent, x, y)
+sys.ui = function(self, type, w, h, item, logic, parent, x, y)
+
+    sys.print('item = ' + item)
 
     if not parent then
         x = 0
@@ -10,20 +12,45 @@ sys.ui = function(self, type, w, h, item, parent, x, y)
 
     if (type == 'vertical') then
         for i in item
-            sys.ui(i[0], i[1], i[2], i[3], true, x, y)
+            sys.print('i = ' + i)
+            sys.ui(i[0], i[1], i[2], i[3], i[4], true, x, y)
             y = y + i[2]
         end
     else if (type == 'horizontal') then
         for i in item
-            sys.ui(i[0], i[1], i[2], i[3], true, x, y)
+            sys.ui(i[0], i[1], i[2], i[3], i[4], true, x, y)
             x = x + i[1]
         end
     else if type == 'button' then
         sys.button(x, y, w, h, item)
     else if type == 'input' then
         sys.input(x, y, w, h, item)
+    else if type == 'table' then
+        sys.table(x, y, w, h, item, logic)
     end
 end
 
-sys.ui('vertical', 20, 20, [['button', 100, 30, 'clickez moi'], ['input', 150, 20, ' ']])
+play_square = function()
+
+    freq = 440
+	seconds = 1
+	sample_rate = 44100
+	buf_size = seconds * sample_rate
+
+	samples = sys.bytes(buf_size * 2)
+
+    for i in (buf_size / 2)
+		up = (i * 2 * freq / sample_rate ) %2
+        s = up * 127
+		samples[(i*2)] = s
+		samples[(i*2)+1] = s
+    end
+    
+    sys.synth(samples)
+
+end
+
+t = ['table', 120, 90, [7, 8, 9, 'x', 'y', 'z'], play_square]
+sys.print('t=' + t)
+sys.ui('vertical', 20, 20, [['button', 100, 30, 'clickez moi'], ['input', 150, 20, ' '], t])
 sys.loop()

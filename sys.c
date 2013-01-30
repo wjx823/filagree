@@ -154,6 +154,20 @@ struct variable *sys_button(struct context *context)
     return NULL;
 }
 
+struct variable *sys_table(struct context *context)
+{
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    int32_t x = ((struct variable*)array_get(value->list, 1))->integer;
+    int32_t y = ((struct variable*)array_get(value->list, 2))->integer;
+    int32_t w = ((struct variable*)array_get(value->list, 3))->integer;
+    int32_t h = ((struct variable*)array_get(value->list, 4))->integer;
+    struct variable *list = (struct variable*)array_get(value->list, 5);
+    struct variable *logic = (struct variable*)array_get(value->list, 6);
+
+    hal_table(context, x, y, w, h, list, logic);
+    return NULL;
+}
+
 struct variable *sys_atoi(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
@@ -232,6 +246,7 @@ struct string_func builtin_funcs[] = {
     {"sound",       &sys_sound},
     {"bytes",       &sys_bytes},
     {"sin",         &sys_sin},
+    {"table",       &sys_table},
 };
 
 struct variable *sys_find(struct context *context, const struct byte_array *name)

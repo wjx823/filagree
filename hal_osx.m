@@ -7,6 +7,9 @@
 #include <OpenAL/alc.h>
 #include <OpenGL/gl.h>
 #include "struct.h"
+#include "util.h"
+#include "variable.h"
+#include "vm.h"
 
 static NSWindow *window;
 
@@ -439,25 +442,51 @@ void hal_input(int x, int y, int w, int h, const char *str, BOOL multiline) {
     [content addSubview:textField];
 }
 
-@implementation NSArray (NSTableViewDataSource)
-
-// just returns the item for the right row
-- (id)     tableView:(NSTableView *) aTableView
-objectValueForTableColumn:(NSTableColumn *) aTableColumn
-                 row:(int) rowIndex
-{
-    return [self objectAtIndex:rowIndex];
-}
-
-// just returns the number of items we have.
-- (int)numberOfRowsInTableView:(NSTableView *)aTableView
-{
-    return [self count];
+@interface HALarray : NSObject <NSTableViewDataSource, NSTableViewDelegate> {
+    struct context *context;
+    const struct variable *data;
+    const struct variable *logic;
 }
 
 @end
 
-void hal_table(int x, int y, int w, int h) {
+@implementation HALarray
+
++ (HALarray *)arrayWithData:(const struct variable *)list
+                      logic:(const struct variable *)logic
+                  inContext:(struct context *)cxt
+{
+    HALarray *ha = [HALarray alloc];
+    ha->data = list;
+    ha->logic = logic;
+    ha->context = cxt;
+    return ha;
+}
+
+- (id)          tableView:(NSTableView *) aTableView
+objectValueForTableColumn:(NSTableColumn *) aTableColumn
+                      row:(long) rowIndex {
+    struct variable *item = array_get(self->data->list, rowIndex);
+    const char *name = variable_value_str(self->context, item);
+    return [NSString stringWithUTF8String:name];
+}
+
+- (long)numberOfRowsInTableView:(NSTableView *)aTableView {
+    return self->data->list->length;
+}
+
+- (void) tableViewSelectionDidChange:(NSNotification *)notification
+{
+    NSTableView* table = [notification object];
+    int row = [table selectedRow];
+    if (row == -1)
+        return;
+    execute(self->logic->str, self->context->find);
+}
+@end
+
+void hal_table(struct context *context, int x, int y, int w, int h,
+               struct variable *list, struct variable *logic) {
     NSView *content = [window contentView];
     NSRect rect = NSMakeRect(x, y, w, h);
     NSScrollView * tableContainer = [[NSScrollView alloc] initWithFrame:rect];
@@ -466,30 +495,14 @@ void hal_table(int x, int y, int w, int h) {
     NSTableView *tableView = [[NSTableView alloc] initWithFrame:rect];
     NSTableColumn * column1 = [[NSTableColumn alloc] initWithIdentifier:@"Col1"];
     [[column1 headerCell] setStringValue:@"yo"];
-
+   
     [tableView addTableColumn:column1];
-//  [tableView setDelegate:self];
-    NSArray *source = [NSArray arrayWithObjects:@"3",@"1",@"4",nil];
+//    NSArray *source = [NSArray arrayWithObjects:@"3",@"1",@"4",nil];
+    HALarray *source = [HALarray arrayWithData:list logic:logic inContext:context];
+    [tableView setDelegate:source];
     [tableView setDataSource:(id<NSTableViewDataSource>)source];
-//  [tableView reloadData];
+    //  [tableView reloadData];
     [tableContainer setDocumentView:tableView];
     [tableContainer setHasVerticalScroller:YES];
     [content addSubview:tableContainer];
 }
-
-#if 0
-int main(int argc, char *argv[])
-{
-    hal_window();
-    hal_graphics();
-    //hal_image();
-//    hal_sound();
-  //  hal_synth();
-//    hal_button(0, 0, 100, 100, "hi", NULL);
-//    hal_input(100, 100, 100, 100, "hi", NO);
-    hal_table(20, 20, 100, 100);
-//    hal_audio_loop();
-    [NSApp run];
-    return 0;
-}
-#endif

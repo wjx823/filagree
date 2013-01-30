@@ -477,7 +477,7 @@ int variable_map_insert(struct variable* v, const struct byte_array *key, struct
     return map_insert(v->map, key, datum);
 }
 
-struct variable *variable_map_get(struct context *context, struct variable* v, const struct byte_array *key)
+struct variable *variable_map_get(struct context *context, const struct variable* v, const struct byte_array *key)
 {
     if (!v->map)
         return variable_new_nil(context);

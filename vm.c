@@ -426,6 +426,7 @@ struct variable* variable_set(struct context *context, struct variable *dst, con
 
 struct variable* variable_copy(struct context *context, const struct variable* v)
 {
+//    DEBUGPRINT("variable_copy");
     vm_null_check(context, v);
     struct variable *u = variable_new(context, (enum VarType)v->type);
     variable_set(context, u, v);
@@ -445,7 +446,9 @@ static struct variable *list_get_int(struct context *context,
     switch (it) {
         case VAR_INT: return variable_new_int(context, index);
         case VAR_LST:
-            return (struct variable*)array_get(indexable->list, index);
+            if (index < indexable->list->length)
+                return (struct variable*)array_get(indexable->list, index);
+            return variable_new_nil(context);
         case VAR_STR: {
             vm_assert(context, index < indexable->str->length, "index out of bounds");
             char *str = (char*)malloc(2);

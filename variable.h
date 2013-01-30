@@ -72,7 +72,7 @@ struct variable *variable_concatenate(struct context *context, int n, const stru
 void variable_remove(struct variable *self, uint32_t start, int32_t length);
 struct variable *variable_part(struct context *context, struct variable *self, uint32_t start, int32_t length);
 int variable_map_insert(struct variable* v, const struct byte_array *key, struct variable *data);
-struct variable *variable_map_get(struct context *context, struct variable* v, const struct byte_array *key);
+struct variable *variable_map_get(struct context *context, const struct variable* v, const struct byte_array *key);
 void variable_mark(struct variable *v);
 
 const char *var_type_str(enum VarType vt);
