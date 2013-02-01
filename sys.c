@@ -107,20 +107,6 @@ struct variable *sys_rm(struct context *context)
     return NULL;
 }
 
-struct variable *sys_window(struct context *context)
-{
-    stack_pop(context->operand_stack); // self
-    hal_window();
-    return NULL;
-}
-
-struct variable *sys_loop(struct context *context)
-{
-    stack_pop(context->operand_stack); // self
-    hal_loop();
-    return NULL;
-}
-
 struct variable *sys_args(struct context *context)
 {
     stack_pop(context->operand_stack); // self
@@ -139,33 +125,6 @@ struct variable *sys_bytes(struct context *context)
         n = arg->integer;
     }
     return variable_new_bytes(context, NULL, n);
-}
-
-struct variable *sys_button(struct context *context)
-{
-    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
-    int32_t x = ((struct variable*)array_get(value->list, 1))->integer;
-    int32_t y = ((struct variable*)array_get(value->list, 2))->integer;
-    int32_t w = ((struct variable*)array_get(value->list, 3))->integer;
-    int32_t h = ((struct variable*)array_get(value->list, 4))->integer;
-    char *str = (char*)((struct variable*)array_get(value->list, 5))->str->data;
-
-    hal_button(x, y, w, h, str, NULL, NULL);
-    return NULL;
-}
-
-struct variable *sys_table(struct context *context)
-{
-    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
-    int32_t x = ((struct variable*)array_get(value->list, 1))->integer;
-    int32_t y = ((struct variable*)array_get(value->list, 2))->integer;
-    int32_t w = ((struct variable*)array_get(value->list, 3))->integer;
-    int32_t h = ((struct variable*)array_get(value->list, 4))->integer;
-    struct variable *list = (struct variable*)array_get(value->list, 5);
-    struct variable *logic = (struct variable*)array_get(value->list, 6);
-
-    hal_table(context, x, y, w, h, list, logic);
-    return NULL;
 }
 
 struct variable *sys_atoi(struct context *context)
@@ -190,6 +149,16 @@ struct variable *sys_atoi(struct context *context)
     return variable_new_src(context, 2);
 }
 
+struct variable *sys_sin(struct context *context) // radians
+{
+    struct variable *arguments = (struct variable*)stack_pop(context->operand_stack);
+    const int32_t n = ((struct variable*)array_get(arguments->list, 1))->integer;
+    double s = sin(n);
+    return variable_new_float(context, s);
+}
+
+#ifndef HEADLESS
+
 struct variable *sys_input(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
@@ -200,6 +169,41 @@ struct variable *sys_input(struct context *context)
     char *str = (char*)((struct variable*)array_get(value->list, 5))->str->data;
 
     hal_input(x, y, w, h, str, false);
+    return NULL;
+}
+
+struct variable *sys_button(struct context *context)
+{
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    int32_t x = ((struct variable*)array_get(value->list, 1))->integer;
+    int32_t y = ((struct variable*)array_get(value->list, 2))->integer;
+    int32_t w = ((struct variable*)array_get(value->list, 3))->integer;
+    int32_t h = ((struct variable*)array_get(value->list, 4))->integer;
+    char *str = (char*)((struct variable*)array_get(value->list, 5))->str->data;
+    
+    hal_button(x, y, w, h, str, NULL, NULL);
+    return NULL;
+}
+
+struct variable *sys_table(struct context *context)
+{
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    int32_t x = ((struct variable*)array_get(value->list, 1))->integer;
+    int32_t y = ((struct variable*)array_get(value->list, 2))->integer;
+    int32_t w = ((struct variable*)array_get(value->list, 3))->integer;
+    int32_t h = ((struct variable*)array_get(value->list, 4))->integer;
+    struct variable *list = (struct variable*)array_get(value->list, 5);
+    struct variable *logic = (struct variable*)array_get(value->list, 6);
+    
+    hal_table(context, x, y, w, h, list, logic);
+    return NULL;
+}
+
+struct variable *sys_graphics(struct context *context)
+{
+    const struct variable *value = (const struct variable*)stack_pop(context->operand_stack);
+    const struct variable *shape = (const struct variable*)array_get(value->list, 1);
+    hal_graphics(shape);
     return NULL;
 }
 
@@ -219,13 +223,22 @@ struct variable *sys_sound(struct context *context)
     return NULL;
 }
 
-struct variable *sys_sin(struct context *context) // radians
+
+struct variable *sys_window(struct context *context)
 {
-    struct variable *arguments = (struct variable*)stack_pop(context->operand_stack);
-    const int32_t n = ((struct variable*)array_get(arguments->list, 1))->integer;
-    double s = sin(n);
-    return variable_new_float(context, s);
+    stack_pop(context->operand_stack); // self
+    hal_window();
+    return NULL;
 }
+
+struct variable *sys_loop(struct context *context)
+{
+    stack_pop(context->operand_stack); // self
+    hal_loop();
+    return NULL;
+}
+
+#endif // HEADLESS
 
 struct string_func builtin_funcs[] = {
 	{"args",        &sys_args},
@@ -235,18 +248,21 @@ struct string_func builtin_funcs[] = {
     {"write",       &sys_write},
     {"save",        &sys_save},
     {"load",        &sys_load},
+    {"remove",      &sys_rm},
+    {"bytes",       &sys_bytes},
+    {"sin",         &sys_sin},
     {"run",         &sys_run},
     {"interpret",   &sys_interpret},
-    {"remove",      &sys_rm},
+#ifndef HEADLESS
     {"window",      &sys_window},
     {"loop",        &sys_loop},
     {"button",      &sys_button},
     {"input",       &sys_input},
     {"synth",       &sys_synth},
     {"sound",       &sys_sound},
-    {"bytes",       &sys_bytes},
-    {"sin",         &sys_sin},
     {"table",       &sys_table},
+    {"graphics",    &sys_graphics},
+#endif
 };
 
 struct variable *sys_find(struct context *context, const struct byte_array *name)

@@ -17,7 +17,7 @@ void hal_loop() {
     [NSApp run];
 }
 
-void hal_window()
+void xhal_window()
 {
     [NSApplication sharedApplication];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
@@ -35,21 +35,22 @@ void hal_window()
     [appMenuItem setSubmenu:appMenu];
     window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 200, 200)
                                          styleMask:NSTitledWindowMask |
-                                                   NSClosableWindowMask |
-                                                   NSMiniaturizableWindowMask |
-                                                   NSResizableWindowMask
-                                              backing:NSBackingStoreBuffered
-                                                defer:NO];
+              NSClosableWindowMask |
+              NSMiniaturizableWindowMask |
+              NSResizableWindowMask
+                                           backing:NSBackingStoreBuffered
+                                             defer:NO];
     [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
     [window setTitle:appName];
     [window makeKeyAndOrderFront:nil];
+    [NSApp activateIgnoringOtherApps:YES];
 }
 
-@interface GLView : NSOpenGLView
+@interface xGLView : NSOpenGLView
 
 @end
 
-@implementation GLView
+@implementation xGLView
 
 - (id)initWithFrame:(NSRect)frameRect
 {
@@ -81,6 +82,12 @@ void hal_window()
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 }
 
+- (float)get_float:(const struct variable *)point at:(uint32_t)i
+{
+    const struct variable *f = (const struct variable*)array_get(point->list, i);
+    return f->floater;
+}
+
 - (void)drawRect:(NSRect)rect
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -93,22 +100,110 @@ void hal_window()
         glVertex3f( -0.2, -0.3, 0.0);
         glVertex3f(  0.2, -0.3 ,0.0);
     }
-    glEnd();	
+    glEnd();
     [[self openGLContext] flushBuffer];
 }
 
 
 @end
 
-void hal_graphics()
+@interface GLView : NSOpenGLView {
+    const struct variable *shape;
+}
+@end
+
+@implementation GLView
+
+- (id)initWithFrame:(NSRect)frameRect
+{
+    NSOpenGLPixelFormatAttribute attr[] =
+	{
+        NSOpenGLPFADoubleBuffer,
+		NSOpenGLPFAAccelerated,
+		NSOpenGLPFAColorSize, (NSOpenGLPixelFormatAttribute) 32,
+		NSOpenGLPFADepthSize, (NSOpenGLPixelFormatAttribute) 23,
+		(NSOpenGLPixelFormatAttribute) 0
+	};
+	NSOpenGLPixelFormat *nsglFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:attr];
+	
+    if (self = [super initWithFrame:frameRect pixelFormat:nsglFormat]) {}
+	return self;
+}
+
+- (void)setShape:(const struct variable *)ape {
+    self->shape = ape;
+}
+
+- (void)prepareOpenGL
+{
+    glMatrixMode(GL_MODELVIEW);
+	glClearColor(0, 0, .25, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+	
+    glShadeModel(GL_SMOOTH);
+	glClearDepth(1.0f);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+}
+
+- (float)get_float:(const struct variable *)point at:(uint32_t)i
+{
+    const struct variable *f = (const struct variable*)array_get(point->list, i);
+    return f->floater;
+}
+
+- (void)drawRect:(NSRect)rect
+{
+    //    assert_message(shape->type == VAR_LST, "shape not list");
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+    glColor3f(1.0f, 0.85f, 0.35f);
+    glBegin(GL_TRIANGLES);
+    {
+        if (!self->shape) {
+            glVertex3f(  0.0,  0.6, 0.0);
+            glVertex3f( -0.2, -0.3, 0.0);
+            glVertex3f(  0.2, -0.3 ,0.0);
+        } else {
+            for (uint32_t i=0; i<self->shape->list->length; i++) {
+                const struct variable *point = (const struct variable*)array_get(self->shape->list, i);
+                assert_message(point->type == VAR_LST, "point not list");
+                float x = [self get_float:point at:0];
+                float y = [self get_float:point at:1];
+                float z = [self get_float:point at:2];
+                glVertex3f( x, y, z);
+            }
+        }
+    }
+    glEnd();
+    [[self openGLContext] flushBuffer];
+}
+
+@end
+
+void hal_graphics(const struct variable *shape)
 {
     NSView *content = [window contentView];
     NSRect rect = [content frame];
-    rect.size.width /= 2;
+    GLView *graph = [[GLView alloc] initWithFrame:rect];
+    [graph setShape:shape];
+    [graph drawRect:rect];
+    [content addSubview:graph];
+}
+
+void add_graphics()
+{
+    NSView *content = [window contentView];
+    NSRect rect = [content frame];
+    //rect.size.width /= 2;
     GLView *graph = [[GLView alloc] initWithFrame:rect];
     [graph drawRect:rect];
     [content addSubview:graph];
 }
+
 
 void hal_image()
 {
@@ -116,7 +211,7 @@ void hal_image()
     NSRect rect = [content frame];
     rect.origin.x = rect.size.width/2;
     NSImageView *iv = [[NSImageView alloc] initWithFrame:rect];
-
+    
     NSURL *url = [NSURL URLWithString:@"http://www.cgl.uwaterloo.ca/~csk/projects/starpatterns/noneuclidean/323ball.jpg"];
     NSImage *pic = [[NSImage alloc] initWithContentsOfURL:url];
     if (pic)
@@ -169,14 +264,14 @@ __al_check_error(__FILE__, __LINE__)
 ALuint init_al() {
 	ALCdevice *dev = NULL;
 	ALCcontext *ctx = NULL;
-
+    
 	const char *defname = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
     printf("Default ouput device: %s\n", defname);
-
+    
 	dev = alcOpenDevice(defname);
 	ctx = alcCreateContext(dev, NULL);
 	alcMakeContextCurrent(ctx);
-
+    
 	/* Create buffer to store samples */
 	ALuint buf;
 	alGenBuffers(1, &buf);
@@ -190,7 +285,7 @@ void exit_al() {
 	ALCcontext *ctx = NULL;
 	ctx = alcGetCurrentContext();
 	dev = alcGetContextsDevice(ctx);
-
+    
 	alcMakeContextCurrent(NULL);
 	alcDestroyContext(ctx);
 	alcCloseDevice(dev);
@@ -214,7 +309,7 @@ void hal_synth(const uint8_t *bytes, uint32_t length)
     short *samples = (short*)bytes;
     uint32_t size = length / sizeof(short);
     float duration = size * 1.0f / SYNTH_SAMPLE_RATE;
-
+    
     ALuint buf = init_al();
     /* Download buffer to OpenAL */
 	alBufferData(buf, AL_FORMAT_MONO16, samples, size, SYNTH_SAMPLE_RATE);
@@ -228,9 +323,9 @@ void hal_synth(const uint8_t *bytes, uint32_t length)
     
 	/* While sound is playing, sleep */
 	al_check_error();
-
+    
     hal_sleep(duration*1000);
-
+    
 	exit_al();
 }
 
@@ -250,99 +345,99 @@ ALvoid hal_audio_loop(ALvoid)
     ALint       lLoop, lFormat, lFrequency, lBlockAlignment, lProcessed, lPlaying;
     ALboolean   bPlaying = AL_FALSE;
     ALboolean   bPlay = AL_FALSE;
-
+    
     // does not setup the Wave Device's Audio Mixer to select a recording input or recording level.
-
+    
 	ALCdevice *dev = NULL;
 	ALCcontext *ctx = NULL;
-
+    
 	const char *defname = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
     printf("Default ouput device: %s\n", defname);
-
+    
 	dev = alcOpenDevice(defname);
 	ctx = alcCreateContext(dev, NULL);
 	alcMakeContextCurrent(ctx);
-
+    
     // Generate a Source and QUEUEBUFFERCOUNT Buffers for Queuing
     alGetError();
     alGenSources(1, &SourceID);
-
+    
     for (lLoop = 0; lLoop < QUEUEBUFFERCOUNT; lLoop++)
         alGenBuffers(1, &BufferID[lLoop]);
-
+    
     if (alGetError() != AL_NO_ERROR) {
         printf("Failed to generate Source and / or Buffers\n");
         return;
     }
-
+    
     ulUnqueueCount = 0;
     ulQueueCount = 0;
-
+    
     // Get list of available Capture Devices
     const ALchar *pDeviceList = alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
     if (pDeviceList) {
         printf("Available Capture Devices are:-\n");
-
+        
         while (*pDeviceList) {
             printf("%s\n", pDeviceList);
             pDeviceList += strlen(pDeviceList) + 1;
         }
     }
-
+    
     szDefaultCaptureDevice = alcGetString(NULL, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
     printf("\nDefault Capture Device is '%s'\n\n", szDefaultCaptureDevice);
-
+    
     // The next call can fail if the WaveDevice does not support the requested format, so the application
     // should be prepared to try different formats in case of failure
-
+    
     lFormat = AL_FORMAT_MONO16;
     lFrequency = 44100;
     lBlockAlignment = 2;
-
+    
     long lTotalProcessed = 0;
     long lOldSamplesAvailable = 0;
     long lOldTotalProcessed = 0;
-
+    
     pCaptureDevice = alcCaptureOpenDevice(szDefaultCaptureDevice, lFrequency, lFormat, lFrequency);
     if (pCaptureDevice) {
         printf("Opened '%s' Capture Device\n\n", alcGetString(pCaptureDevice, ALC_CAPTURE_DEVICE_SPECIFIER));
-
+        
         printf("start capture\n");
         alcCaptureStart(pCaptureDevice);
         bPlay = AL_TRUE;
-
+        
         for (;;) {
             //alcCaptureStop(pCaptureDevice);
-
+            
             alGetError();
             alcGetIntegerv(pCaptureDevice, ALC_CAPTURE_SAMPLES, 1, &lSamplesAvailable);
-
+            
             if ((lOldSamplesAvailable != lSamplesAvailable) || (lOldTotalProcessed != lTotalProcessed)) {
                 printf("Samples available is %d, Buffers Processed %ld\n", lSamplesAvailable, lTotalProcessed);
                 lOldSamplesAvailable = lSamplesAvailable;
                 lOldTotalProcessed = lTotalProcessed;
             }
-
+            
             // If the Source is (or should be) playing, get number of buffers processed
             // and check play status
             if (bPlaying) {
                 alGetSourcei(SourceID, AL_BUFFERS_PROCESSED, &lProcessed);
                 while (lProcessed) {
                     lTotalProcessed++;
-
+                    
                     // Unqueue the buffer
                     alSourceUnqueueBuffers(SourceID, 1, &TempBufferID);
-
+                    
                     // Update unqueue count
                     if (++ulUnqueueCount == QUEUEBUFFERCOUNT)
                         ulUnqueueCount = 0;
-
+                    
                     // Increment buffers available
                     ulBuffersAvailable++;
-
+                    
                     lProcessed--;
                 }
-
+                
                 // If the Source has stopped (been starved of data) it will need to be
                 // restarted
                 alGetSourcei(SourceID, AL_SOURCE_STATE, &lPlaying);
@@ -351,25 +446,25 @@ ALvoid hal_audio_loop(ALvoid)
                     bPlay = AL_TRUE;
                 }
             }
-
+            
             if ((lSamplesAvailable > (QUEUEBUFFERSIZE / lBlockAlignment)) && !(ulBuffersAvailable)) {
                 printf("underrun!\n");
             }
-
+            
             // When we have enough data to fill our QUEUEBUFFERSIZE byte buffer, grab the samples
             else if ((lSamplesAvailable > (QUEUEBUFFERSIZE / lBlockAlignment)) && (ulBuffersAvailable)) {
                 // Consume Samples
                 alcCaptureSamples(pCaptureDevice, Buffer, QUEUEBUFFERSIZE / lBlockAlignment);
                 alBufferData(BufferID[ulQueueCount], lFormat, Buffer, QUEUEBUFFERSIZE, lFrequency);
-
+                
                 // Queue the buffer, and mark buffer as queued
                 alSourceQueueBuffers(SourceID, 1, &BufferID[ulQueueCount]);
                 if (++ulQueueCount == QUEUEBUFFERCOUNT)
                     ulQueueCount = 0;
-
+                
                 // Decrement buffers available
                 ulBuffersAvailable--;
-
+                
                 // If we need to start the Source do it now IF AND ONLY IF we have queued at least 2 buffers
                 if ((bPlay) && (ulBuffersAvailable <= (QUEUEBUFFERCOUNT - 2))) {
                     alSourcePlay(SourceID);
@@ -382,11 +477,11 @@ ALvoid hal_audio_loop(ALvoid)
         alcCaptureCloseDevice(pCaptureDevice);
     } else
         printf("WaveDevice is unavailable, or does not supported the request format\n");
-
+    
     alSourceStop(SourceID);
     alDeleteSources(1, &SourceID);
     for (lLoop = 0; lLoop < QUEUEBUFFERCOUNT; lLoop++)
-    alDeleteBuffers(1, &BufferID[lLoop]);
+        alDeleteBuffers(1, &BufferID[lLoop]);
 }
 
 void hal_label(int x, int y, int w, int h, const char *str) {
@@ -407,19 +502,19 @@ void hal_button(int x, int y, int w, int h, const char *str, const char *img1, c
     NSView *content = [window contentView];
     int frameHeight = [content frame].size.height;
     NSRect rect = NSMakeRect(x, frameHeight - y - h, w, h);
-
+    
     NSButton *my = [[NSButton alloc] initWithFrame:rect];
     [content addSubview: my];
     NSString *string = [NSString stringWithUTF8String:str];
     [my setTitle:string];
-
+    
     if (img1) {
         string = [NSString stringWithUTF8String:img1];
         NSURL* url = [NSURL fileURLWithPath:string];
         NSImage *image = [[NSImage alloc] initWithContentsOfURL: url];
         [my setImage:image] ;
     }
-
+    
     //    [my setTarget:self];
     [my setAction:@selector(invisible)];
     [my setButtonType:NSMomentaryLightButton];
@@ -431,14 +526,14 @@ void hal_input(int x, int y, int w, int h, const char *str, BOOL multiline) {
     int frameHeight = [content frame].size.height;
     NSRect rect = NSMakeRect(x, frameHeight - y - h, w, h);
     NSString *string = [NSString stringWithUTF8String:str];
-
+    
     NSView *textField;
     if (multiline)
         textField = [[NSTextView alloc] initWithFrame:rect];
     else
         textField = [[NSTextField alloc] initWithFrame:rect];
     [textField insertText:string];
-
+    
     [content addSubview:textField];
 }
 
@@ -481,7 +576,8 @@ objectValueForTableColumn:(NSTableColumn *) aTableColumn
     int row = [table selectedRow];
     if (row == -1)
         return;
-    execute(self->logic->str, self->context->find);
+    if (self->logic->type != VAR_NIL)
+        execute(self->logic->str, self->context->find);
 }
 @end
 
@@ -495,9 +591,9 @@ void hal_table(struct context *context, int x, int y, int w, int h,
     NSTableView *tableView = [[NSTableView alloc] initWithFrame:rect];
     NSTableColumn * column1 = [[NSTableColumn alloc] initWithIdentifier:@"Col1"];
     [[column1 headerCell] setStringValue:@"yo"];
-   
+    
     [tableView addTableColumn:column1];
-//    NSArray *source = [NSArray arrayWithObjects:@"3",@"1",@"4",nil];
+    //    NSArray *source = [NSArray arrayWithObjects:@"3",@"1",@"4",nil];
     HALarray *source = [HALarray arrayWithData:list logic:logic inContext:context];
     [tableView setDelegate:source];
     [tableView setDataSource:(id<NSTableViewDataSource>)source];
@@ -505,4 +601,41 @@ void hal_table(struct context *context, int x, int y, int w, int h,
     [tableContainer setDocumentView:tableView];
     [tableContainer setHasVerticalScroller:YES];
     [content addSubview:tableContainer];
+}
+
+void hal_window()
+{
+    [NSApplication sharedApplication];
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    id menubar = [NSMenu new];
+    id appMenuItem = [NSMenuItem new];
+    [menubar addItem:appMenuItem];
+    [NSApp setMainMenu:menubar];
+    id appMenu = [NSMenu new];
+    id appName = [[NSProcessInfo processInfo] processName];
+    id quitTitle = [@"Quit " stringByAppendingString:appName];
+    id quitMenuItem = [[NSMenuItem alloc] initWithTitle:quitTitle
+                                                 action:@selector(terminate:)
+                                          keyEquivalent:@"q"];
+    [appMenu addItem:quitMenuItem];
+    [appMenuItem setSubmenu:appMenu];
+    window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 200, 200)
+                                         styleMask:NSTitledWindowMask |
+              NSClosableWindowMask |
+              NSMiniaturizableWindowMask |
+              NSResizableWindowMask
+                                           backing:NSBackingStoreBuffered
+                                             defer:NO];
+    [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
+    [window setTitle:appName];
+    [window makeKeyAndOrderFront:nil];
+    [NSApp activateIgnoringOtherApps:YES];
+}
+
+int xmain(int argc, char *argv[])
+{
+    hal_window();
+    hal_graphics(NULL);
+    [NSApp run];
+    return 0;
 }

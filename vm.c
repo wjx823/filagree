@@ -1029,6 +1029,14 @@ static void unary_op(struct context *context, enum Opcode op)
                 default:        vm_exit_message(context, "bad math operator");   break;
             }
         } break;
+        case VAR_FLT: {
+            float n = v->floater;
+            switch (op) {
+                case VM_NEG:    result = variable_new_float(context, -n);        break;
+                case VM_NOT:    result = variable_new_bool(context, !n);         break;
+                default:        vm_exit_message(context, "bad math operator");   break;
+            }
+        } break;
         default:
             if (op == VM_NOT)
                 result = variable_new_bool(context, false);

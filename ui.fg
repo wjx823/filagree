@@ -50,7 +50,12 @@ play_square = function()
 
 end
 
-t = ['table', 120, 90, [7, 8, 9, 'x', 'y', 'z'], play_square]
+triangle = function()
+    sys.graphics([[0.0, 0.6, 0.0], [-0.2, -0.3, 0.0], [0.2, -0.3, 0.0]])
+end
+
+t = ['table', 120, 90, [7, 8, 9, 'x', 'y', 'z'], triangle]
 sys.print('t=' + t)
 sys.ui('vertical', 20, 20, [['button', 100, 30, 'clickez moi'], ['input', 150, 20, ' '], t])
+
 sys.loop()
