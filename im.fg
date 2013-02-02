@@ -1,0 +1,7 @@
+import 'ui'
+
+sys.window()
+
+sys.ui('vertical', 20, 20, [['button', 100, 30, 'clickez moi'], ['input', 150, 20, ' '], t])
+
+sys.loop()

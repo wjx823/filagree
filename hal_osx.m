@@ -211,7 +211,7 @@ void hal_image()
     NSRect rect = [content frame];
     rect.origin.x = rect.size.width/2;
     NSImageView *iv = [[NSImageView alloc] initWithFrame:rect];
-    
+
     NSURL *url = [NSURL URLWithString:@"http://www.cgl.uwaterloo.ca/~csk/projects/starpatterns/noneuclidean/323ball.jpg"];
     NSImage *pic = [[NSImage alloc] initWithContentsOfURL:url];
     if (pic)
@@ -264,14 +264,14 @@ __al_check_error(__FILE__, __LINE__)
 ALuint init_al() {
 	ALCdevice *dev = NULL;
 	ALCcontext *ctx = NULL;
-    
+
 	const char *defname = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
     printf("Default ouput device: %s\n", defname);
-    
+
 	dev = alcOpenDevice(defname);
 	ctx = alcCreateContext(dev, NULL);
 	alcMakeContextCurrent(ctx);
-    
+
 	/* Create buffer to store samples */
 	ALuint buf;
 	alGenBuffers(1, &buf);
@@ -285,7 +285,7 @@ void exit_al() {
 	ALCcontext *ctx = NULL;
 	ctx = alcGetCurrentContext();
 	dev = alcGetContextsDevice(ctx);
-    
+
 	alcMakeContextCurrent(NULL);
 	alcDestroyContext(ctx);
 	alcCloseDevice(dev);
@@ -309,23 +309,23 @@ void hal_synth(const uint8_t *bytes, uint32_t length)
     short *samples = (short*)bytes;
     uint32_t size = length / sizeof(short);
     float duration = size * 1.0f / SYNTH_SAMPLE_RATE;
-    
+
     ALuint buf = init_al();
     /* Download buffer to OpenAL */
 	alBufferData(buf, AL_FORMAT_MONO16, samples, size, SYNTH_SAMPLE_RATE);
 	al_check_error();
-    
+
 	/* Set-up sound source and play buffer */
 	ALuint src = 0;
 	alGenSources(1, &src);
 	alSourcei(src, AL_BUFFER, buf);
 	alSourcePlay(src);
-    
+
 	/* While sound is playing, sleep */
 	al_check_error();
-    
+
     hal_sleep(duration*1000);
-    
+
 	exit_al();
 }
 
@@ -345,99 +345,99 @@ ALvoid hal_audio_loop(ALvoid)
     ALint       lLoop, lFormat, lFrequency, lBlockAlignment, lProcessed, lPlaying;
     ALboolean   bPlaying = AL_FALSE;
     ALboolean   bPlay = AL_FALSE;
-    
+
     // does not setup the Wave Device's Audio Mixer to select a recording input or recording level.
-    
+
 	ALCdevice *dev = NULL;
 	ALCcontext *ctx = NULL;
-    
+
 	const char *defname = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
     printf("Default ouput device: %s\n", defname);
-    
+
 	dev = alcOpenDevice(defname);
 	ctx = alcCreateContext(dev, NULL);
 	alcMakeContextCurrent(ctx);
-    
+
     // Generate a Source and QUEUEBUFFERCOUNT Buffers for Queuing
     alGetError();
     alGenSources(1, &SourceID);
-    
+
     for (lLoop = 0; lLoop < QUEUEBUFFERCOUNT; lLoop++)
         alGenBuffers(1, &BufferID[lLoop]);
-    
+
     if (alGetError() != AL_NO_ERROR) {
         printf("Failed to generate Source and / or Buffers\n");
         return;
     }
-    
+
     ulUnqueueCount = 0;
     ulQueueCount = 0;
-    
+
     // Get list of available Capture Devices
     const ALchar *pDeviceList = alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
     if (pDeviceList) {
         printf("Available Capture Devices are:-\n");
-        
+
         while (*pDeviceList) {
             printf("%s\n", pDeviceList);
             pDeviceList += strlen(pDeviceList) + 1;
         }
     }
-    
+
     szDefaultCaptureDevice = alcGetString(NULL, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
     printf("\nDefault Capture Device is '%s'\n\n", szDefaultCaptureDevice);
-    
+
     // The next call can fail if the WaveDevice does not support the requested format, so the application
     // should be prepared to try different formats in case of failure
-    
+
     lFormat = AL_FORMAT_MONO16;
     lFrequency = 44100;
     lBlockAlignment = 2;
-    
+
     long lTotalProcessed = 0;
     long lOldSamplesAvailable = 0;
     long lOldTotalProcessed = 0;
-    
+
     pCaptureDevice = alcCaptureOpenDevice(szDefaultCaptureDevice, lFrequency, lFormat, lFrequency);
     if (pCaptureDevice) {
         printf("Opened '%s' Capture Device\n\n", alcGetString(pCaptureDevice, ALC_CAPTURE_DEVICE_SPECIFIER));
-        
+
         printf("start capture\n");
         alcCaptureStart(pCaptureDevice);
         bPlay = AL_TRUE;
-        
+
         for (;;) {
             //alcCaptureStop(pCaptureDevice);
-            
+
             alGetError();
             alcGetIntegerv(pCaptureDevice, ALC_CAPTURE_SAMPLES, 1, &lSamplesAvailable);
-            
+
             if ((lOldSamplesAvailable != lSamplesAvailable) || (lOldTotalProcessed != lTotalProcessed)) {
                 printf("Samples available is %d, Buffers Processed %ld\n", lSamplesAvailable, lTotalProcessed);
                 lOldSamplesAvailable = lSamplesAvailable;
                 lOldTotalProcessed = lTotalProcessed;
             }
-            
+
             // If the Source is (or should be) playing, get number of buffers processed
             // and check play status
             if (bPlaying) {
                 alGetSourcei(SourceID, AL_BUFFERS_PROCESSED, &lProcessed);
                 while (lProcessed) {
                     lTotalProcessed++;
-                    
+
                     // Unqueue the buffer
                     alSourceUnqueueBuffers(SourceID, 1, &TempBufferID);
-                    
+
                     // Update unqueue count
                     if (++ulUnqueueCount == QUEUEBUFFERCOUNT)
                         ulUnqueueCount = 0;
-                    
+
                     // Increment buffers available
                     ulBuffersAvailable++;
-                    
+
                     lProcessed--;
                 }
-                
+
                 // If the Source has stopped (been starved of data) it will need to be
                 // restarted
                 alGetSourcei(SourceID, AL_SOURCE_STATE, &lPlaying);
@@ -446,25 +446,25 @@ ALvoid hal_audio_loop(ALvoid)
                     bPlay = AL_TRUE;
                 }
             }
-            
+
             if ((lSamplesAvailable > (QUEUEBUFFERSIZE / lBlockAlignment)) && !(ulBuffersAvailable)) {
                 printf("underrun!\n");
             }
-            
+
             // When we have enough data to fill our QUEUEBUFFERSIZE byte buffer, grab the samples
             else if ((lSamplesAvailable > (QUEUEBUFFERSIZE / lBlockAlignment)) && (ulBuffersAvailable)) {
                 // Consume Samples
                 alcCaptureSamples(pCaptureDevice, Buffer, QUEUEBUFFERSIZE / lBlockAlignment);
                 alBufferData(BufferID[ulQueueCount], lFormat, Buffer, QUEUEBUFFERSIZE, lFrequency);
-                
+
                 // Queue the buffer, and mark buffer as queued
                 alSourceQueueBuffers(SourceID, 1, &BufferID[ulQueueCount]);
                 if (++ulQueueCount == QUEUEBUFFERCOUNT)
                     ulQueueCount = 0;
-                
+
                 // Decrement buffers available
                 ulBuffersAvailable--;
-                
+
                 // If we need to start the Source do it now IF AND ONLY IF we have queued at least 2 buffers
                 if ((bPlay) && (ulBuffersAvailable <= (QUEUEBUFFERCOUNT - 2))) {
                     alSourcePlay(SourceID);
@@ -477,16 +477,23 @@ ALvoid hal_audio_loop(ALvoid)
         alcCaptureCloseDevice(pCaptureDevice);
     } else
         printf("WaveDevice is unavailable, or does not supported the request format\n");
-    
+
     alSourceStop(SourceID);
     alDeleteSources(1, &SourceID);
     for (lLoop = 0; lLoop < QUEUEBUFFERCOUNT; lLoop++)
         alDeleteBuffers(1, &BufferID[lLoop]);
 }
 
-void hal_label(int x, int y, int w, int h, const char *str) {
+NSRect whereAmI(int x, int y, int w, int h)
+{
     NSView *content = [window contentView];
-    NSRect rect = NSMakeRect(x, y, w, h);
+    int frameHeight = [content frame].size.height;
+    return NSMakeRect(x, frameHeight - y - h, w, h);
+}
+
+void hal_label(int x, int y, int w, int h, const char *str)
+{
+    NSRect rect = whereAmI(x,y,w,h);
     NSTextField *textField;
     textField = [[NSTextField alloc] initWithFrame:rect];
     NSString *string = [NSString stringWithUTF8String:str];
@@ -495,45 +502,46 @@ void hal_label(int x, int y, int w, int h, const char *str) {
     [textField setDrawsBackground:NO];
     [textField setEditable:NO];
     [textField setSelectable:NO];
+    NSView *content = [window contentView];
     [content addSubview:textField];
 }
 
-void hal_button(int x, int y, int w, int h, const char *str, const char *img1, const char* img2) {
+void hal_button(int x, int y, int w, int h, const char *str, const char *img1, const char* img2)
+{
     NSView *content = [window contentView];
-    int frameHeight = [content frame].size.height;
-    NSRect rect = NSMakeRect(x, frameHeight - y - h, w, h);
-    
+    NSRect rect = whereAmI(x,y,w,h);
+
     NSButton *my = [[NSButton alloc] initWithFrame:rect];
     [content addSubview: my];
     NSString *string = [NSString stringWithUTF8String:str];
     [my setTitle:string];
-    
+
     if (img1) {
         string = [NSString stringWithUTF8String:img1];
         NSURL* url = [NSURL fileURLWithPath:string];
         NSImage *image = [[NSImage alloc] initWithContentsOfURL: url];
         [my setImage:image] ;
     }
-    
+
     //    [my setTarget:self];
     [my setAction:@selector(invisible)];
     [my setButtonType:NSMomentaryLightButton];
     [my setBezelStyle:NSTexturedSquareBezelStyle];
 }
 
-void hal_input(int x, int y, int w, int h, const char *str, BOOL multiline) {
+void hal_input(int x, int y, int w, int h, const char *str, BOOL multiline)
+{
     NSView *content = [window contentView];
-    int frameHeight = [content frame].size.height;
-    NSRect rect = NSMakeRect(x, frameHeight - y - h, w, h);
+    NSRect rect = whereAmI(x,y,w,h);
     NSString *string = [NSString stringWithUTF8String:str];
-    
+
     NSView *textField;
     if (multiline)
         textField = [[NSTextView alloc] initWithFrame:rect];
     else
         textField = [[NSTextField alloc] initWithFrame:rect];
     [textField insertText:string];
-    
+
     [content addSubview:textField];
 }
 
@@ -584,14 +592,15 @@ objectValueForTableColumn:(NSTableColumn *) aTableColumn
 void hal_table(struct context *context, int x, int y, int w, int h,
                struct variable *list, struct variable *logic) {
     NSView *content = [window contentView];
-    NSRect rect = NSMakeRect(x, y, w, h);
+    NSRect rect = whereAmI(x,y,w,h);
     NSScrollView * tableContainer = [[NSScrollView alloc] initWithFrame:rect];
     w -= 16;
     rect = NSMakeRect(x, y, w, h);
     NSTableView *tableView = [[NSTableView alloc] initWithFrame:rect];
     NSTableColumn * column1 = [[NSTableColumn alloc] initWithIdentifier:@"Col1"];
-    [[column1 headerCell] setStringValue:@"yo"];
-    
+//    [[column1 headerCell] setStringValue:@"yo"];
+    [tableView setHeaderView:nil];
+
     [tableView addTableColumn:column1];
     //    NSArray *source = [NSArray arrayWithObjects:@"3",@"1",@"4",nil];
     HALarray *source = [HALarray arrayWithData:list logic:logic inContext:context];

@@ -159,6 +159,19 @@ struct variable *sys_sin(struct context *context) // radians
 
 #ifndef HEADLESS
 
+struct variable *sys_label(struct context *context)
+{
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    int32_t x = ((struct variable*)array_get(value->list, 1))->integer;
+    int32_t y = ((struct variable*)array_get(value->list, 2))->integer;
+    int32_t w = ((struct variable*)array_get(value->list, 3))->integer;
+    int32_t h = ((struct variable*)array_get(value->list, 4))->integer;
+    char *str = (char*)((struct variable*)array_get(value->list, 5))->str->data;
+    
+    hal_label(x, y, w, h, str);
+    return NULL;
+}
+
 struct variable *sys_input(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
@@ -256,6 +269,7 @@ struct string_func builtin_funcs[] = {
 #ifndef HEADLESS
     {"window",      &sys_window},
     {"loop",        &sys_loop},
+    {"label",       &sys_label},
     {"button",      &sys_button},
     {"input",       &sys_input},
     {"synth",       &sys_synth},

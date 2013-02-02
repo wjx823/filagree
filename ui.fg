@@ -2,7 +2,7 @@
 
 sys.ui = function(self, type, w, h, item, logic, parent, x, y)
 
-    sys.print('item = ' + item)
+    sys.print('item = ' + item + ' at ' + x + ',' + y)
 
     if not parent then
         x = 0
@@ -12,7 +12,7 @@ sys.ui = function(self, type, w, h, item, logic, parent, x, y)
 
     if (type == 'vertical') then
         for i in item
-            sys.print('i = ' + i)
+            #sys.print('i = ' + i)
             sys.ui(i[0], i[1], i[2], i[3], i[4], true, x, y)
             y = y + i[2]
         end
@@ -21,6 +21,8 @@ sys.ui = function(self, type, w, h, item, logic, parent, x, y)
             sys.ui(i[0], i[1], i[2], i[3], i[4], true, x, y)
             x = x + i[1]
         end
+    else if type == 'label' then
+        sys.label(x, y, w, h, item)
     else if type == 'button' then
         sys.button(x, y, w, h, item)
     else if type == 'input' then
@@ -30,32 +32,42 @@ sys.ui = function(self, type, w, h, item, logic, parent, x, y)
     end
 end
 
-play_square = function()
+testui = function()
 
-    freq = 440
-	seconds = 1
-	sample_rate = 44100
-	buf_size = seconds * sample_rate
+    play_square = function()
 
-	samples = sys.bytes(buf_size * 2)
+        freq = 440
+        seconds = 1
+        sample_rate = 44100
+        buf_size = seconds * sample_rate
 
-    for i in (buf_size / 2)
-		up = (i * 2 * freq / sample_rate ) %2
-        s = up * 127
-		samples[(i*2)] = s
-		samples[(i*2)+1] = s
+        samples = sys.bytes(buf_size * 2)
+
+        for i in (buf_size / 2)
+            up = (i * 2 * freq / sample_rate ) %2
+            s = up * 127
+            samples[(i*2)] = s
+            samples[(i*2)+1] = s
+        end
+        
+        sys.synth(samples)
+
     end
-    
-    sys.synth(samples)
+
+    triangle = function()
+        sys.graphics([[0.0, 0.6, 0.0], [-0.2, -0.3, 0.0], [0.2, -0.3, 0.0]])
+    end
+
+    t = ['table', 120, 90, [7, 8, 9, 'x', 'y', 'z'], triangle]
+
+    sys.ui('vertical', 20, 20, [
+                ['button', 100, 30, 'clickez moi'],
+                ['label', 50, 20, 'hello'],
+                ['input', 150, 20, ' '],
+                t])
+
+    sys.loop()
 
 end
 
-triangle = function()
-    sys.graphics([[0.0, 0.6, 0.0], [-0.2, -0.3, 0.0], [0.2, -0.3, 0.0]])
-end
-
-t = ['table', 120, 90, [7, 8, 9, 'x', 'y', 'z'], triangle]
-sys.print('t=' + t)
-sys.ui('vertical', 20, 20, [['button', 100, 30, 'clickez moi'], ['input', 150, 20, ' '], t])
-
-sys.loop()
+testui()
