@@ -17,96 +17,6 @@ void hal_loop() {
     [NSApp run];
 }
 
-void xhal_window()
-{
-    [NSApplication sharedApplication];
-    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-    id menubar = [NSMenu new];
-    id appMenuItem = [NSMenuItem new];
-    [menubar addItem:appMenuItem];
-    [NSApp setMainMenu:menubar];
-    id appMenu = [NSMenu new];
-    id appName = [[NSProcessInfo processInfo] processName];
-    id quitTitle = [@"Quit " stringByAppendingString:appName];
-    id quitMenuItem = [[NSMenuItem alloc] initWithTitle:quitTitle
-                                                 action:@selector(terminate:)
-                                          keyEquivalent:@"q"];
-    [appMenu addItem:quitMenuItem];
-    [appMenuItem setSubmenu:appMenu];
-    window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 200, 200)
-                                         styleMask:NSTitledWindowMask |
-              NSClosableWindowMask |
-              NSMiniaturizableWindowMask |
-              NSResizableWindowMask
-                                           backing:NSBackingStoreBuffered
-                                             defer:NO];
-    [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
-    [window setTitle:appName];
-    [window makeKeyAndOrderFront:nil];
-    [NSApp activateIgnoringOtherApps:YES];
-}
-
-@interface xGLView : NSOpenGLView
-
-@end
-
-@implementation xGLView
-
-- (id)initWithFrame:(NSRect)frameRect
-{
-    NSOpenGLPixelFormatAttribute attr[] =
-	{
-        NSOpenGLPFADoubleBuffer,
-		NSOpenGLPFAAccelerated,
-		NSOpenGLPFAColorSize, (NSOpenGLPixelFormatAttribute) 32,
-		NSOpenGLPFADepthSize, (NSOpenGLPixelFormatAttribute) 23,
-		(NSOpenGLPixelFormatAttribute) 0
-	};
-	NSOpenGLPixelFormat *nsglFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:attr];
-	
-    if (self = [super initWithFrame:frameRect pixelFormat:nsglFormat]) {}
-	return self;
-}
-
-- (void)prepareOpenGL
-{
-    glMatrixMode(GL_MODELVIEW);
-	glClearColor(0, 0, .25, 0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();
-	
-    glShadeModel(GL_SMOOTH);
-	glClearDepth(1.0f);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-}
-
-- (float)get_float:(const struct variable *)point at:(uint32_t)i
-{
-    const struct variable *f = (const struct variable*)array_get(point->list, i);
-    return f->floater;
-}
-
-- (void)drawRect:(NSRect)rect
-{
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-    glColor3f(1.0f, 0.85f, 0.35f);
-    glBegin(GL_TRIANGLES);
-    {
-        glVertex3f(  0.0,  0.6, 0.0);
-        glVertex3f( -0.2, -0.3, 0.0);
-        glVertex3f(  0.2, -0.3 ,0.0);
-    }
-    glEnd();
-    [[self openGLContext] flushBuffer];
-}
-
-
-@end
-
 @interface GLView : NSOpenGLView {
     const struct variable *shape;
 }
@@ -612,7 +522,7 @@ void hal_table(struct context *context, int x, int y, int w, int h,
     [content addSubview:tableContainer];
 }
 
-void hal_window()
+void hal_window(const char *iconPath)
 {
     [NSApplication sharedApplication];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
@@ -638,12 +548,22 @@ void hal_window()
     [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
     [window setTitle:appName];
     [window makeKeyAndOrderFront:nil];
+
+    if (!iconPath)
+        iconPath = "icon.png";
+    NSString *path = [NSString stringWithUTF8String:iconPath];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
+        NSImage *icon = [[NSImage alloc] initWithContentsOfFile:path];
+        if (icon)
+            [NSApp setApplicationIconImage:icon];
+    }
+
     [NSApp activateIgnoringOtherApps:YES];
 }
 
 int xmain(int argc, char *argv[])
 {
-    hal_window();
+    hal_window(NULL);
     hal_graphics(NULL);
     [NSApp run];
     return 0;

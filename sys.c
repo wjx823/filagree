@@ -240,7 +240,7 @@ struct variable *sys_sound(struct context *context)
 struct variable *sys_window(struct context *context)
 {
     stack_pop(context->operand_stack); // self
-    hal_window();
+    hal_window(NULL);
     return NULL;
 }
 

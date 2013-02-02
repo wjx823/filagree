@@ -9,7 +9,7 @@
 #include "vm.h"
 
 void hal_loop();
-void hal_window();
+void hal_window(const char *iconPath);
 void hal_image();
 void hal_sound();
 void hal_audioloop();
