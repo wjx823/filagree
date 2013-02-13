@@ -416,7 +416,43 @@ void hal_label(int x, int y, int w, int h, const char *str)
     [content addSubview:textField];
 }
 
-void hal_button(int x, int y, int w, int h, const char *str, const char *img1, const char* img2)
+@interface ButtonPressee : NSObject {
+    struct variable *logic;
+    struct context *context;
+    struct variable *uictx;
+}
+
+-(IBAction)pressed:(id)sender;
+
+@end
+
+@implementation ButtonPressee
+
++(ButtonPressee*)shall:(struct variable *)logic
+                  with:(struct variable *)uictx
+             inContext:(struct context *)ctx
+{
+    ButtonPressee *bp = [ButtonPressee alloc];
+    bp->logic = logic;
+    bp->context = ctx;
+    bp->uictx = uictx;
+    return bp;
+}
+
+-(IBAction)pressed:(id)sender {
+    if (self->logic->type == VAR_NIL)
+        return;
+    struct variable *f = variable_new_fnc(self->context, self->logic->str, NULL);
+    vm_call(self->context, f, self->uictx, NULL);
+}
+
+@end // ButtonPressee implementation
+
+void hal_button(struct context *context,
+                struct variable *uictx,
+                int x, int y, int w, int h,
+                struct variable *logic,
+                const char *str, const char *img)
 {
     NSView *content = [window contentView];
     NSRect rect = whereAmI(x,y,w,h);
@@ -426,20 +462,25 @@ void hal_button(int x, int y, int w, int h, const char *str, const char *img1, c
     NSString *string = [NSString stringWithUTF8String:str];
     [my setTitle:string];
 
-    if (img1) {
-        string = [NSString stringWithUTF8String:img1];
+    if (img) {
+        string = [NSString stringWithUTF8String:img];
         NSURL* url = [NSURL fileURLWithPath:string];
         NSImage *image = [[NSImage alloc] initWithContentsOfURL: url];
-        [my setImage:image] ;
+        [my setImage:image];
     }
 
-    //    [my setTarget:self];
-    [my setAction:@selector(invisible)];
+    ButtonPressee *bp = [ButtonPressee shall:logic
+                                        with:uictx
+                                   inContext:context];
+    [my setTarget:bp];
+    [my setAction:@selector(pressed:)];
     [my setButtonType:NSMomentaryLightButton];
     [my setBezelStyle:NSTexturedSquareBezelStyle];
 }
 
-void hal_input(int x, int y, int w, int h, const char *str, BOOL multiline)
+void hal_input(struct variable *uictx,
+               int x, int y, int w, int h,
+               const char *str, BOOL multiline)
 {
     NSView *content = [window contentView];
     NSRect rect = whereAmI(x,y,w,h);
@@ -499,7 +540,9 @@ objectValueForTableColumn:(NSTableColumn *) aTableColumn
 }
 @end
 
-void hal_table(struct context *context, int x, int y, int w, int h,
+void hal_table(struct variable *uictx,
+               struct context *context,
+               int x, int y, int w, int h,
                struct variable *list, struct variable *logic) {
     NSView *content = [window contentView];
     NSRect rect = whereAmI(x,y,w,h);
@@ -524,6 +567,14 @@ void hal_table(struct context *context, int x, int y, int w, int h,
 
 void hal_window(const char *iconPath)
 {
+    if (window) { // clear contents
+        NSView *content = [window contentView];
+        [[NSArray arrayWithArray: [content subviews]] makeObjectsPerformSelector:
+         @selector(removeFromSuperviewWithoutNeedingDisplay)];
+        [content setNeedsDisplay: YES];
+        return;
+    }
+
     [NSApplication sharedApplication];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     id menubar = [NSMenu new];

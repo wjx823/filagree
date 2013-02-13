@@ -159,15 +159,27 @@ struct variable *sys_sin(struct context *context) // radians
 
 #ifndef HEADLESS
 
+static const char *param_str(const struct variable *value, uint32_t index)
+{
+    const struct variable *strv = (struct variable*)array_get(value->list, index);
+    const struct byte_array *strb = strv->str;
+    const char *str = byte_array_to_string(strb);
+    return str;
+}
+
+static int32_t param_int(const struct variable *value, uint32_t index) {
+    return ((struct variable*)array_get(value->list, index))->integer;
+}
+
 struct variable *sys_label(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
-    int32_t x = ((struct variable*)array_get(value->list, 1))->integer;
-    int32_t y = ((struct variable*)array_get(value->list, 2))->integer;
-    int32_t w = ((struct variable*)array_get(value->list, 3))->integer;
-    int32_t h = ((struct variable*)array_get(value->list, 4))->integer;
-    char *str = (char*)((struct variable*)array_get(value->list, 5))->str->data;
-    
+    int32_t x = param_int(value, 1);
+    int32_t y = param_int(value, 2);
+    int32_t w = param_int(value, 3);
+    int32_t h = param_int(value, 4);
+    const char *str = param_str(value, 5);
+
     hal_label(x, y, w, h, str);
     return NULL;
 }
@@ -175,40 +187,44 @@ struct variable *sys_label(struct context *context)
 struct variable *sys_input(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
-    int32_t x = ((struct variable*)array_get(value->list, 1))->integer;
-    int32_t y = ((struct variable*)array_get(value->list, 2))->integer;
-    int32_t w = ((struct variable*)array_get(value->list, 3))->integer;
-    int32_t h = ((struct variable*)array_get(value->list, 4))->integer;
-    char *str = (char*)((struct variable*)array_get(value->list, 5))->str->data;
+    struct variable *uictx = (struct variable*)array_get(value->list, 1);
+    int32_t x = param_int(value, 2);
+    int32_t y = param_int(value, 3);
+    int32_t w = param_int(value, 4);
+    int32_t h = param_int(value, 5);
+    const char *str = param_str(value, 6);
 
-    hal_input(x, y, w, h, str, false);
+    hal_input(uictx, x, y, w, h, str, false);
     return NULL;
 }
 
 struct variable *sys_button(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
-    int32_t x = ((struct variable*)array_get(value->list, 1))->integer;
-    int32_t y = ((struct variable*)array_get(value->list, 2))->integer;
-    int32_t w = ((struct variable*)array_get(value->list, 3))->integer;
-    int32_t h = ((struct variable*)array_get(value->list, 4))->integer;
-    char *str = (char*)((struct variable*)array_get(value->list, 5))->str->data;
-    
-    hal_button(x, y, w, h, str, NULL, NULL);
+    struct variable *uictx = (struct variable*)array_get(value->list, 1);
+    int32_t x = param_int(value, 2);
+    int32_t y = param_int(value, 3);
+    int32_t w = param_int(value, 4);
+    int32_t h = param_int(value, 5);
+    const char *str = param_str(value, 6);
+    struct variable *logic = (struct variable*)array_get(value->list, 7);
+
+    hal_button(context, uictx, x, y, w, h, logic, str, NULL);
     return NULL;
 }
 
 struct variable *sys_table(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
-    int32_t x = ((struct variable*)array_get(value->list, 1))->integer;
-    int32_t y = ((struct variable*)array_get(value->list, 2))->integer;
-    int32_t w = ((struct variable*)array_get(value->list, 3))->integer;
-    int32_t h = ((struct variable*)array_get(value->list, 4))->integer;
-    struct variable *list = (struct variable*)array_get(value->list, 5);
-    struct variable *logic = (struct variable*)array_get(value->list, 6);
-    
-    hal_table(context, x, y, w, h, list, logic);
+    struct variable *uictx = (struct variable*)array_get(value->list, 1);
+    int32_t x = param_int(value, 2);
+    int32_t y = param_int(value, 3);
+    int32_t w = param_int(value, 4);
+    int32_t h = param_int(value, 5);
+    struct variable *list = (struct variable*)array_get(value->list, 6);
+    struct variable *logic = (struct variable*)array_get(value->list, 7);
+
+    hal_table(context, uictx, x, y, w, h, list, logic);
     return NULL;
 }
 

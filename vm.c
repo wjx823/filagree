@@ -639,7 +639,6 @@ static void push_fnc(struct context *context, struct byte_array *program)
                 closures = map_new(NULL, NULL);
             struct variable *c = find_var(context, name);
             c = variable_copy(context, c);
-            //struct variable *n = variable_new_str(context, name);
             map_insert(closures, name, c);
         }
     }

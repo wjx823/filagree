@@ -1,7 +1,53 @@
+#todo:
+#    add context param to callback
+
 import 'ui'
 
-sys.window()
+ctx = []
 
-sys.ui('vertical', 20, 20, [['button', 100, 30, 'clickez moi'], ['input', 150, 20, ' '], t])
+ctx.select = function(self)
+    sys.print('select ' + sys.args())
+end
+
+ctx.add = function(self)
+    sys.print('add ' + sys.args())
+end
+
+ctx.settings = function(self)
+    sys.print('settings ' + sys.args())
+end
+
+ctx.signin = function(ctx)
+    sys.ui(ctx,'vertical', [
+                ['horizontal', [
+                    ['add', 'add', 100, 30],
+                    ['settings', 'settings', 100, 30],
+                ]],
+                ['table', [7, 8, 9, 'x', 'y', 'z'], 120, 90]
+            ])
+end
+
+ctx.signup = function(ctx)
+    ctx.signin()
+end
+
+sys.ui(ctx,
+       'vertical', [
+
+            ['horizontal', [
+                ['label', 'username', 80, 20],
+                ['input', ' ', 150, 20],
+            ]],
+
+            ['horizontal', [
+                ['label', 'password', 80, 20],
+                ['input', ' ', 150, 20],
+            ]],
+
+            ['horizontal', [
+                ['button', 'signin', 100, 30, ctx.signin],
+                ['button', 'signup', 100, 30, ctx.signup],
+            ]]
+        ])
 
 sys.loop()

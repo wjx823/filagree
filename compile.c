@@ -329,8 +329,10 @@ lexmore:
                             line++;
                     i += right_comment_len;
                 } else if (lexeme == LEX_LINE_COMMENT) { // start line comment with #
-                    while (input[i] != '\n' && input[i] != EOF)
+                    while (input[i] && (input[i] != '\n') && (input[i] != EOF)) {
+                        //printf("input[%d]=%d\n", i, input[i]);
                         i++;
+                    }
                     line++;
                 } else if (lexeme == LEX_IMPORT)
                     i = import(input, i);

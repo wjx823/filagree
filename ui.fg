@@ -1,8 +1,8 @@
 # ui.fg ###################################################################
 
-sys.ui = function(self, type, w, h, item, logic, parent, x, y)
+sys.ui = function(self, context, type, item, w, h, logic, parent, x, y)
 
-    sys.print('item = ' + item + ' at ' + x + ',' + y)
+    #sys.print('item = ' + item + ' at ' + x + ',' + y)
 
     if not parent then
         x = 0
@@ -12,24 +12,32 @@ sys.ui = function(self, type, w, h, item, logic, parent, x, y)
 
     if (type == 'vertical') then
         for i in item
-            #sys.print('i = ' + i)
-            sys.ui(i[0], i[1], i[2], i[3], i[4], true, x, y)
-            y = y + i[2]
+            sys.print('i = ' + i)
+            a,b = sys.ui(context, i[0], i[1], i[2], i[3], i[4], true, x, y)
+            #sys.print('a=' + a + ', b=' + b)
+            y = y + b
+            w = w + a
+            h = h + b
         end
     else if (type == 'horizontal') then
         for i in item
-            sys.ui(i[0], i[1], i[2], i[3], i[4], true, x, y)
-            x = x + i[1]
+            a,b = sys.ui(context, i[0], i[1], i[2], i[3], i[4], true, x, y)
+            #sys.print('a=' + a + ', b=' + b)
+            x = x + a
+            w = w + a
+            h = h + b
         end
     else if type == 'label' then
         sys.label(x, y, w, h, item)
     else if type == 'button' then
-        sys.button(x, y, w, h, item)
+        sys.button(context, x, y, w, h, item, logic)
     else if type == 'input' then
-        sys.input(x, y, w, h, item)
+        sys.input(context, x, y, w, h, item)
     else if type == 'table' then
-        sys.table(x, y, w, h, item, logic)
+        sys.table(context, x, y, w, h, item, logic)
     end
+    #sys.print('return ' + w + ',' + h)
+    return w,h
 end
 
 testui = function()
@@ -58,16 +66,16 @@ testui = function()
         sys.graphics([[0.0, 0.6, 0.0], [-0.2, -0.3, 0.0], [0.2, -0.3, 0.0]])
     end
 
-    t = ['table', 120, 90, [7, 8, 9, 'x', 'y', 'z'], triangle]
+    t = ['table', [7, 8, 9, 'x', 'y', 'z'], 120, 90, triangle]
 
-    sys.ui('vertical', 20, 20, [
-                ['button', 100, 30, 'clickez moi'],
-                ['label', 50, 20, 'hello'],
-                ['input', 150, 20, ' '],
+    sys.ui(nil, 'vertical', [
+                ['button', 'clickez moi', 100, 30],
+                ['label', 'hello', 50, 20],
+                ['input', ' ', 150, 20],
                 t])
 
     sys.loop()
 
 end
 
-testui()
+#testui()
