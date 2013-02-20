@@ -1,32 +1,49 @@
 # ui.fg ###################################################################
 
+sys.max = function(self,a,b)
+    if a > b then
+        return a
+    end
+    return b
+end
+
 sys.ui = function(self, context, type, item, w, h, logic, parent, x, y)
 
-    #sys.print('item = ' + item + ' at ' + x + ',' + y)
+    sys.print('sys.ui: item ' + item.length + ' = ' + item + ' at ' + x + ',' + y)
 
     if not parent then
         x = 0
         y = 0
-        sys.window()
+        sys.window(w,h)
     end
+    a = b = 0
 
     if (type == 'vertical') then
         for i in item
             sys.print('i = ' + i)
-            a,b = sys.ui(context, i[0], i[1], i[2], i[3], i[4], true, x, y)
-            #sys.print('a=' + a + ', b=' + b)
-            y = y + b
-            w = w + a
+            a,b = sys.ui(context, i[0], i[1], i[2], i[3], i[4], true, x, y + b)
+            w = sys.max(w, a)
             h = h + b
         end
     else if (type == 'horizontal') then
         for i in item
-            a,b = sys.ui(context, i[0], i[1], i[2], i[3], i[4], true, x, y)
-            #sys.print('a=' + a + ', b=' + b)
-            x = x + a
+            a,b = sys.ui(context, i[0], i[1], i[2], i[3], i[4], true, x + a, y)
             w = w + a
-            h = h + b
+            h = sys.max(h, b)
         end
+    else if type == 'form' then
+        fields = []
+        for name in item
+            field = ['horizontal', [
+                ['label', name, 80, 20],
+                ['input', ' ', 150, 20],
+            ]]
+            fields.insert(field)
+            w = w + 80+150
+            h = h + 20
+        end
+        context.fields = fields
+        sys.ui(context, 'vertical', fields, w, h, nil, true)
     else if type == 'label' then
         sys.label(x, y, w, h, item)
     else if type == 'button' then
@@ -36,7 +53,7 @@ sys.ui = function(self, context, type, item, w, h, logic, parent, x, y)
     else if type == 'table' then
         sys.table(context, x, y, w, h, item, logic)
     end
-    #sys.print('return ' + w + ',' + h)
+
     return w,h
 end
 

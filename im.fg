@@ -1,53 +1,69 @@
 #todo:
-#    add context param to callback
+#    form
+#    ui fit
 
 import 'ui'
 
 ctx = []
 
-ctx.select = function(self)
+ctx.select = function(ctx)
     sys.print('select ' + sys.args())
 end
 
-ctx.add = function(self)
-    sys.print('add ' + sys.args())
+ctx.add = function(ctx)
+    ctx.main()
 end
 
-ctx.settings = function(self)
-    sys.print('settings ' + sys.args())
+ctx.save = function(ctx)
+    ctx.save()
 end
 
-ctx.signin = function(ctx)
+ctx.settings = function(ctx)
+    sys.ui(ctx,'vertical', [
+            ['form', ['display name', 'username', 'password']],
+
+            ['horizontal', [
+                ['button', 'save', 50, 30,   ctx.save],
+                ['button', 'cancel', 50, 30, ctx.main],
+                ['button', 'logout', 50, 30, ctx.main],
+            ]],
+        ])
+end
+
+ctx.main = function(ctx)
     sys.ui(ctx,'vertical', [
                 ['horizontal', [
-                    ['add', 'add', 100, 30],
-                    ['settings', 'settings', 100, 30],
+                    ['button', 'add',      50, 30, ctx.add],
+                    ['button', 'settings', 50, 30, ctx.settings],
                 ]],
-                ['table', [7, 8, 9, 'x', 'y', 'z'], 120, 90]
+                ['table', [7, 8, 9, 'x', 'y', 'z'], 120, 90, ctx.select]
             ])
 end
 
+ctx.add = function(ctx)
+    sys.ui(ctx,'vertical', [
+            ['form', ['username']],
+            ['button', 'add',       50, 30, ctx.main],
+            ['button', 'nevermind', 50, 30, ctx.main],
+            ])
+end
+
+
 ctx.signup = function(ctx)
-    ctx.signin()
+    ctx.main()
 end
 
 sys.ui(ctx,
        'vertical', [
 
-            ['horizontal', [
-                ['label', 'username', 80, 20],
-                ['input', ' ', 150, 20],
-            ]],
+            ['form', ['username', 'password']],
 
             ['horizontal', [
-                ['label', 'password', 80, 20],
-                ['input', ' ', 150, 20],
-            ]],
-
-            ['horizontal', [
-                ['button', 'signin', 100, 30, ctx.signin],
+                ['button', 'signin', 100, 30, ctx.main],
                 ['button', 'signup', 100, 30, ctx.signup],
             ]]
-        ])
+        ],
+        240,
+        320)
 
 sys.loop()

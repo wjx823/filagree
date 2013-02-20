@@ -540,6 +540,8 @@ int map_resize(struct map *m, size_t size)
 // in case of intersection, a wins
 void map_update(struct map *a, const struct map *b)
 {
+    if (b == NULL)
+        return;
     const struct array *keys = map_keys(b);
     for (int i=0; i<keys->length; i++) {
         const struct byte_array *key = (const struct byte_array*)array_get(keys, i);

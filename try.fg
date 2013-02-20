@@ -1,3 +1,2 @@
-sys.window()
-sys.graphics([[0.0, 0.6, 0.0], [-0.2, -0.3, 0.0], [0.2, -0.3, 0.0]])
+sys.ui(ctx, ['button', 'signin', 100, 30])
 sys.loop()

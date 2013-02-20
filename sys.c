@@ -161,6 +161,8 @@ struct variable *sys_sin(struct context *context) // radians
 
 static const char *param_str(const struct variable *value, uint32_t index)
 {
+    if (index >= value->list->length)
+        return NULL;
     const struct variable *strv = (struct variable*)array_get(value->list, index);
     const struct byte_array *strb = strv->str;
     const char *str = byte_array_to_string(strb);
@@ -252,11 +254,21 @@ struct variable *sys_sound(struct context *context)
     return NULL;
 }
 
-
 struct variable *sys_window(struct context *context)
 {
-    stack_pop(context->operand_stack); // self
-    hal_window(NULL);
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    int w=0, h=0;
+    if (value->list->length > 2) {
+        w = param_int(value, 1);
+        h = param_int(value, 2);
+    }
+    if (!w || !h) {
+        DEBUGPRINT("warning: zero-size window");
+        w = 240;
+        h = 320;
+    }
+    const char *str = param_str(value, 3);
+    hal_window(w, h, str);
     return NULL;
 }
 

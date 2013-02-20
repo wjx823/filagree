@@ -180,7 +180,7 @@ bool display_serial(const struct key_value_pair* kvp) {
             DEBUGPRINT("int %d\n", kvp->value.integer);
             break;
         case SERIAL_FLOAT:
-            DEBUGPRINT("float %f\n", kvp->value.floater)
+            DEBUGPRINT("float %f\n", kvp->value.floater);
         case SERIAL_STRING:
             str = (char*)malloc(kvp->value.bytes->length + 1);
             memcpy(str, kvp->value.bytes->data, kvp->value.bytes->length);

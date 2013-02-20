@@ -398,7 +398,9 @@ NSRect whereAmI(int x, int y, int w, int h)
 {
     NSView *content = [window contentView];
     int frameHeight = [content frame].size.height;
-    return NSMakeRect(x, frameHeight - y - h, w, h);
+    int y2 = frameHeight - y - h;
+    NSLog(@"whereAmI: %d - %d - %d = %d", frameHeight, y, h, y2);
+    return NSMakeRect(x, y2, w, h);
 }
 
 void hal_label(int x, int y, int w, int h, const char *str)
@@ -456,6 +458,7 @@ void hal_button(struct context *context,
 {
     NSView *content = [window contentView];
     NSRect rect = whereAmI(x,y,w,h);
+    NSLog(@"button %@ @ %f,%f,%f,%f", content, rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
 
     NSButton *my = [[NSButton alloc] initWithFrame:rect];
     [content addSubview: my];
@@ -565,7 +568,7 @@ void hal_table(struct variable *uictx,
     [content addSubview:tableContainer];
 }
 
-void hal_window(const char *iconPath)
+void hal_window(int32_t w, int32_t h, const char *iconPath)
 {
     if (window) { // clear contents
         NSView *content = [window contentView];
@@ -589,16 +592,17 @@ void hal_window(const char *iconPath)
                                           keyEquivalent:@"q"];
     [appMenu addItem:quitMenuItem];
     [appMenuItem setSubmenu:appMenu];
-    window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 200, 200)
+    window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, w, h)
                                          styleMask:NSTitledWindowMask |
-              NSClosableWindowMask |
-              NSMiniaturizableWindowMask |
-              NSResizableWindowMask
+                                                   NSClosableWindowMask |
+                                                   NSMiniaturizableWindowMask |
+                                                   NSResizableWindowMask
                                            backing:NSBackingStoreBuffered
                                              defer:NO];
     [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
     [window setTitle:appName];
     [window makeKeyAndOrderFront:nil];
+    NSLog(@"window %@ %d,%d", [window contentView], w,h);
 
     if (!iconPath)
         iconPath = "icon.png";
@@ -612,10 +616,27 @@ void hal_window(const char *iconPath)
     [NSApp activateIgnoringOtherApps:YES];
 }
 
-int xmain(int argc, char *argv[])
+void hal_save(struct context *context, const struct byte_array *key, const struct variable *value)
 {
-    hal_window(NULL);
-    hal_graphics(NULL);
-    [NSApp run];
-    return 0;
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+
+    const char *key2 = byte_array_to_string(key);
+    NSString *key3 = [NSString stringWithUTF8String:key2];
+
+    struct byte_array *bits = variable_serialize(context, NULL, value, true);
+    NSData *value2 = [NSData dataWithBytes:bits->data length:bits->length];
+
+    [defaults setObject:value2 forKey:key3];
+    [defaults synchronize];
+}
+
+struct variable *hal_load(struct context *context, const struct byte_array *key)
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    const char *key2 = byte_array_to_string(key);
+    NSString *key3 = [NSString stringWithUTF8String:key2];
+    NSData *value2 = [defaults dataForKey:key3];
+    struct byte_array bits = {(uint8_t*)[value2 bytes], NULL, [value2 length]};
+    
+    return variable_deserialize(context, &bits);
 }
