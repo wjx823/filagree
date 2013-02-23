@@ -6,7 +6,7 @@
 #include "util.h"
 
 #define ERROR_VAR_TYPE  "type error"
-#define VAR_MAX         100
+#define VAR_MAX         1000
 #define VV_SIZE         1000
 
 const struct number_string var_types[] = {
@@ -107,7 +107,12 @@ struct variable *variable_new_src(struct context *context, uint32_t size)
         if (o->type == VAR_SRC) {
             array_append(o->list, v->list);
             v = o;
-        } else
+        /*} else if (o->type == VAR_MAP) {
+            if (v->map == NULL)
+                v->map = map_new(context, NULL);
+            map_update(v->map, o->map);*/
+        }
+        else
             array_insert(v->list, 0, o);
     }
 //  DEBUGPRINT("src = %s\n", variable_value_str(context, v));
@@ -148,9 +153,25 @@ struct variable *variable_new_fnc(struct context *context, struct byte_array *bo
 
 struct variable *variable_new_list(struct context *context, struct array *list) {
     struct variable *v = variable_new(context, VAR_LST);
+    
+#if 0
     v->list = list ? list : array_new();
+#else
+    v->list = array_new();
+    for (uint32_t i=0; list && (i<list->length); i++) {
+        struct variable *u = (struct variable*)array_get(list, i);
+        if (u->type == VAR_MAP) {
+            if (v->map == NULL)
+                v->map = map_new(context, NULL);
+            map_update(v->map, u->map);
+        } else
+            array_set(v->list, v->list->length, u);
+    }
+#endif
+
     return v;
 }
+
 struct variable *variable_new_map(struct context *context, struct map *map) {
     struct variable *v = variable_new(context, VAR_MAP);
     v->map = map;

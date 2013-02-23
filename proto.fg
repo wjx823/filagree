@@ -11,7 +11,7 @@ sys.class = function(self, init, super)
     ]
 
     f = function()(init, meta)
-        #sys.print(sys.args())
+        sys.print('sys.class.f: ' + sys.args())
         if init and (init.type == 'function') then
             self = init(sys.args())
         else

@@ -1,2 +1,10 @@
-sys.ui(ctx, ['button', 'signin', 100, 30])
-sys.loop()
+f = function()
+    a = sys.args()
+    sys.print(a.p + a.q)
+end
+
+f('p':3, 'q':4, 9)
+
+
+#a = ['p':7, 'q':8, 9]
+#sys.print(a.p + a.q)

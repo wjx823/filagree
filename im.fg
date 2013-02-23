@@ -1,5 +1,4 @@
 #todo:
-#    form
 #    ui fit
 
 import 'ui'
@@ -10,24 +9,17 @@ ctx.select = function(ctx)
     sys.print('select ' + sys.args())
 end
 
-ctx.add = function(ctx)
-    ctx.main()
-end
-
-ctx.save = function(ctx)
-    ctx.save()
-end
-
 ctx.settings = function(ctx)
     sys.ui(ctx,'vertical', [
             ['form', ['display name', 'username', 'password']],
 
             ['horizontal', [
-                ['button', 'save', 50, 30,   ctx.save],
+                ['button', 'save',   50, 30, sys.ui.save_form('settings')],
                 ['button', 'cancel', 50, 30, ctx.main],
                 ['button', 'logout', 50, 30, ctx.main],
             ]],
         ])
+    sys.ui.load_form('settings')
 end
 
 ctx.main = function(ctx)
@@ -43,9 +35,10 @@ end
 ctx.add = function(ctx)
     sys.ui(ctx,'vertical', [
             ['form', ['username']],
-            ['button', 'add',       50, 30, ctx.main],
-            ['button', 'nevermind', 50, 30, ctx.main],
-            ])
+            ['horizontal', [
+                ['button', 'add',       90, 30, ctx.main],
+                ['button', 'nevermind', 90, 30, ctx.main],
+            ]]])
 end
 
 

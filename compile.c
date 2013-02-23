@@ -855,7 +855,7 @@ struct symbol *member()
 struct symbol *call()
 {
     FETCH_OR_QUIT(LEX_LEFTHESIS);
-    struct symbol *s = repeated(SYMBOL_CALL, &expression); // arguments
+    struct symbol *s = repeated(SYMBOL_CALL, &element); // arguments
     FETCH_OR_ERROR(LEX_RIGHTHESIS);
     return s;
 }

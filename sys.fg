@@ -18,7 +18,7 @@ end
 ####### String
 
 sys.String = sys.class( function(init_args)
-                  chars = init_args[1]
+                  chars = init_args[0]
                   return ['str':chars]
               end )
 

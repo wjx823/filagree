@@ -16,33 +16,33 @@ sys.ui = function(self, context, type, item, w, h, logic, parent, x, y)
         y = 0
         sys.window(w,h)
     end
-    a = b = 0
 
     if (type == 'vertical') then
+        w = h = 0
         for i in item
             sys.print('i = ' + i)
-            a,b = sys.ui(context, i[0], i[1], i[2], i[3], i[4], true, x, y + b)
+            a,b = sys.ui(context, i[0], i[1], i[2], i[3], i[4], true, x, y + h)
             w = sys.max(w, a)
             h = h + b
         end
     else if (type == 'horizontal') then
+        w = h = 0
         for i in item
-            a,b = sys.ui(context, i[0], i[1], i[2], i[3], i[4], true, x + a, y)
+            a,b = sys.ui(context, i[0], i[1], i[2], i[3], i[4], true, x + w, y)
             w = w + a
             h = sys.max(h, b)
         end
     else if type == 'form' then
         fields = []
+        w = 80+150
         for name in item
             field = ['horizontal', [
                 ['label', name, 80, 20],
                 ['input', ' ', 150, 20],
             ]]
             fields.insert(field)
-            w = w + 80+150
             h = h + 20
         end
-        context.fields = fields
         sys.ui(context, 'vertical', fields, w, h, nil, true)
     else if type == 'label' then
         sys.label(x, y, w, h, item)
