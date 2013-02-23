@@ -332,4 +332,15 @@ tester.test('assignment expression',
     end,
     23)
 
+tester.test('map args',
+    function()
+        f = function()
+            a = sys.args()
+            return a.p + a.q
+        end
+        return f('p':7, 'q':8)
+    end,
+    15)
+
+
 tester.done()
