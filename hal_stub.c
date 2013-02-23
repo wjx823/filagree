@@ -24,4 +24,6 @@ void hal_table (struct context *context,
 void hal_sound_url(const char *address) {}
 void hal_sound_bytes(const uint8_t *bytes, uint32_t length) {}
 void hal_save(struct context *context, const struct byte_array *key, const struct variable *value) {}
-struct variable *hal_load(struct context *context, const struct byte_array *key) {}
+struct variable *hal_load(struct context *context, const struct byte_array *key) { return NULL; }
+void hal_save_form(struct context *context, const struct byte_array *key) {}
+void hal_load_form(struct context *context, const struct byte_array *key) {}

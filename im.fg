@@ -14,12 +14,12 @@ ctx.settings = function(ctx)
             ['form', ['display name', 'username', 'password']],
 
             ['horizontal', [
-                ['button', 'save',   50, 30, sys.ui.save_form('settings')],
+                ['button', 'save',   50, 30, sys.form_saver('settings')],
                 ['button', 'cancel', 50, 30, ctx.main],
                 ['button', 'logout', 50, 30, ctx.main],
             ]],
         ])
-    sys.ui.load_form('settings')
+    sys.load_form('settings')
 end
 
 ctx.main = function(ctx)

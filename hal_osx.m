@@ -10,8 +10,11 @@
 #include "util.h"
 #include "variable.h"
 #include "vm.h"
+#include "hal.h"
+#include "struct.h"
 
-static NSWindow *window;
+static NSWindow *window = NULL;
+static NSMutableArray *inputs = NULL;
 
 void hal_loop() {
     [NSApp run];
@@ -399,7 +402,7 @@ NSRect whereAmI(int x, int y, int w, int h)
     NSView *content = [window contentView];
     int frameHeight = [content frame].size.height;
     int y2 = frameHeight - y - h;
-    NSLog(@"whereAmI: %d - %d - %d = %d", frameHeight, y, h, y2);
+    //NSLog(@"whereAmI: %d - %d - %d = %d", frameHeight, y, h, y2);
     return NSMakeRect(x, y2, w, h);
 }
 
@@ -445,6 +448,7 @@ void hal_label(int x, int y, int w, int h, const char *str)
     if (self->logic->type == VAR_NIL)
         return;
     struct variable *f = variable_new_fnc(self->context, self->logic->str, NULL);
+    //NSLog(@"pressed %s", byte_array_to_string(self->logic->str));
     vm_call(self->context, f, self->uictx, NULL);
 }
 
@@ -458,7 +462,7 @@ void hal_button(struct context *context,
 {
     NSView *content = [window contentView];
     NSRect rect = whereAmI(x,y,w,h);
-    NSLog(@"button %@ @ %f,%f,%f,%f", content, rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
+    //NSLog(@"button %@ @ %f,%f,%f,%f", content, rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
 
     NSButton *my = [[NSButton alloc] initWithFrame:rect];
     [content addSubview: my];
@@ -472,6 +476,7 @@ void hal_button(struct context *context,
         [my setImage:image];
     }
 
+    //NSLog(@"Button %s %s", str, byte_array_to_string(logic->str));
     ButtonPressee *bp = [ButtonPressee shall:logic
                                         with:uictx
                                    inContext:context];
@@ -483,7 +488,7 @@ void hal_button(struct context *context,
 
 void hal_input(struct variable *uictx,
                int x, int y, int w, int h,
-               const char *str, BOOL multiline)
+               const char *str, bool multiline)
 {
     NSView *content = [window contentView];
     NSRect rect = whereAmI(x,y,w,h);
@@ -497,6 +502,10 @@ void hal_input(struct variable *uictx,
     [textField insertText:string];
 
     [content addSubview:textField];
+    [inputs addObject:textField];
+    
+    for (NSTextField *f in inputs)
+        NSLog(@"%@", f);
 }
 
 @interface HALarray : NSObject <NSTableViewDataSource, NSTableViewDelegate> {
@@ -543,8 +552,8 @@ objectValueForTableColumn:(NSTableColumn *) aTableColumn
 }
 @end
 
-void hal_table(struct variable *uictx,
-               struct context *context,
+void hal_table(struct context *context,
+               struct variable *uictx,
                int x, int y, int w, int h,
                struct variable *list, struct variable *logic) {
     NSView *content = [window contentView];
@@ -570,6 +579,10 @@ void hal_table(struct variable *uictx,
 
 void hal_window(int32_t w, int32_t h, const char *iconPath)
 {
+    inputs = [NSMutableArray arrayWithCapacity:0];
+    for (NSTextField *i in inputs)
+        NSLog(@"%@", i);
+
     if (window) { // clear contents
         NSView *content = [window contentView];
         [[NSArray arrayWithArray: [content subviews]] makeObjectsPerformSelector:
@@ -616,6 +629,32 @@ void hal_window(int32_t w, int32_t h, const char *iconPath)
     [NSApp activateIgnoringOtherApps:YES];
 }
 
+void hal_save_form(struct context *context, const struct byte_array *key)
+{
+    struct array *list = array_new();
+    for (NSTextField *i in inputs) {
+        NSString *str = [i stringValue];
+        const char *str2 = [str UTF8String];
+        struct byte_array *str3 = byte_array_from_string(str2);
+        struct variable *v = variable_new_str(context, str3);
+        array_set(list, list->length, v);
+    }
+    struct variable *u = variable_new_list(context, list);
+    hal_save(context, key, u);
+}
+
+void hal_load_form(struct context *context, const struct byte_array *key)
+{
+    struct variable *v = hal_load(context, key);
+    for (int i=0; v->type==VAR_LST && i<v->list->length; i++) {
+        NSTextField *input = [inputs objectAtIndex:i];
+        struct byte_array *b = (struct byte_array*)array_get(v->list, i);
+        const char *str = byte_array_to_string(b);
+        NSString *str2 = [NSString stringWithUTF8String:str];
+        [input setStringValue:str2];
+    }
+}
+
 void hal_save(struct context *context, const struct byte_array *key, const struct variable *value)
 {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -636,7 +675,9 @@ struct variable *hal_load(struct context *context, const struct byte_array *key)
     const char *key2 = byte_array_to_string(key);
     NSString *key3 = [NSString stringWithUTF8String:key2];
     NSData *value2 = [defaults dataForKey:key3];
+    if (!value2)
+        return variable_new_nil(context);
     struct byte_array bits = {(uint8_t*)[value2 bytes], NULL, [value2 length]};
-    
+
     return variable_deserialize(context, &bits);
 }

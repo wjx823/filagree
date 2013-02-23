@@ -157,7 +157,7 @@ struct variable *sys_sin(struct context *context) // radians
     return variable_new_float(context, s);
 }
 
-#ifndef HEADLESS
+#ifndef NO_UI
 
 static const char *param_str(const struct variable *value, uint32_t index)
 {
@@ -272,6 +272,22 @@ struct variable *sys_window(struct context *context)
     return NULL;
 }
 
+struct variable *sys_load_form(struct context *context)
+{
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    const struct byte_array *key = ((struct variable*)array_get(value->list, 1))->str;
+    hal_load_form(context, key);
+    return NULL;
+}
+
+struct variable *sys_save_form(struct context *context)
+{
+    struct variable *value = (struct variable*)stack_pop(context->operand_stack);
+    const struct byte_array *key = ((struct variable*)array_get(value->list, 1))->str;
+    hal_save_form(context, key);
+    return NULL;
+}
+
 struct variable *sys_loop(struct context *context)
 {
     stack_pop(context->operand_stack); // self
@@ -279,7 +295,7 @@ struct variable *sys_loop(struct context *context)
     return NULL;
 }
 
-#endif // HEADLESS
+#endif // NO_UI
 
 struct string_func builtin_funcs[] = {
 	{"args",        &sys_args},
@@ -294,8 +310,10 @@ struct string_func builtin_funcs[] = {
     {"sin",         &sys_sin},
     {"run",         &sys_run},
     {"interpret",   &sys_interpret},
-#ifndef HEADLESS
+#ifndef NO_UI
     {"window",      &sys_window},
+    {"load_form",   &sys_load_form},
+    {"save_form",   &sys_save_form},
     {"loop",        &sys_loop},
     {"label",       &sys_label},
     {"button",      &sys_button},

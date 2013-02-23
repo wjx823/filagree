@@ -29,7 +29,10 @@ void hal_table (struct context *context,
                 struct variable *uictx,
                 int x, int y, int w, int h,
                 struct variable *list, struct variable *logic);
+
 void hal_save(struct context *context, const struct byte_array *key, const struct variable *value);
 struct variable *hal_load(struct context *context, const struct byte_array *key);
+void hal_save_form(struct context *context, const struct byte_array *key);
+void hal_load_form(struct context *context, const struct byte_array *key);
 
 #endif
