@@ -1,10 +1,6 @@
-f = function()
-    a = sys.args()
-    sys.print(a.p + a.q)
+x = 7
+f = function(a)(x)
+    return a+x
 end
 
-f('p':3, 'q':4, 9)
-
-
-#a = ['p':7, 'q':8, 9]
-#sys.print(a.p + a.q)
+sys.print(f(3))

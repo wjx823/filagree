@@ -447,9 +447,7 @@ void hal_label(int x, int y, int w, int h, const char *str)
 -(IBAction)pressed:(id)sender {
     if (self->logic->type == VAR_NIL)
         return;
-    struct variable *f = variable_new_fnc(self->context, self->logic->str, NULL);
-    //NSLog(@"pressed %s", byte_array_to_string(self->logic->str));
-    vm_call(self->context, f, self->uictx, NULL);
+    vm_call(self->context, self->logic, self->uictx, NULL);
 }
 
 @end // ButtonPressee implementation
@@ -503,7 +501,7 @@ void hal_input(struct variable *uictx,
 
     [content addSubview:textField];
     [inputs addObject:textField];
-    
+
     for (NSTextField *f in inputs)
         NSLog(@"%@", f);
 }
@@ -579,15 +577,13 @@ void hal_table(struct context *context,
 
 void hal_window(int32_t w, int32_t h, const char *iconPath)
 {
-    inputs = [NSMutableArray arrayWithCapacity:0];
-    for (NSTextField *i in inputs)
-        NSLog(@"%@", i);
-
     if (window) { // clear contents
         NSView *content = [window contentView];
         [[NSArray arrayWithArray: [content subviews]] makeObjectsPerformSelector:
          @selector(removeFromSuperviewWithoutNeedingDisplay)];
         [content setNeedsDisplay: YES];
+
+        [inputs removeAllObjects];
         return;
     }
 
@@ -627,6 +623,10 @@ void hal_window(int32_t w, int32_t h, const char *iconPath)
     }
 
     [NSApp activateIgnoringOtherApps:YES];
+
+    inputs = [NSMutableArray array];
+    for (NSTextField *i in inputs)
+        NSLog(@"%@", i);
 }
 
 void hal_save_form(struct context *context, const struct byte_array *key)
@@ -648,8 +648,8 @@ void hal_load_form(struct context *context, const struct byte_array *key)
     struct variable *v = hal_load(context, key);
     for (int i=0; v->type==VAR_LST && i<v->list->length; i++) {
         NSTextField *input = [inputs objectAtIndex:i];
-        struct byte_array *b = (struct byte_array*)array_get(v->list, i);
-        const char *str = byte_array_to_string(b);
+        struct variable *u = (struct variable*)array_get(v->list, i);
+        const char *str = byte_array_to_string(u->str);
         NSString *str2 = [NSString stringWithUTF8String:str];
         [input setStringValue:str2];
     }
@@ -665,8 +665,13 @@ void hal_save(struct context *context, const struct byte_array *key, const struc
     struct byte_array *bits = variable_serialize(context, NULL, value, true);
     NSData *value2 = [NSData dataWithBytes:bits->data length:bits->length];
 
+    byte_array_reset(bits);
+    struct variable *tst = variable_deserialize(context, bits);
+    NSLog(@"tst = %s", variable_value_str(context, tst));
+
     [defaults setObject:value2 forKey:key3];
     [defaults synchronize];
+
 }
 
 struct variable *hal_load(struct context *context, const struct byte_array *key)
@@ -678,6 +683,7 @@ struct variable *hal_load(struct context *context, const struct byte_array *key)
     if (!value2)
         return variable_new_nil(context);
     struct byte_array bits = {(uint8_t*)[value2 bytes], NULL, [value2 length]};
+    bits.current = bits.data;
 
     return variable_deserialize(context, &bits);
 }

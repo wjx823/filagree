@@ -95,9 +95,9 @@ testui = function()
 
 end
 
-sys.form_saver = function(key)
+sys.form_saver = function(self, key)
     f = function()(key)
-        sys.print('hi!')
+        sys.print('hi ' + key)
         sys.save_form(key)
     end
     return f
