@@ -107,10 +107,6 @@ struct variable *variable_new_src(struct context *context, uint32_t size)
         if (o->type == VAR_SRC) {
             array_append(o->list, v->list);
             v = o;
-        /*} else if (o->type == VAR_MAP) {
-            if (v->map == NULL)
-                v->map = map_new(context, NULL);
-            map_update(v->map, o->map);*/
         }
         else
             array_insert(v->list, 0, o);

@@ -1,6 +1,11 @@
-x = 7
-f = function(a)(x)
-    return a+x
-end
+import 'ui'
 
-sys.print(f(3))
+sys.ui(nil,
+       'horizontal', [
+            ['button', 'signin', 'size':[100, 30]],
+            ['button', 'signup', 100, 30],
+        ],
+        240,
+        320)
+
+sys.loop()

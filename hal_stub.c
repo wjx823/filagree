@@ -1,7 +1,11 @@
 #include "hal.h"
 
 void hal_loop() {}
-void hal_window(int32_t w, int32_t h, const char *iconPath) {}
+void hal_window(struct context *context,
+                struct variable *uictx,
+                int32_t w, int32_t h,
+                struct variable *logic,
+                const char *iconPath) {}
 void hal_graphics(const struct variable *shape) {}
 void hal_image() {}
 void hal_sound() {}

@@ -173,6 +173,12 @@ static int32_t param_int(const struct variable *value, uint32_t index) {
     return ((struct variable*)array_get(value->list, index))->integer;
 }
 
+static int32_t param_var(const struct variable *value, uint32_t index) {
+    if (index >= value->list->length)
+        return NULL;
+    return (struct variable*)array_get(value->list, index);
+}
+
 struct variable *sys_label(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
@@ -267,8 +273,12 @@ struct variable *sys_window(struct context *context)
         w = 240;
         h = 320;
     }
-    const char *str = param_str(value, 3);
-    hal_window(w, h, str);
+
+    struct variable *uictx = param_var(value, 2);
+    const char *icon_path = param_str(value, 3);
+    struct variable *logic = param_var(value, 4);
+    
+    hal_window(context, uictx, w, h, logic, icon_path);
     return NULL;
 }
 

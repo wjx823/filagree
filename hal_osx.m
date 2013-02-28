@@ -1,4 +1,6 @@
 #import <Cocoa/Cocoa.h>
+#import <objc/objc-class.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -6,6 +8,7 @@
 #include <OpenAL/al.h>
 #include <OpenAL/alc.h>
 #include <OpenGL/gl.h>
+
 #include "struct.h"
 #include "util.h"
 #include "variable.h"
@@ -421,7 +424,7 @@ void hal_label(int x, int y, int w, int h, const char *str)
     [content addSubview:textField];
 }
 
-@interface ButtonPressee : NSObject {
+@interface ButtonPressee  : NSObject <NSWindowDelegate> {
     struct variable *logic;
     struct context *context;
     struct variable *uictx;
@@ -444,10 +447,18 @@ void hal_label(int x, int y, int w, int h, const char *str)
     return bp;
 }
 
+- (void)windowDidResize:(NSNotification*)notification
+{
+    NSWindow *window = [notification object];
+	CGFloat w = [window frame].size.width;
+	CGFloat h = [window frame].size.height;
+    NSLog(@"resized to %f,%f", w, h);
+    [self pressed:nil];
+}
+
 -(IBAction)pressed:(id)sender {
-    if (self->logic->type == VAR_NIL)
-        return;
-    vm_call(self->context, self->logic, self->uictx, NULL);
+    if (self->logic->type != VAR_NIL)
+        vm_call(self->context, self->logic, self->uictx, NULL);
 }
 
 @end // ButtonPressee implementation
@@ -575,7 +586,43 @@ void hal_table(struct context *context,
     [content addSubview:tableContainer];
 }
 
-void hal_window(int32_t w, int32_t h, const char *iconPath)
+/*
+@interface Hal_Window_Delegate : NSObject <NSWindowDelegate> {
+    struct variable *callback;
+}
+
++ (Hal_Window_Delegate*)initWithCallback:(struct variable *)resizer;
+- (void)windowDidResize:(NSNotification*)notification;
+
+@end
+
+@implementation Hal_Window_Delegate
+
++ (Hal_Window_Delegate*)initWithCallback:(struct variable *)callback
+{
+    Hal_Window_Delegate *hwd = [Hal_Window_Delegate alloc];
+    hwd->callback = callback;
+    return hwd;
+}
+
+- (void)windowDidResize:(NSNotification*)notification
+{
+    NSWindow *window = [notification object];
+	CGFloat w = [window frame].size.width;
+	CGFloat h = [window frame].size.height;
+    NSLog(@"resized to %f,%f", w, h);
+    if (self->callback->type != VAR_NIL)
+        vm_call(self->context, self->logic, self->uictx, NULL);
+}
+
+@end
+*/
+
+void hal_window(struct context *context,
+                struct variable *uictx,
+                int32_t w, int32_t h,
+                struct variable *logic,
+                const char *iconPath)
 {
     if (window) { // clear contents
         NSView *content = [window contentView];
@@ -611,7 +658,11 @@ void hal_window(int32_t w, int32_t h, const char *iconPath)
     [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
     [window setTitle:appName];
     [window makeKeyAndOrderFront:nil];
-    NSLog(@"window %@ %d,%d", [window contentView], w,h);
+    ButtonPressee *bp = [ButtonPressee shall:logic
+                                        with:uictx
+                                   inContext:context];
+    [window setDelegate:bp];
+    //NSLog(@"window %@ %d,%d", [window contentView], w,h);
 
     if (!iconPath)
         iconPath = "icon.png";
