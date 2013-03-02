@@ -164,12 +164,15 @@ static const char *param_str(const struct variable *value, uint32_t index)
     if (index >= value->list->length)
         return NULL;
     const struct variable *strv = (struct variable*)array_get(value->list, index);
+    assert_message(strv->type == VAR_STR, "param is not string");
     const struct byte_array *strb = strv->str;
     const char *str = byte_array_to_string(strb);
     return str;
 }
 
 static int32_t param_int(const struct variable *value, uint32_t index) {
+    if (index >= value->list->length)
+        return 0;
     return ((struct variable*)array_get(value->list, index))->integer;
 }
 
@@ -179,17 +182,23 @@ static int32_t param_var(const struct variable *value, uint32_t index) {
     return (struct variable*)array_get(value->list, index);
 }
 
+struct variable *two_ints(struct context *context, int32_t w, int32_t h)
+{
+    variable_push(context, variable_new_int(context, w));
+    variable_push(context, variable_new_int(context, h));
+    return variable_new_src(context, 2);
+}
+
 struct variable *sys_label(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
     int32_t x = param_int(value, 1);
     int32_t y = param_int(value, 2);
-    int32_t w = param_int(value, 3);
-    int32_t h = param_int(value, 4);
-    const char *str = param_str(value, 5);
+    const char *str = param_str(value, 3);
 
-    hal_label(x, y, w, h, str);
-    return NULL;
+    int32_t w=0,h=0;
+    hal_label(x, y, &w, &h, str);
+    return two_ints(context, w, h);
 }
 
 struct variable *sys_input(struct context *context)
@@ -198,12 +207,11 @@ struct variable *sys_input(struct context *context)
     struct variable *uictx = (struct variable*)array_get(value->list, 1);
     int32_t x = param_int(value, 2);
     int32_t y = param_int(value, 3);
-    int32_t w = param_int(value, 4);
-    int32_t h = param_int(value, 5);
-    const char *str = param_str(value, 6);
+    const char *str = param_str(value, 4);
 
-    hal_input(uictx, x, y, w, h, str, false);
-    return NULL;
+    int32_t w=0, h=0;
+    hal_input(uictx, x, y, &w, &h, str, false);
+    return two_ints(context, w, h);
 }
 
 struct variable *sys_button(struct context *context)
@@ -215,10 +223,10 @@ struct variable *sys_button(struct context *context)
     int32_t w = param_int(value, 4);
     int32_t h = param_int(value, 5);
     const char *str = param_str(value, 6);
-    struct variable *logic = (struct variable*)array_get(value->list, 7);
+    struct variable *logic = (value->list->length > 7) ? (struct variable*)array_get(value->list, 7) : NULL;
 
-    hal_button(context, uictx, x, y, w, h, logic, str, NULL);
-    return NULL;
+    hal_button(context, uictx, x, y, &w, &h, logic, str, NULL);
+    return two_ints(context, w, h);
 }
 
 struct variable *sys_table(struct context *context)

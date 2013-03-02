@@ -7,51 +7,57 @@ sys.max = function(self,a,b)
     return b
 end
 
-sys.ui = function(self, context, type, item, w, h, logic, parent, x, y)
-
-    #sys.print('sys.ui: item ' + item.length + ' = ' + item + ' at ' + x + ',' + y)
-
-    if not parent then
-        x = 0
-        y = 0
-        sys.window(w,h)
+sys.form_saver = function(self, key)
+    f = function()(key)
+        sys.save_form(key)
     end
+    return f
+end
 
+sys.ui = function(self, uictx, type, item, w, h)
+    sys.window(w,h)
+    sys.ui2(uictx, type, item, 0, 0)
+end
+
+sys.ui2 = function(self, uictx, type, item, x, y)
+
+    sys.print('item = ' + item)
     if (type == 'vertical') then
         w = h = 0
         for i in item
-            #sys.print('i = ' + i)
-            a,b = sys.ui(context, i[0], i[1], i[2], i[3], i[4], true, x, y + h)
+            i.x,i.y = x,y+h
+            sys.print('i = ' + i)
+            a,b = sys.ui2(uictx, i[0], i[1], x, y+h)
             w = sys.max(w, a)
             h = h + b
         end
     else if (type == 'horizontal') then
         w = h = 0
         for i in item
-            a,b = sys.ui(context, i[0], i[1], i[2], i[3], i[4], true, x + w, y)
+            i.x,i.y = x+w,y
+            a,b = sys.ui2(uictx, i[0], i[1], x+w, y)
             w = w + a
             h = sys.max(h, b)
         end
     else if type == 'form' then
         fields = []
-        w = 80+150
         for name in item
             field = ['horizontal', [
-                ['label', name, 80, 20],
-                ['input', ' ', 150, 20],
+                ['label', name],
+                ['input', ' '],
             ]]
             fields.insert(field)
-            h = h + 20
         end
-        sys.ui(context, 'vertical', fields, w, h, nil, true)
+        w,h = sys.ui2(uictx, 'vertical', fields)
+
     else if type == 'label' then
-        sys.label(x, y, w, h, item)
+        w,h = sys.label(x, y, item)
     else if type == 'button' then
-        sys.button(context, x, y, w, h, item, logic)
+        w,h = sys.button(uictx, x, y, 0, 0, item)
     else if type == 'input' then
-        sys.input(context, x, y, w, h, item)
+        w,h = sys.input(uictx, x, y, item)
     else if type == 'table' then
-        sys.table(context, x, y, w, h, item, logic)
+        w,h = sys.table(uictx, item, x, y)
     end
 
     return w,h
@@ -59,48 +65,21 @@ end
 
 testui = function()
 
-    play_square = function()
+    sys.ui(nil,
+           'vertical', [
 
-        freq = 440
-        seconds = 1
-        sample_rate = 44100
-        buf_size = seconds * sample_rate
+                ['form', ['username', 'password']],
 
-        samples = sys.bytes(buf_size * 2)
-
-        for i in (buf_size / 2)
-            up = (i * 2 * freq / sample_rate ) %2
-            s = up * 127
-            samples[(i*2)] = s
-            samples[(i*2)+1] = s
-        end
-        
-        sys.synth(samples)
-
-    end
-
-    triangle = function()
-        sys.graphics([[0.0, 0.6, 0.0], [-0.2, -0.3, 0.0], [0.2, -0.3, 0.0]])
-    end
-
-    t = ['table', [7, 8, 9, 'x', 'y', 'z'], 120, 90, triangle]
-
-    sys.ui(nil, 'vertical', [
-                ['button', 'clickez moi', 100, 30],
-                ['label', 'hello', 50, 20],
-                ['input', ' ', 150, 20],
-                t])
+                ['horizontal', [
+                    ['button', 'signin'],
+                    ['button', 'signup'],
+                ]]
+            ],
+            240,
+            320)
 
     sys.loop()
 
 end
 
-sys.form_saver = function(self, key)
-    f = function()(key)
-        sys.print('hi ' + key)
-        sys.save_form(key)
-    end
-    return f
-end
-
-#testui()
+testui()

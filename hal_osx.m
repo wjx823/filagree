@@ -409,11 +409,26 @@ NSRect whereAmI(int x, int y, int w, int h)
     return NSMakeRect(x, y2, w, h);
 }
 
-void hal_label(int x, int y, int w, int h, const char *str)
+void resize(NSControl *control,
+            int32_t x, int32_t y,
+            int32_t *w, int32_t *h)
 {
-    NSRect rect = whereAmI(x,y,w,h);
-    NSTextField *textField;
-    textField = [[NSTextField alloc] initWithFrame:rect];
+    if (*w && *h)
+        return;
+    [control sizeToFit];
+    NSSize size = control.frame.size;
+    *w = size.width;
+    *h = size.height;
+    NSRect rect = whereAmI(x,y,*w,*h);
+    [control setFrame:rect];
+}
+
+void hal_label (int32_t x, int32_t y,
+                int32_t *w, int32_t *h,
+                const char *str)
+{
+    NSRect rect = whereAmI(x,y,*w,*h);
+    NSTextField *textField = [[NSTextField alloc] initWithFrame:rect];
     NSString *string = [NSString stringWithUTF8String:str];
     [textField setStringValue:string];
     [textField setBezeled:NO];
@@ -422,6 +437,8 @@ void hal_label(int x, int y, int w, int h, const char *str)
     [textField setSelectable:NO];
     NSView *content = [window contentView];
     [content addSubview:textField];
+
+    resize(textField, x, y, w, h);
 }
 
 @interface ButtonPressee  : NSObject <NSWindowDelegate> {
@@ -457,7 +474,7 @@ void hal_label(int x, int y, int w, int h, const char *str)
 }
 
 -(IBAction)pressed:(id)sender {
-    if (self->logic->type != VAR_NIL)
+    if (self->logic && self->logic->type != VAR_NIL)
         vm_call(self->context, self->logic, self->uictx, NULL);
 }
 
@@ -465,12 +482,13 @@ void hal_label(int x, int y, int w, int h, const char *str)
 
 void hal_button(struct context *context,
                 struct variable *uictx,
-                int x, int y, int w, int h,
+                int32_t x, int32_t y,
+                int32_t *w, int32_t *h,
                 struct variable *logic,
                 const char *str, const char *img)
 {
     NSView *content = [window contentView];
-    NSRect rect = whereAmI(x,y,w,h);
+    NSRect rect = whereAmI(x,y,*w,*h);
     //NSLog(@"button %@ @ %f,%f,%f,%f", content, rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
 
     NSButton *my = [[NSButton alloc] initWithFrame:rect];
@@ -493,14 +511,18 @@ void hal_button(struct context *context,
     [my setAction:@selector(pressed:)];
     [my setButtonType:NSMomentaryLightButton];
     [my setBezelStyle:NSTexturedSquareBezelStyle];
+    resize(my, x, y, w, h);
 }
 
 void hal_input(struct variable *uictx,
-               int x, int y, int w, int h,
+               int32_t x, int32_t y,
+               int32_t *w, int32_t *h,
                const char *str, bool multiline)
 {
     NSView *content = [window contentView];
-    NSRect rect = whereAmI(x,y,w,h);
+    *w = [content frame].size.width / 2;
+    *h = 20;
+    NSRect rect = whereAmI(x,y,*w,*h);
     NSString *string = [NSString stringWithUTF8String:str];
 
     NSView *textField;
@@ -512,9 +534,6 @@ void hal_input(struct variable *uictx,
 
     [content addSubview:textField];
     [inputs addObject:textField];
-
-    for (NSTextField *f in inputs)
-        NSLog(@"%@", f);
 }
 
 @interface HALarray : NSObject <NSTableViewDataSource, NSTableViewDelegate> {
@@ -585,38 +604,6 @@ void hal_table(struct context *context,
     [tableContainer setHasVerticalScroller:YES];
     [content addSubview:tableContainer];
 }
-
-/*
-@interface Hal_Window_Delegate : NSObject <NSWindowDelegate> {
-    struct variable *callback;
-}
-
-+ (Hal_Window_Delegate*)initWithCallback:(struct variable *)resizer;
-- (void)windowDidResize:(NSNotification*)notification;
-
-@end
-
-@implementation Hal_Window_Delegate
-
-+ (Hal_Window_Delegate*)initWithCallback:(struct variable *)callback
-{
-    Hal_Window_Delegate *hwd = [Hal_Window_Delegate alloc];
-    hwd->callback = callback;
-    return hwd;
-}
-
-- (void)windowDidResize:(NSNotification*)notification
-{
-    NSWindow *window = [notification object];
-	CGFloat w = [window frame].size.width;
-	CGFloat h = [window frame].size.height;
-    NSLog(@"resized to %f,%f", w, h);
-    if (self->callback->type != VAR_NIL)
-        vm_call(self->context, self->logic, self->uictx, NULL);
-}
-
-@end
-*/
 
 void hal_window(struct context *context,
                 struct variable *uictx,

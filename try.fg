@@ -2,10 +2,9 @@ import 'ui'
 
 sys.ui(nil,
        'horizontal', [
-            ['button', 'signin', 'size':[100, 30]],
-            ['button', 'signup', 100, 30],
+            ['button', 'signin'],
+            ['button', 'signup'],
         ],
-        240,
-        320)
+        'size':[240,320])
 
 sys.loop()

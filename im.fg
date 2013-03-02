@@ -56,7 +56,7 @@ sys.ui(ctx,
                 ['button', 'signup', 100, 30, ctx.signup],
             ]]
         ],
-        240,
-        320)
+        w:240,
+        h:320)
 
 sys.loop()
