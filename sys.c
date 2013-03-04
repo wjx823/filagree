@@ -214,6 +214,17 @@ struct variable *sys_input(struct context *context)
     return two_ints(context, w, h);
 }
 
+const char *variable_keyed_string(struct context *context, struct variable *v, const char *key)
+{
+    if (!v || !v->map)
+        return NULL;
+    struct byte_array *b = byte_array_from_string(key);
+    struct variable *u = variable_map_get(context, v, b);
+    if (!u || u->type != VAR_STR)
+        return NULL;
+    return byte_array_to_string(u->str);
+}
+
 struct variable *sys_button(struct context *context)
 {
     struct variable *value = (struct variable*)stack_pop(context->operand_stack);
@@ -222,10 +233,13 @@ struct variable *sys_button(struct context *context)
     int32_t y = param_int(value, 3);
     int32_t w = param_int(value, 4);
     int32_t h = param_int(value, 5);
-    const char *str = param_str(value, 6);
-    struct variable *logic = (value->list->length > 7) ? (struct variable*)array_get(value->list, 7) : NULL;
+    struct variable *item = (struct variable*)array_get(value->list, 6);
 
-    hal_button(context, uictx, x, y, &w, &h, logic, str, NULL);
+    hal_button(context, uictx, x, y, &w, &h,
+               variable_map_get(context, item, byte_array_from_string("logic")),
+               variable_keyed_string(context, item, "text"),
+               variable_keyed_string(context, item, "image"));
+    
     return two_ints(context, w, h);
 }
 
@@ -237,8 +251,9 @@ struct variable *sys_table(struct context *context)
     int32_t y = param_int(value, 3);
     int32_t w = param_int(value, 4);
     int32_t h = param_int(value, 5);
-    struct variable *list = (struct variable*)array_get(value->list, 6);
-    struct variable *logic = (struct variable*)array_get(value->list, 7);
+    struct variable *item = (struct variable*)array_get(value->list, 6);
+    struct variable *list = variable_map_get(context, item, byte_array_from_string("list"));
+    struct variable *logic = variable_map_get(context, item, byte_array_from_string("logic"));
 
     hal_table(context, uictx, x, y, w, h, list, logic);
     return NULL;
@@ -276,18 +291,13 @@ struct variable *sys_window(struct context *context)
         w = param_int(value, 1);
         h = param_int(value, 2);
     }
-    if (!w || !h) {
-        DEBUGPRINT("warning: zero-size window");
-        w = 240;
-        h = 320;
-    }
 
     struct variable *uictx = param_var(value, 2);
     const char *icon_path = param_str(value, 3);
     struct variable *logic = param_var(value, 4);
     
-    hal_window(context, uictx, w, h, logic, icon_path);
-    return NULL;
+    hal_window(context, uictx, &w, &h, logic, icon_path);
+    return two_ints(context, w, h);
 }
 
 struct variable *sys_load_form(struct context *context)

@@ -441,26 +441,29 @@ void hal_label (int32_t x, int32_t y,
     resize(textField, x, y, w, h);
 }
 
-@interface ButtonPressee  : NSObject <NSWindowDelegate> {
+@interface Actionifier  : NSObject <NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate> {
     struct variable *logic;
     struct context *context;
     struct variable *uictx;
+    const struct variable *data;
 }
 
 -(IBAction)pressed:(id)sender;
 
 @end
 
-@implementation ButtonPressee
+@implementation Actionifier
 
-+(ButtonPressee*)shall:(struct variable *)logic
-                  with:(struct variable *)uictx
-             inContext:(struct context *)ctx
++(Actionifier*) fContext:(struct context *)f
+                 uiContext:(struct variable*)u
+                  callback:(struct variable*)c
+                  userData:(struct variable*)d
 {
-    ButtonPressee *bp = [ButtonPressee alloc];
-    bp->logic = logic;
-    bp->context = ctx;
-    bp->uictx = uictx;
+    Actionifier *bp = [Actionifier alloc];
+    bp->logic = c;
+    bp->context = f;
+    bp->uictx = u;
+    bp->data = d;
     return bp;
 }
 
@@ -473,12 +476,33 @@ void hal_label (int32_t x, int32_t y,
     [self pressed:nil];
 }
 
+- (id)          tableView:(NSTableView *) aTableView
+objectValueForTableColumn:(NSTableColumn *) aTableColumn
+                      row:(long) rowIndex {
+    struct variable *item = array_get(self->data->list, rowIndex);
+    const char *name = variable_value_str(self->context, item);
+    return [NSString stringWithUTF8String:name];
+}
+
+- (long)numberOfRowsInTableView:(NSTableView *)aTableView {
+    return self->data->list->length;
+}
+
+- (void) tableViewSelectionDidChange:(NSNotification *)notification
+{
+    NSTableView* table = [notification object];
+    int row = [table selectedRow];
+    if (row == -1)
+        return;
+    [self pressed:notification];
+}
+
 -(IBAction)pressed:(id)sender {
     if (self->logic && self->logic->type != VAR_NIL)
         vm_call(self->context, self->logic, self->uictx, NULL);
 }
 
-@end // ButtonPressee implementation
+@end // Actionifier implementation
 
 void hal_button(struct context *context,
                 struct variable *uictx,
@@ -489,7 +513,6 @@ void hal_button(struct context *context,
 {
     NSView *content = [window contentView];
     NSRect rect = whereAmI(x,y,*w,*h);
-    //NSLog(@"button %@ @ %f,%f,%f,%f", content, rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
 
     NSButton *my = [[NSButton alloc] initWithFrame:rect];
     [content addSubview: my];
@@ -503,10 +526,10 @@ void hal_button(struct context *context,
         [my setImage:image];
     }
 
-    //NSLog(@"Button %s %s", str, byte_array_to_string(logic->str));
-    ButtonPressee *bp = [ButtonPressee shall:logic
-                                        with:uictx
-                                   inContext:context];
+    Actionifier *bp = [Actionifier fContext:context
+                                          uiContext:uictx
+                                           callback:logic
+                                           userData:NULL];
     [my setTarget:bp];
     [my setAction:@selector(pressed:)];
     [my setButtonType:NSMomentaryLightButton];
@@ -536,54 +559,11 @@ void hal_input(struct variable *uictx,
     [inputs addObject:textField];
 }
 
-@interface HALarray : NSObject <NSTableViewDataSource, NSTableViewDelegate> {
-    struct context *context;
-    const struct variable *data;
-    const struct variable *logic;
-}
-
-@end
-
-@implementation HALarray
-
-+ (HALarray *)arrayWithData:(const struct variable *)list
-                      logic:(const struct variable *)logic
-                  inContext:(struct context *)cxt
-{
-    HALarray *ha = [HALarray alloc];
-    ha->data = list;
-    ha->logic = logic;
-    ha->context = cxt;
-    return ha;
-}
-
-- (id)          tableView:(NSTableView *) aTableView
-objectValueForTableColumn:(NSTableColumn *) aTableColumn
-                      row:(long) rowIndex {
-    struct variable *item = array_get(self->data->list, rowIndex);
-    const char *name = variable_value_str(self->context, item);
-    return [NSString stringWithUTF8String:name];
-}
-
-- (long)numberOfRowsInTableView:(NSTableView *)aTableView {
-    return self->data->list->length;
-}
-
-- (void) tableViewSelectionDidChange:(NSNotification *)notification
-{
-    NSTableView* table = [notification object];
-    int row = [table selectedRow];
-    if (row == -1)
-        return;
-    if (self->logic->type != VAR_NIL)
-        execute(self->logic->str, self->context->find);
-}
-@end
-
 void hal_table(struct context *context,
                struct variable *uictx,
                int x, int y, int w, int h,
-               struct variable *list, struct variable *logic) {
+               struct variable *list,
+               struct variable *logic) {
     NSView *content = [window contentView];
     NSRect rect = whereAmI(x,y,w,h);
     NSScrollView * tableContainer = [[NSScrollView alloc] initWithFrame:rect];
@@ -591,14 +571,16 @@ void hal_table(struct context *context,
     rect = NSMakeRect(x, y, w, h);
     NSTableView *tableView = [[NSTableView alloc] initWithFrame:rect];
     NSTableColumn * column1 = [[NSTableColumn alloc] initWithIdentifier:@"Col1"];
-//    [[column1 headerCell] setStringValue:@"yo"];
+    // [[column1 headerCell] setStringValue:@"yo"];
     [tableView setHeaderView:nil];
 
     [tableView addTableColumn:column1];
-    //    NSArray *source = [NSArray arrayWithObjects:@"3",@"1",@"4",nil];
-    HALarray *source = [HALarray arrayWithData:list logic:logic inContext:context];
-    [tableView setDelegate:source];
-    [tableView setDataSource:(id<NSTableViewDataSource>)source];
+    Actionifier *a = [Actionifier fContext:context
+                                          uiContext:uictx
+                                           callback:logic
+                                           userData:list];
+    [tableView setDelegate:a];
+    [tableView setDataSource:(id<NSTableViewDataSource>)a];
     //  [tableView reloadData];
     [tableContainer setDocumentView:tableView];
     [tableContainer setHasVerticalScroller:YES];
@@ -607,7 +589,7 @@ void hal_table(struct context *context,
 
 void hal_window(struct context *context,
                 struct variable *uictx,
-                int32_t w, int32_t h,
+                int32_t *w, int32_t *h,
                 struct variable *logic,
                 const char *iconPath)
 {
@@ -618,7 +600,16 @@ void hal_window(struct context *context,
         [content setNeedsDisplay: YES];
 
         [inputs removeAllObjects];
+        NSSize size = [content frame].size;
+        *w = size.width;
+        *h = size.height;
         return;
+    }
+
+    if (!*w || !*h) {
+        NSLog(@"warning: zero-size window");
+        *w = 240;
+        *h = 320;
     }
 
     [NSApplication sharedApplication];
@@ -635,7 +626,7 @@ void hal_window(struct context *context,
                                           keyEquivalent:@"q"];
     [appMenu addItem:quitMenuItem];
     [appMenuItem setSubmenu:appMenu];
-    window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, w, h)
+    window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, *w, *h)
                                          styleMask:NSTitledWindowMask |
                                                    NSClosableWindowMask |
                                                    NSMiniaturizableWindowMask |
@@ -645,10 +636,11 @@ void hal_window(struct context *context,
     [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
     [window setTitle:appName];
     [window makeKeyAndOrderFront:nil];
-    ButtonPressee *bp = [ButtonPressee shall:logic
-                                        with:uictx
-                                   inContext:context];
-    [window setDelegate:bp];
+    Actionifier *a = [Actionifier fContext:context
+                                          uiContext:uictx
+                                           callback:logic
+                                           userData:NULL];
+    [window setDelegate:a];
     //NSLog(@"window %@ %d,%d", [window contentView], w,h);
 
     if (!iconPath)

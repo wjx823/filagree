@@ -14,9 +14,9 @@ ctx.settings = function(ctx)
             ['form', ['display name', 'username', 'password']],
 
             ['horizontal', [
-                ['button', 'save',   50, 30, sys.form_saver('settings')],
-                ['button', 'cancel', 50, 30, ctx.main],
-                ['button', 'logout', 50, 30, ctx.main],
+                ['button', ['text':'save',   'logic':sys.form_saver('settings')]],
+                ['button', ['text':'cancel', 'logic':ctx.main]],
+                ['button', ['text':'logout', 'logic':ctx.main]],
             ]],
         ])
     sys.load_form('settings')
@@ -25,10 +25,10 @@ end
 ctx.main = function(ctx)
     sys.ui(ctx,'vertical', [
                 ['horizontal', [
-                    ['button', 'add',      50, 30, ctx.add],
-                    ['button', 'settings', 50, 30, ctx.settings],
+                    ['button', ['text':'add',      'logic':ctx.add]],
+                    ['button', ['text':'settings', 'logic':ctx.settings]],
                 ]],
-                ['table', [7, 8, 9, 'x', 'y', 'z'], 120, 90, ctx.select]
+                ['table', ['list':[7, 8, 9, 'x', 'y', 'z'], 'logic':ctx.select]]
             ])
 end
 
@@ -36,8 +36,8 @@ ctx.add = function(ctx)
     sys.ui(ctx,'vertical', [
             ['form', ['username']],
             ['horizontal', [
-                ['button', 'add',       90, 30, ctx.main],
-                ['button', 'nevermind', 90, 30, ctx.main],
+                ['button', ['text':'add',       'logic':ctx.main]],
+                ['button', ['text':'nevermind', 'logic':ctx.main]],
             ]]])
 end
 
@@ -52,11 +52,11 @@ sys.ui(ctx,
             ['form', ['username', 'password']],
 
             ['horizontal', [
-                ['button', 'signin', 100, 30, ctx.main],
-                ['button', 'signup', 100, 30, ctx.signup],
+                ['button', ['text':'signin', 'logic':ctx.main]],
+                ['button', ['text':'signup', 'logic':ctx.signup]],
             ]]
         ],
-        w:240,
-        h:320)
+        240,
+        320)
 
 sys.loop()

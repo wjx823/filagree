@@ -15,11 +15,12 @@ sys.form_saver = function(self, key)
 end
 
 sys.ui = function(self, uictx, type, item, w, h)
-    sys.window(w,h)
-    sys.ui2(uictx, type, item, 0, 0)
+    w,h = sys.window(w,h)
+    parent = ['w':w, 'h':h]
+    sys.ui2(uictx, parent, type, item, 0, 0)
 end
 
-sys.ui2 = function(self, uictx, type, item, x, y)
+sys.ui2 = function(self, uictx, parent, type, item, x, y)
 
     sys.print('item = ' + item)
     if (type == 'vertical') then
@@ -27,7 +28,7 @@ sys.ui2 = function(self, uictx, type, item, x, y)
         for i in item
             i.x,i.y = x,y+h
             sys.print('i = ' + i)
-            a,b = sys.ui2(uictx, i[0], i[1], x, y+h)
+            a,b = sys.ui2(uictx, parent, i[0], i[1], x, y+h)
             w = sys.max(w, a)
             h = h + b
         end
@@ -35,7 +36,7 @@ sys.ui2 = function(self, uictx, type, item, x, y)
         w = h = 0
         for i in item
             i.x,i.y = x+w,y
-            a,b = sys.ui2(uictx, i[0], i[1], x+w, y)
+            a,b = sys.ui2(uictx, parent, i[0], i[1], x+w, y)
             w = w + a
             h = sys.max(h, b)
         end
@@ -48,7 +49,7 @@ sys.ui2 = function(self, uictx, type, item, x, y)
             ]]
             fields.insert(field)
         end
-        w,h = sys.ui2(uictx, 'vertical', fields)
+        w,h = sys.ui2(uictx, parent, 'vertical', fields)
 
     else if type == 'label' then
         w,h = sys.label(x, y, item)
@@ -57,11 +58,13 @@ sys.ui2 = function(self, uictx, type, item, x, y)
     else if type == 'input' then
         w,h = sys.input(uictx, x, y, item)
     else if type == 'table' then
-        w,h = sys.table(uictx, item, x, y)
+        sys.print('parent= ' + parent + ', pw=' + parent.w)
+        w,h = sys.table(uictx, x, y, parent.w, parent.h, item)
     end
 
     return w,h
 end
+
 
 testui = function()
 
@@ -71,8 +74,8 @@ testui = function()
                 ['form', ['username', 'password']],
 
                 ['horizontal', [
-                    ['button', 'signin'],
-                    ['button', 'signup'],
+                    ['button', ['text':'signin']],
+                    ['button', ['text':'signup']],
                 ]]
             ],
             240,
@@ -82,4 +85,4 @@ testui = function()
 
 end
 
-testui()
+#testui()
