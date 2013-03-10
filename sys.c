@@ -293,10 +293,9 @@ struct variable *sys_window(struct context *context)
     }
 
     struct variable *uictx = param_var(value, 2);
-    const char *icon_path = param_str(value, 3);
-    struct variable *logic = param_var(value, 4);
+    struct variable *logic = param_var(value, 3);
     
-    hal_window(context, uictx, &w, &h, logic, icon_path);
+    hal_window(context, uictx, &w, &h, logic);
     return two_ints(context, w, h);
 }
 

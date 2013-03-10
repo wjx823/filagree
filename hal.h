@@ -20,8 +20,7 @@ void hal_audioloop();
 void hal_window(struct context *context,
                 struct variable *uictx,
                 int32_t *w, int32_t *h,
-                struct variable *logic,
-                const char *iconPath);
+                struct variable *logic);
 void hal_graphics(const struct variable *shape);
 void hal_synth(const uint8_t *bytes, uint32_t length);
 void hal_label (int32_t x, int32_t y,

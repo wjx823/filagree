@@ -590,8 +590,7 @@ void hal_table(struct context *context,
 void hal_window(struct context *context,
                 struct variable *uictx,
                 int32_t *w, int32_t *h,
-                struct variable *logic,
-                const char *iconPath)
+                struct variable *logic)
 {
     if (window) { // clear contents
         NSView *content = [window contentView];
@@ -643,9 +642,7 @@ void hal_window(struct context *context,
     [window setDelegate:a];
     //NSLog(@"window %@ %d,%d", [window contentView], w,h);
 
-    if (!iconPath)
-        iconPath = "icon.png";
-    NSString *path = [NSString stringWithUTF8String:iconPath];
+    NSString *path = @"icon.png";
     if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
         NSImage *icon = [[NSImage alloc] initWithContentsOfFile:path];
         if (icon)
