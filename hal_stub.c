@@ -1,24 +1,26 @@
 #include "hal.h"
 
 void hal_loop() {}
-void hal_window(struct context *context,
-                struct variable *uictx,
-                int32_t w, int32_t h,
-                struct variable *logic,
-                const char *iconPath) {}
 void hal_graphics(const struct variable *shape) {}
 void hal_image() {}
 void hal_sound() {}
 void hal_synth(const uint8_t *bytes, uint32_t length) {}
 void hal_audioloop() {}
-void hal_label (int x, int y, int w, int h,
+void hal_window(struct context *context,
+                struct variable *uictx,
+                int32_t *w, int32_t *h,
+                struct variable *logic,
+                const char *iconPath){}
+void hal_label (int32_t x, int32_t y,
+                int32_t *w, int32_t *h,
                 const char *str) {}
 void hal_input (struct variable *uictx,
-                int x, int y, int w, int h,
+                int32_t x, int32_t y,
+                int32_t *w, int32_t *h,
                 const char *str, bool multiline) {}
 void hal_button(struct context *context,
                 struct variable *uictx,
-                int x, int y, int w, int h,
+                int32_t x, int32_t y, int32_t *w, int32_t *h,
                 struct variable *logic,
                 const char *str, const char *img) {}
 void hal_table (struct context *context,

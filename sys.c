@@ -176,7 +176,7 @@ static int32_t param_int(const struct variable *value, uint32_t index) {
     return ((struct variable*)array_get(value->list, index))->integer;
 }
 
-static int32_t param_var(const struct variable *value, uint32_t index) {
+static struct variable *param_var(const struct variable *value, uint32_t index) {
     if (index >= value->list->length)
         return NULL;
     return (struct variable*)array_get(value->list, index);
