@@ -11,6 +11,7 @@
 #include "variable.h"
 #include "vm.h"
 #include "util.h"
+#include "node.h"
 
 #define RESERVED_SYS  "sys"
 
@@ -337,6 +338,9 @@ struct string_func builtin_funcs[] = {
     {"sin",         &sys_sin},
     {"run",         &sys_run},
     {"interpret",   &sys_interpret},
+    {"listen",      &sys_listen},
+    {"connect",     &sys_connect},
+    {"disconnect",  &sys_disconnect},
 #ifndef NO_UI
     {"window",      &sys_window},
     {"load_form",   &sys_load_form},

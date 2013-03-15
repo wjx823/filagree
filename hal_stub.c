@@ -8,9 +8,8 @@ void hal_synth(const uint8_t *bytes, uint32_t length) {}
 void hal_audioloop() {}
 void hal_window(struct context *context,
                 struct variable *uictx,
-                int32_t *w, int32_t *h,
-                struct variable *logic,
-                const char *iconPath){}
+		        int32_t *w, int32_t *h,
+		        struct variable *logic) {}
 void hal_label (int32_t x, int32_t y,
                 int32_t *w, int32_t *h,
                 const char *str) {}

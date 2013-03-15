@@ -76,9 +76,30 @@ void interpret_string(const char *str, find_c_var *find)
     execute(program, find);
 }
 
+
 #ifdef CLI
+
+#include <signal.h>
+
+void sig_handler(const int sig)
+{
+	printf("\nSIGINT handled.\n");
+    exit(1);
+}
+
 int main (int argc, char** argv)
 {
+	struct sigaction act, oact;             /* structures for signal handling */
+    
+	/* Define a signal handler for when the user closes the program
+     with Ctrl-C. Also, turn off SA_RESTART so that the OS doesn't
+     restart the call to accept() after the signal is handled. */
+    
+	act.sa_handler = sig_handler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	sigaction(SIGINT, &act, &oact);
+
     switch (argc) {
         case 1:     repl();                         break;
         case 2:     run_file(argv[1], NULL, NULL);  break;

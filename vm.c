@@ -207,19 +207,6 @@ static void display_program_counter(struct context *context, const struct byte_a
     DEBUGPRINT("%s%2ld:%3d ", indentation(context), program->current-program->data, *program->current);
 }
 
-void display_code(struct context *context, struct byte_array *code)
-{
-    null_check(context);
-    bool was_running = context->runtime;
-    context->runtime = false;
-
-    INDENT
-    run(context, code, false, NULL);
-    UNDENT
-
-    context->runtime = was_running;
-}
-
 void display_program(struct byte_array *program)
 {
     struct context *context = context_new(false);
@@ -238,6 +225,19 @@ void display_program(struct byte_array *program)
 
     UNDENT
     UNDENT
+}
+
+void display_code(struct context *context, struct byte_array *code)
+{
+    null_check(context);
+    bool was_running = context->runtime;
+    context->runtime = false;
+    
+    INDENT
+    run(context, code, false, NULL);
+    UNDENT
+    
+    context->runtime = was_running;
 }
 
 #else // not DEBUG

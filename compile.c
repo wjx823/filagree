@@ -596,7 +596,7 @@ struct token *fetch(enum Lexeme lexeme) {
         return NULL;
     }
     //DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
-    display_token(token, 0);
+    //display_token(token, 0);
 
     parse_index++;
     return token;
@@ -651,7 +651,7 @@ struct symbol *symbol_fetch(enum Nonterminal n, enum Lexeme goal, ...)
             symbol = symbol_new(n);
             symbol->token = token;
             //DEBUGPRINT("fetched %s at %d\n", lexeme_to_string(lexeme), parse_index);
-            display_token(token, 0);
+            //display_token(token, 0);
 
             parse_index++;
             break;

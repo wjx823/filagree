@@ -11,6 +11,7 @@
 		880BFE9C15B7192A00A90585 /* OpenAL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 880BFE9B15B7192A00A90585 /* OpenAL.framework */; };
 		880BFE9E15B7194400A90585 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 880BFE9D15B7194400A90585 /* Cocoa.framework */; };
 		881AC0FF14B09B2B00EAAE3F /* sys.c in Sources */ = {isa = PBXBuildFile; fileRef = 881AC0FD14B09B2B00EAAE3F /* sys.c */; };
+		882E4C3616F045AE00AE6B61 /* node.c in Sources */ = {isa = PBXBuildFile; fileRef = 882E4C3516F045AE00AE6B61 /* node.c */; };
 		8871737A15BF555E00F2CF9B /* hal_osx.m in Sources */ = {isa = PBXBuildFile; fileRef = 88FAF8A015B9ED5700A9B6D9 /* hal_osx.m */; };
 		88A65DA0147757400055DACF /* compile.c in Sources */ = {isa = PBXBuildFile; fileRef = 88A65D9A147757400055DACF /* compile.c */; };
 		88A65DA1147757400055DACF /* serial.c in Sources */ = {isa = PBXBuildFile; fileRef = 88A65D9B147757400055DACF /* serial.c */; };
@@ -37,11 +38,13 @@
 		880BFE9915B7192400A90585 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		880BFE9B15B7192A00A90585 /* OpenAL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenAL.framework; path = System/Library/Frameworks/OpenAL.framework; sourceTree = SDKROOT; };
 		880BFE9D15B7194400A90585 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		880C5BF616ED1BFC00B66505 /* node.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = node.fg; sourceTree = "<group>"; };
 		880E6A3F15FB1B0B008A06F7 /* sys.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sys.fg; sourceTree = "<group>"; };
 		881AC0FD14B09B2B00EAAE3F /* sys.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sys.c; sourceTree = "<group>"; };
 		881AC0FE14B09B2B00EAAE3F /* sys.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sys.h; sourceTree = "<group>"; };
 		881B388416BCC26F00084F96 /* im.fg */ = {isa = PBXFileReference; lastKnownFileType = text; path = im.fg; sourceTree = "<group>"; };
 		882A967515BE7CEB00A413CC /* ui.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ui.fg; sourceTree = "<group>"; };
+		882E4C3516F045AE00AE6B61 /* node.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = node.c; sourceTree = "<group>"; };
 		88784E0615CDC8860052A0F2 /* program.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = program.fg; sourceTree = "<group>"; };
 		88A65D95147757400055DACF /* compile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = compile.h; sourceTree = "<group>"; };
 		88A65D96147757400055DACF /* serial.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = serial.h; sourceTree = "<group>"; };
@@ -58,6 +61,7 @@
 		88AA20D216209EB000634794 /* proto.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = proto.fg; sourceTree = "<group>"; };
 		88C760B015428A5100A4F8E7 /* interpret.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = interpret.h; sourceTree = "<group>"; };
 		88C760B215428A5F00A4F8E7 /* interpret.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = interpret.c; sourceTree = "<group>"; };
+		88D5124016F15D5A00A0D28D /* node.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = node.h; sourceTree = "<group>"; };
 		88E1FA6015CBBEE9001E6488 /* compile.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = compile.fg; sourceTree = "<group>"; };
 		88E1FA6515CC5263001E6488 /* try.fg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = try.fg; sourceTree = "<group>"; };
 		88E65DE41510F46F00E6207D /* variable.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = variable.c; sourceTree = "<group>"; };
@@ -103,6 +107,7 @@
 				88FAF8A015B9ED5700A9B6D9 /* hal_osx.m */,
 				88C760B015428A5100A4F8E7 /* interpret.h */,
 				88C760B215428A5F00A4F8E7 /* interpret.c */,
+				882E4C3516F045AE00AE6B61 /* node.c */,
 				88A65D9B147757400055DACF /* serial.c */,
 				88A65D96147757400055DACF /* serial.h */,
 				88A65D9C147757400055DACF /* struct.c */,
@@ -115,6 +120,7 @@
 				88E65DE41510F46F00E6207D /* variable.c */,
 				88A65D9F147757400055DACF /* vm.c */,
 				88A65D99147757400055DACF /* vm.h */,
+				88D5124016F15D5A00A0D28D /* node.h */,
 			);
 			name = source;
 			sourceTree = "<group>";
@@ -139,6 +145,7 @@
 				88E1FA6515CC5263001E6488 /* try.fg */,
 				882A967515BE7CEB00A413CC /* ui.fg */,
 				88A65DA91477574E0055DACF /* unit_test.fg */,
+				880C5BF616ED1BFC00B66505 /* node.fg */,
 			);
 			name = test;
 			sourceTree = "<group>";
@@ -206,6 +213,7 @@
 				881AC0FF14B09B2B00EAAE3F /* sys.c in Sources */,
 				88E65DE61510F46F00E6207D /* variable.c in Sources */,
 				88C760B315428A5F00A4F8E7 /* interpret.c in Sources */,
+				882E4C3616F045AE00AE6B61 /* node.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -225,6 +233,7 @@
 					"-DDEBUG",
 					"-DCLI",
 				);
+				OTHER_LDFLAGS = "-lcyassl";
 				PRODUCT_NAME = filagree;
 			};
 			name = Debug;
@@ -250,6 +259,8 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /usr/local/include/;
+				"LIBRARY_SEARCH_PATHS[arch=*]" = /usr/local/lib/;
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -268,6 +279,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /usr/local/include/;
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (

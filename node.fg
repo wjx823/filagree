@@ -1,0 +1,35 @@
+server_listener = [
+
+    'connected' : function(self, id)
+        sys.print('server: connected ' + id)
+    end,
+
+    'messaged' : function(self, id, msg)
+        sys.print('server: message from ' + id + ': ' + msg)
+        id.send(msg + 2)
+    end
+
+]
+
+client_listener = [
+
+    'connected' : function(self, id)
+        sys.print('client: connected ' + id)
+    end,
+
+    'messaged' : function(self, id, msg)
+        sys.print('client: message from ' + id + ': ' + msg)
+        self.result = msg
+    end
+
+]
+
+server = sys.listen(8080, server_listener)
+
+client = sys.connect('localhost', 8080, client_listener)
+client.send('hi')
+
+client.disconnect('localhost', 8080)
+server.disconnect() # from all
+
+sys.print('result = ' + client.result
