@@ -158,9 +158,7 @@ struct variable *sys_sin(struct context *context) // radians
     return variable_new_float(context, s);
 }
 
-#ifndef NO_UI
-
-static const char *param_str(const struct variable *value, uint32_t index)
+const char *param_str(const struct variable *value, uint32_t index)
 {
     if (index >= value->list->length)
         return NULL;
@@ -171,11 +169,13 @@ static const char *param_str(const struct variable *value, uint32_t index)
     return str;
 }
 
-static int32_t param_int(const struct variable *value, uint32_t index) {
+int32_t param_int(const struct variable *value, uint32_t index) {
     if (index >= value->list->length)
         return 0;
     return ((struct variable*)array_get(value->list, index))->integer;
 }
+
+#ifndef NO_UI
 
 static struct variable *param_var(const struct variable *value, uint32_t index) {
     if (index >= value->list->length)

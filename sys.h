@@ -11,4 +11,8 @@ struct variable *builtin_method(struct context *context,
 								struct variable *indexable,
                                 const struct variable *index);
 
+const char *param_str(const struct variable *value, uint32_t index);
+
+int32_t param_int(const struct variable *value, uint32_t index);
+
 #endif // SYS_H
