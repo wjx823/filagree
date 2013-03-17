@@ -18,7 +18,7 @@ static Serial usbTxRx(USBTX, USBRX);
 
 #if __linux
 
-size_t strnlen(char *s, size_t maxlen)
+size_t xstrnlen(char *s, size_t maxlen)
 {
 	size_t i;
 	for (i= 0; i<maxlen && *s; i++, s++);
