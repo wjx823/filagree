@@ -387,7 +387,7 @@ static void push_map(struct context *context, struct byte_array *program)
     DEBUGPRINT("MAP %d", num_items);
     if (!context->runtime)
         VM_DEBUGPRINT("\n");
-    struct map *map = map_new(NULL, NULL);
+    struct map *map = map_new();
     while (num_items--) {
         struct variable* value = variable_pop(context);
         struct variable* key = variable_pop(context);
@@ -636,7 +636,7 @@ static void push_fnc(struct context *context, struct byte_array *program)
         struct byte_array *name = serial_decode_string(program);
         if (context->runtime) {
             if (!closures)
-                closures = map_new(NULL, NULL);
+                closures = map_new();
             struct variable *c = find_var(context, name);
             c = variable_copy(context, c);
             map_insert(closures, name, c);

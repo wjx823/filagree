@@ -1495,7 +1495,7 @@ struct byte_array *build_string(const struct byte_array *input) {
     DEBUGPRINT("lex %d:\n", input_copy->length);
 
     lex_list = array_new();
-    imports = map_new(NULL, NULL);
+    imports = map_new();
 
     struct array* list = lex(input_copy);
     struct symbol *tree = parse(list, 0);

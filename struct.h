@@ -92,17 +92,22 @@ struct hash_node {
 	struct hash_node *next;
 };
 
-typedef bool (map_compare)(const void *context, const void *a, const void *b);
+typedef bool (map_compare)(const void *a, const void *b);
+typedef int32_t (map_hash)(const void *x);
+typedef void *(map_copyor)(const void *x);
+typedef void (map_rm)(const void *x);
 
 struct map {
-    void *context;
-    bool (*comparator)(const void *context, const void *a, const void *b);
+    map_compare *comparator;
 	size_t size;
 	struct hash_node **nodes;
-	size_t (*hash_func)(const struct byte_array*);
+    map_hash *hash_func;
+    map_rm *deletor;
+    map_copyor *copyor;
 };
 
-struct map* map_new(void *context, map_compare *mc);
+struct map* map_new();
+struct map* map_new_ex(map_compare *mc, map_hash *mh, map_copyor *my, map_rm *md);
 void map_del(struct map* map);
 int map_insert(struct map* map, const void *key, void *data);
 int map_remove(struct map* map, const void *key);

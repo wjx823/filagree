@@ -1,10 +1,4 @@
-/*-----------------------------------------------------------------------------------
-*
-* node
-*
-* multithreaded TCP client / server
-*
------------------------------------------------------------------------------------*/
+// node.c - socket client and server
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,22 +54,29 @@ void *incoming_connection(void *arg)
         assert_message(raw_message_length < MAXLINE, "todo: handle long messages");
         struct variable *message = variable_deserialize(ta->context, raw_message);
 
-        struct variable *listener = (struct variable *)map_get(server_listeners, ta->fd);
+        struct variable *listener = (struct variable *)map_get(server_listeners, (void*)(VOID_INT)ta->fd);
         vm_call(ta->context, listener, message);
     }
 
 free_ssl:
-	CyaSSL_free(ta->ssl); /* Free CYASSL object */
+	CyaSSL_free(ta->ssl); // Free CYASSL object
     free(ta);
 	return NULL;
 }
 
-bool int_compare(const void *context, const void *a, const void *b)
+static bool int_compare(const void *a, const void *b)
 {
-    int32_t i = (int32_t)a;
-    int32_t j = (int32_t)b;
+    int32_t i = (VOID_INT)a;
+    int32_t j = (VOID_INT)b;
     return i == j;
 }
+
+static int32_t int_hash(const void* x) {
+    return (int32_t)(VOID_INT)x;
+}
+
+void *int_copy(const void *x) { return (void*)x; }
+void int_del(const void *x) {}
 
 // listens for incoming connections
 struct variable *sys_listen(struct context *context)
@@ -85,9 +86,9 @@ struct variable *sys_listen(struct context *context)
     struct variable *listener = ((struct variable*)array_get(arguments->list, 2));
 
     if (server_listeners == NULL)
-        server_listeners = map_new(context, &int_compare);
+        server_listeners = map_new_ex(&int_compare, &int_hash, &int_copy, &int_del);
 
-    map_insert(server_listeners, serverport, listener);
+    map_insert(server_listeners, (void*)(VOID_INT)serverport, listener);
 
 	int listenfd;
 	struct sockaddr_in servaddr;
@@ -232,8 +233,8 @@ struct variable *sys_connect(struct context *context)
     ta->cya = ctx;
 
     if (socket_listeners == NULL)
-        socket_listeners = map_new(context, &int_compare);
-    map_insert(socket_listeners, sockfd, ta);
+        socket_listeners = map_new_ex(&int_compare, &int_hash, &int_copy, &int_del);
+    map_insert(socket_listeners, (void*)(VOID_INT)sockfd, (void*)(VOID_INT)ta);
 
     return variable_new_int(context, sockfd);
 }
@@ -246,7 +247,7 @@ struct variable *sys_send(struct context *context)
 
     assert_message(sender->type == VAR_INT, "non int fd");
     int32_t fd = sender->integer;
-    struct thread_argument *ta = (struct thread_argument*)map_get(socket_listeners, fd);
+    struct thread_argument *ta = (struct thread_argument*)map_get(socket_listeners, (void*)(VOID_INT)fd);
 
     if (CyaSSL_write(ta->ssl, message, strlen(message)) != strlen(message))
         context->vm_exception = variable_new_str(context, byte_array_from_string("CyaSSL_write error"));
@@ -272,7 +273,7 @@ struct variable *sys_disconnect(struct context *context)
     {
         const int32_t fd = param_int(arguments, 1);
         close(fd);
-        map_remove(socket_listeners, fd);
+        map_remove(socket_listeners, (void*)(VOID_INT)fd);
     }
     return NULL;
 }

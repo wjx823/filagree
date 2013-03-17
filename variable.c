@@ -158,7 +158,7 @@ struct variable *variable_new_list(struct context *context, struct array *list) 
         struct variable *u = (struct variable*)array_get(list, i);
         if (u->type == VAR_MAP) {
             if (v->map == NULL)
-                v->map = map_new(context, NULL);
+                v->map = map_new(context);
             map_update(v->map, u->map);
         } else
             array_set(v->list, v->list->length, u);
@@ -401,7 +401,7 @@ struct variable *variable_deserialize(struct context *context, struct byte_array
             
             uint32_t map_length = serial_decode_int(bits);
             if (map_length) {
-                out->map = map_new(NULL, NULL);
+                out->map = map_new();
                 for (int i=0; i<map_length; i++) {
                     struct byte_array *key = serial_decode_string(bits);
                     struct variable *value = variable_deserialize(context, bits);
@@ -490,7 +490,7 @@ struct variable *variable_concatenate(struct context *context, int n, const stru
 int variable_map_insert(struct variable* v, const struct byte_array *key, struct variable *datum)
 {
     if (!v->map)
-        v->map = map_new(NULL, NULL);
+        v->map = map_new();
     return map_insert(v->map, key, datum);
 }
 

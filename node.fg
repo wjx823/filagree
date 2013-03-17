@@ -32,4 +32,4 @@ client.send('hi')
 client.disconnect('localhost', 8080)
 server.disconnect() # from all
 
-sys.print('result = ' + client.result
+sys.print('result = ' + client.result)
